@@ -1,28 +1,50 @@
 import { useEffect, useState } from 'react';
-import { seedIfEmpty } from '@/db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, seedIfEmpty } from '@/db';
 import {
   isMarketOpen,
   lookupStock,
-  fetchPrices,
   ApiError,
   describeApiError
 } from '@/api';
-import type { Stock, StockPrice } from '@/types';
+import {
+  buyOrFeed,
+  sell,
+  runPriceUpdate,
+  computeSummary,
+  type PortfolioSummary
+} from '@/services';
+import { getCreature } from '@/data/creatures';
+import { formatInt, formatSigned, formatPercent, formatPrice } from '@/utils';
+import type { Stock } from '@/types';
 
-interface DemoRow {
-  stock: Stock;
-  price?: StockPrice;
-}
+const TIER_LABEL: Record<string, string> = {
+  normal: '凡獸境',
+  spirit: '靈獸境',
+  demon: '妖獸境',
+  god: '神獸境',
+  saint: '聖獸境',
+  celestial: '仙獸境',
+  cursed1: '凶獸一階',
+  cursed2: '凶獸二階',
+  cursed3: '凶獸三階'
+};
+
+const TIER_COLOR: Record<string, string> = {
+  normal: 'text-tier-normal',
+  spirit: 'text-tier-spirit',
+  demon: 'text-tier-demon',
+  god: 'text-tier-god',
+  saint: 'text-tier-saint',
+  celestial: 'text-tier-celestial',
+  cursed1: 'text-tier-cursed-1',
+  cursed2: 'text-tier-cursed-2',
+  cursed3: 'text-tier-cursed-3'
+};
 
 export default function App() {
   const [ready, setReady] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
-
-  const [code, setCode] = useState('');
-  const [rows, setRows] = useState<DemoRow[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [marketOpen, setMarketOpen] = useState(isMarketOpen());
 
   useEffect(() => {
     seedIfEmpty()
@@ -30,132 +52,257 @@ export default function App() {
       .catch((e) => setSeedError(e instanceof Error ? e.message : String(e)));
   }, []);
 
-  // 每分鐘更新一次盤中狀態顯示
+  if (seedError) {
+    return (
+      <CenteredMessage>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          初始化失敗：{seedError}
+        </div>
+      </CenteredMessage>
+    );
+  }
+
+  if (!ready) {
+    return <CenteredMessage>資料庫初始化中⋯</CenteredMessage>;
+  }
+
+  return <DemoApp />;
+}
+
+function CenteredMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-sand-100 p-6 text-gray-600">
+      {children}
+    </div>
+  );
+}
+
+function DemoApp() {
+  const [code, setCode] = useState('');
+  const [shares, setShares] = useState('1000');
+  const [price, setPrice] = useState('100');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [marketOpen, setMarketOpen] = useState(isMarketOpen());
+  const [summary, setSummary] = useState<PortfolioSummary | null>(null);
+
+  const holdings = useLiveQuery(() => db.holdings.toArray(), []);
+  const prices = useLiveQuery(() => db.prices.toArray(), []);
+  const pets = useLiveQuery(() => db.pets.filter((p) => !p.retiredAt).toArray(), []);
+  const stocks = useLiveQuery(() => db.stocks.toArray(), []);
+  const settings = useLiveQuery(() => db.settings.get('singleton'), []);
+
   useEffect(() => {
     const t = setInterval(() => setMarketOpen(isMarketOpen()), 60_000);
     return () => clearInterval(t);
   }, []);
 
-  async function handleLookup() {
-    if (!code.trim()) return;
+  // 自動重算 summary
+  useEffect(() => {
+    computeSummary().then(setSummary);
+  }, [holdings, prices]);
+
+  const stockMap = new Map((stocks ?? []).map((s) => [s.code, s]));
+  const priceMap = new Map((prices ?? []).map((p) => [p.code, p]));
+  const petMap = new Map((pets ?? []).map((p) => [p.code, p]));
+
+  function withBusy<T>(fn: () => Promise<T>): Promise<T | undefined> {
     setBusy(true);
     setError(null);
-    try {
-      const stock = await lookupStock(code);
-      const result = await fetchPrices({
-        targets: [{ code: stock.code, market: stock.market }]
+    setInfo(null);
+    return fn()
+      .catch((e) => {
+        setError(e instanceof ApiError ? describeApiError(e) : e instanceof Error ? e.message : String(e));
+        return undefined;
+      })
+      .finally(() => setBusy(false));
+  }
+
+  async function handleBuy() {
+    if (!settings) return;
+    await withBusy(async () => {
+      const stock: Stock = stockMap.get(code.trim().toUpperCase()) ?? (await lookupStock(code));
+      const result = await buyOrFeed({
+        stock,
+        shares: Number(shares),
+        price: Number(price),
+        feeConfig: { discount: settings.brokerageFeeDiscount, minFee: settings.brokerageMinFee },
+        now: Date.now()
       });
-      const price = result.prices.find((p) => p.code === stock.code);
-      setRows((prev) => {
-        const filtered = prev.filter((r) => r.stock.code !== stock.code);
-        return [{ stock, price }, ...filtered];
-      });
+      setInfo(
+        `${result.transaction.type === 'buy' ? '買入' : '加碼'} ${stock.name} ${shares} 股 @ ${price}（手續費 NT$${result.transaction.fee}）`
+      );
       setCode('');
-    } catch (e) {
-      setError(e instanceof ApiError ? describeApiError(e) : String(e));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
-  if (seedError) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-sand-100 p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          初始化失敗：{seedError}
-        </div>
-      </div>
-    );
+  async function handleSell() {
+    if (!settings) return;
+    await withBusy(async () => {
+      const result = await sell({
+        code: code.trim().toUpperCase(),
+        shares: Number(shares),
+        price: Number(price),
+        feeConfig: { discount: settings.brokerageFeeDiscount, minFee: settings.brokerageMinFee },
+        now: Date.now()
+      });
+      setInfo(
+        `賣出 ${result.transaction.shares} 股 @ ${price}（已實現損益 ${formatSigned(result.transaction.realizedPnL)}）`
+      );
+      setCode('');
+    });
   }
 
-  if (!ready) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-sand-100">
-        <p className="text-gray-500">資料庫初始化中⋯</p>
-      </div>
-    );
+  async function handleRefresh() {
+    await withBusy(async () => {
+      const r = await runPriceUpdate();
+      setInfo(
+        `已更新 ${r.updated.length} 檔（${r.duringMarket ? '盤中即時' : '盤後收盤'}）` +
+          (r.missing.length ? `，未抓到：${r.missing.join(', ')}` : '') +
+          (r.evolved.length ? `，進化：${r.evolved.length} 隻` : '') +
+          (r.corrupted.length ? `，黑化：${r.corrupted.length} 隻` : '') +
+          (r.purified.length ? `，淨化：${r.purified.length} 隻` : '')
+      );
+    });
   }
 
   return (
-    <div className="w-full h-full overflow-auto bg-sand-100 no-select">
-      <div className="max-w-md mx-auto px-4 py-6">
-        <header className="mb-4">
-          <h1 className="text-2xl font-bold text-sand-300">山海經股市 · API 測試</h1>
-          <p className="text-xs text-gray-500">
-            盤中狀態：
-            <span className={marketOpen ? 'text-tw-up font-bold' : 'text-gray-600'}>
-              {marketOpen ? '🟢 盤中（即時報價）' : '⚪ 盤後／假日（最新收盤）'}
-            </span>
-          </p>
-        </header>
+    <div className="w-full h-full overflow-auto bg-sand-100">
+      <div className="max-w-md mx-auto px-4 py-4 space-y-3">
+        <h1 className="text-xl font-bold text-sand-300 text-center">山海經股市 · MVP 測試</h1>
 
-        <div className="bg-white/80 rounded-lg p-3 shadow mb-3">
-          <div className="flex gap-2">
+        {/* 總資產列 */}
+        {summary && (
+          <div className="bg-white rounded-lg p-3 shadow text-sm">
+            <div className="grid grid-cols-2 gap-y-1">
+              <span className="text-gray-500">持有檔數</span>
+              <span className="text-right">{summary.holdingCount} 檔</span>
+              <span className="text-gray-500">總市值</span>
+              <span className="text-right">NT$ {formatInt(summary.totalMarketValue)}</span>
+              <span className="text-gray-500">累積成本</span>
+              <span className="text-right">NT$ {formatInt(summary.totalCost)}</span>
+              <span className="text-gray-500">未實現損益</span>
+              <span className={`text-right font-bold ${summary.unrealizedPnL >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
+                {formatSigned(summary.unrealizedPnL)}
+              </span>
+              <span className="text-gray-500">已實現損益</span>
+              <span className={`text-right ${summary.realizedPnL >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
+                {formatSigned(summary.realizedPnL)}
+              </span>
+              <span className="text-gray-500">總報酬率</span>
+              <span className={`text-right font-bold ${summary.returnRate >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
+                {formatPercent(summary.returnRate)}
+              </span>
+              <span className="text-gray-500">當日損益</span>
+              <span className={`text-right ${summary.todayPnL >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
+                {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
+              </span>
+            </div>
+            <p className="text-xs text-center mt-2">
+              {marketOpen ? '🟢 盤中（即時）' : '⚪ 盤外（收盤）'}
+            </p>
+          </div>
+        )}
+
+        {/* 操作面板 */}
+        <div className="bg-white rounded-lg p-3 shadow space-y-2">
+          <div className="grid grid-cols-3 gap-2">
             <input
               type="text"
-              inputMode="numeric"
-              placeholder="輸入股票代號 (例：2330, 0050, 5269)"
-              className="flex-1 px-3 py-2 rounded border border-gray-300 bg-white text-base"
+              placeholder="代號"
+              className="px-2 py-2 rounded border border-gray-300 text-sm"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
               disabled={busy}
             />
+            <input
+              type="number"
+              placeholder="股數"
+              className="px-2 py-2 rounded border border-gray-300 text-sm"
+              value={shares}
+              onChange={(e) => setShares(e.target.value)}
+              disabled={busy}
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="價格"
+              className="px-2 py-2 rounded border border-gray-300 text-sm"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              className="px-4 py-2 bg-sand-300 text-white rounded font-bold disabled:opacity-50"
-              onClick={handleLookup}
-              disabled={busy || !code.trim()}
+              className="py-2 bg-emerald-600 text-white rounded text-sm font-bold disabled:opacity-50"
+              onClick={handleBuy}
+              disabled={busy || !code || !shares || !price}
             >
-              {busy ? '查詢中…' : '查詢'}
+              買入/加碼
+            </button>
+            <button
+              type="button"
+              className="py-2 bg-orange-500 text-white rounded text-sm font-bold disabled:opacity-50"
+              onClick={handleSell}
+              disabled={busy || !code || !shares || !price}
+            >
+              賣出
+            </button>
+            <button
+              type="button"
+              className="py-2 bg-sand-300 text-white rounded text-sm font-bold disabled:opacity-50"
+              onClick={handleRefresh}
+              disabled={busy}
+            >
+              更新股價
             </button>
           </div>
-          {error && (
-            <p className="text-tw-down text-sm mt-2 bg-red-50 px-2 py-1 rounded">⚠️ {error}</p>
-          )}
+          {error && <p className="text-tw-down text-xs bg-red-50 px-2 py-1 rounded">⚠️ {error}</p>}
+          {info && <p className="text-emerald-700 text-xs bg-emerald-50 px-2 py-1 rounded">✓ {info}</p>}
         </div>
 
-        <div className="space-y-2">
-          {rows.map((r) => (
-            <PriceRow key={r.stock.code} stock={r.stock} price={r.price} />
-          ))}
-          {rows.length === 0 && (
-            <p className="text-center text-gray-400 text-sm py-8">查詢一個代號試試看</p>
+        {/* 寵物清單 */}
+        <div className="space-y-1">
+          <h2 className="text-sm font-bold text-gray-600">我的神獸（{pets?.length ?? 0} 隻）</h2>
+          {(holdings ?? []).map((h) => {
+            const pet = petMap.get(h.code);
+            const stock = stockMap.get(h.code);
+            const price = priceMap.get(h.code);
+            const species = pet ? getCreature(pet.speciesId) : undefined;
+            const marketValue = price ? price.currentPrice * h.shares : h.avgCost * h.shares;
+            const pnl = marketValue - h.totalCost;
+            const ret = h.totalCost > 0 ? pnl / h.totalCost : 0;
+            return (
+              <div key={h.code} className="bg-white rounded-lg p-3 shadow flex items-center gap-3">
+                <div className="text-3xl">{species?.emoji ?? '❓'}</div>
+                <div className="flex-1 text-sm">
+                  <div className="font-bold">
+                    {species?.name ?? '?'} <span className="text-xs text-gray-500">/{stock?.name}</span>
+                  </div>
+                  <div className="text-xs">
+                    <span className={pet ? TIER_COLOR[pet.tier] : ''}>{pet ? TIER_LABEL[pet.tier] : ''}</span>
+                    <span className="text-gray-500"> · 修為 Lv.{pet?.level ?? 1}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {h.shares} 股 @均價 {formatPrice(h.avgCost)}
+                    {price && ` · 現價 ${formatPrice(price.currentPrice)}`}
+                  </div>
+                </div>
+                <div className={`text-right text-sm ${pnl >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
+                  <div className="font-bold">{formatSigned(pnl)}</div>
+                  <div className="text-xs">{formatPercent(ret)}</div>
+                </div>
+              </div>
+            );
+          })}
+          {(holdings ?? []).length === 0 && (
+            <p className="text-center text-gray-400 text-xs py-6">輸入代號 + 股數 + 價格買第一檔試試</p>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function PriceRow({ stock, price }: DemoRow) {
-  const up = price && price.change > 0;
-  const down = price && price.change < 0;
-  const colorClass = up ? 'text-tw-up' : down ? 'text-tw-down' : 'text-tw-flat';
-
-  return (
-    <div className="bg-white rounded-lg p-3 shadow flex items-center justify-between">
-      <div>
-        <div className="font-bold">
-          <span className="text-gray-500 mr-2">{stock.code}</span>
-          {stock.name}
-        </div>
-        <div className="text-xs text-gray-500">
-          {stock.market}
-          {price && ` · ${price.source === 'intraday' ? '即時' : '收盤'}`}
-        </div>
-      </div>
-      {price ? (
-        <div className={`text-right ${colorClass}`}>
-          <div className="text-lg font-bold">{price.currentPrice.toFixed(2)}</div>
-          <div className="text-xs">
-            {price.change >= 0 ? '+' : ''}
-            {price.change.toFixed(2)} ({(price.changePercent * 100).toFixed(2)}%)
-          </div>
-        </div>
-      ) : (
-        <div className="text-gray-400 text-sm">無報價</div>
-      )}
     </div>
   );
 }
