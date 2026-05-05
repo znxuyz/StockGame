@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
 import {
@@ -21,7 +21,8 @@ import PhaserMap from '@/game/PhaserMap';
 import BuyModal from '@/components/BuyModal';
 import FeedModal from '@/components/FeedModal';
 import SellModal from '@/components/SellModal';
-import RecordsModal from '@/components/RecordsModal';
+// 紀錄頁靠 Recharts，500KB+，按下「紀錄」才載入
+const RecordsModal = lazy(() => import('@/components/RecordsModal'));
 import SettingsModal from '@/components/SettingsModal';
 import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
@@ -189,7 +190,11 @@ function Game() {
         settings={settings}
         onActionComplete={postAction}
       />
-      <RecordsModal open={modal === 'records'} onClose={() => setModal(null)} />
+      <Suspense fallback={null}>
+        {modal === 'records' && (
+          <RecordsModal open onClose={() => setModal(null)} />
+        )}
+      </Suspense>
       <SettingsModal
         open={modal === 'settings'}
         onClose={() => setModal(null)}

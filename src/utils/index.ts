@@ -7,3 +7,10 @@ export {
   formatPercent,
   daysBetween
 } from './format';
+export {
+  computeXIRR,
+  computeSharpe,
+  computeMaxDrawdown,
+  computeDailyReturns,
+  type CashFlow
+} from './finance';
