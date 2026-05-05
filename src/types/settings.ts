@@ -16,4 +16,10 @@ export interface Settings {
   playerName?: string;
   /** 帳戶建立時間（成就：週年） */
   createdAt: number;
+  /** 上次登入日期 YYYY-MM-DD（用於計算連續登入） */
+  lastLoginDate?: string;
+  /** 目前連續登入天數 */
+  consecutiveDays: number;
+  /** 歷史最高連續登入天數 */
+  maxConsecutiveDays: number;
 }

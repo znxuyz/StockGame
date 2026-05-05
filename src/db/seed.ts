@@ -16,7 +16,9 @@ export async function seedIfEmpty(): Promise<void> {
       brokerageFeeDiscount: 1.0, // 台新無折扣
       brokerageMinFee: 20,
       soundEnabled: true,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      consecutiveDays: 0,
+      maxConsecutiveDays: 0
     };
     await db.settings.put(initial);
   }

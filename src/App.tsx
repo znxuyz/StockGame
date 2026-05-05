@@ -12,8 +12,12 @@ import {
   sell,
   runPriceUpdate,
   computeSummary,
+  recordDailySnapshot,
+  runAchievementChecks,
+  checkInLoginToday,
   type PortfolioSummary
 } from '@/services';
+import { ACHIEVEMENTS } from '@/data/achievements';
 import { getCreature } from '@/data/creatures';
 import { formatInt, formatSigned, formatPercent, formatPrice } from '@/utils';
 import type { Stock } from '@/types';
@@ -48,7 +52,11 @@ export default function App() {
 
   useEffect(() => {
     seedIfEmpty()
-      .then(() => setReady(true))
+      .then(async () => {
+        await checkInLoginToday();
+        await runAchievementChecks();
+        setReady(true);
+      })
       .catch((e) => setSeedError(e instanceof Error ? e.message : String(e)));
   }, []);
 
@@ -106,6 +114,8 @@ function DemoApp() {
   const stockMap = new Map((stocks ?? []).map((s) => [s.code, s]));
   const priceMap = new Map((prices ?? []).map((p) => [p.code, p]));
   const petMap = new Map((pets ?? []).map((p) => [p.code, p]));
+  const achievements = useLiveQuery(() => db.achievements.toArray(), []);
+  const unlockedCount = (achievements ?? []).filter((a) => a.unlockedAt).length;
 
   function withBusy<T>(fn: () => Promise<T>): Promise<T | undefined> {
     setBusy(true);
@@ -119,6 +129,19 @@ function DemoApp() {
       .finally(() => setBusy(false));
   }
 
+  async function postAction(message: string) {
+    const ach = await runAchievementChecks();
+    if (ach.newlyUnlocked.length > 0) {
+      const names = ach.newlyUnlocked
+        .map((id) => ACHIEVEMENTS.find((a) => a.id === id)?.name)
+        .filter(Boolean)
+        .join('、');
+      setInfo(`${message}　🏆 新成就：${names}`);
+    } else {
+      setInfo(message);
+    }
+  }
+
   async function handleBuy() {
     if (!settings) return;
     await withBusy(async () => {
@@ -130,7 +153,7 @@ function DemoApp() {
         feeConfig: { discount: settings.brokerageFeeDiscount, minFee: settings.brokerageMinFee },
         now: Date.now()
       });
-      setInfo(
+      await postAction(
         `${result.transaction.type === 'buy' ? '買入' : '加碼'} ${stock.name} ${shares} 股 @ ${price}（手續費 NT$${result.transaction.fee}）`
       );
       setCode('');
@@ -147,7 +170,7 @@ function DemoApp() {
         feeConfig: { discount: settings.brokerageFeeDiscount, minFee: settings.brokerageMinFee },
         now: Date.now()
       });
-      setInfo(
+      await postAction(
         `賣出 ${result.transaction.shares} 股 @ ${price}（已實現損益 ${formatSigned(result.transaction.realizedPnL)}）`
       );
       setCode('');
@@ -157,7 +180,8 @@ function DemoApp() {
   async function handleRefresh() {
     await withBusy(async () => {
       const r = await runPriceUpdate();
-      setInfo(
+      await recordDailySnapshot();
+      await postAction(
         `已更新 ${r.updated.length} 檔（${r.duringMarket ? '盤中即時' : '盤後收盤'}）` +
           (r.missing.length ? `，未抓到：${r.missing.join(', ')}` : '') +
           (r.evolved.length ? `，進化：${r.evolved.length} 隻` : '') +
@@ -201,6 +225,10 @@ function DemoApp() {
             </div>
             <p className="text-xs text-center mt-2">
               {marketOpen ? '🟢 盤中（即時）' : '⚪ 盤外（收盤）'}
+              <span className="ml-3 text-gray-500">
+                🏆 {unlockedCount}/{ACHIEVEMENTS.length}
+                🔥 連登 {settings?.consecutiveDays ?? 0} 天
+              </span>
             </p>
           </div>
         )}
