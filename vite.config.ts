@@ -67,6 +67,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src')
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Phaser 約 1.4MB，獨立成 chunk 才不會拖慢首載
+        manualChunks: {
+          phaser: ['phaser'],
+          recharts: ['recharts']
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     proxy: {

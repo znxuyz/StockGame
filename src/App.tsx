@@ -17,7 +17,7 @@ import {
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
 import BottomBar from '@/components/BottomBar';
-import MapPlaceholder from '@/components/MapPlaceholder';
+import PhaserMap from '@/game/PhaserMap';
 import BuyModal from '@/components/BuyModal';
 import FeedModal from '@/components/FeedModal';
 import SellModal from '@/components/SellModal';
@@ -129,7 +129,12 @@ function Game() {
     }
   }
 
-  function handlePetClick(pet: Pet, stock: Stock) {
+  /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
+  async function handlePetClickById(petId: string) {
+    const pet = await db.pets.get(petId);
+    if (!pet) return;
+    const stock = await db.stocks.get(pet.code);
+    if (!stock) return;
     setPetTarget({ pet, stock });
     setModal('pet');
   }
@@ -150,8 +155,8 @@ function Game() {
         totalAchievements={ACHIEVEMENTS.length}
       />
 
-      <MapPlaceholder
-        onPetClick={handlePetClick}
+      <PhaserMap
+        onPetClick={handlePetClickById}
         onRefresh={handleRefresh}
         refreshing={refreshing}
       />
