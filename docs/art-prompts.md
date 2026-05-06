@@ -90,35 +90,59 @@ with one limb lifted, sense of movement. {STYLE_BLOCK}
 --ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 100 --oref [CHAR_REF] --ow 100
 ```
 
-### 3.3 進化(Ascended Form) — **降低 oref 權重 + 加強轉變描述**
+### 3.3 進化(Ascended Form) — **不用 oref + 身體變色金/象牙白 + 強調全身**
 ```
-A celestial ascended {visual_subject} transcending into divine form,
-golden crackling lightning bolts erupting around the body, swirling
-ethereal ink clouds enveloping the figure, glowing vermillion red and
-gold mandorla halo radiating behind, body emanating divine brilliance
-with sacred energy, dramatic transformation moment, soaring upward
-majestic pose, side view full body, {visual_features}. {STYLE_BLOCK}
---ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 200 --oref [CHAR_REF] --ow 25
-```
-
-### 3.4 黑化(Corrupted Form) — **降低 oref 權重 + 加強轉變描述**
-```
-A corrupted demonic {visual_subject}, body twisted and emaciated wreathed
-in swirling thick black ink miasma, glowing crimson red eyes piercing
-through dark smoke, sinister hunched aggressive pose with bared fangs
-and snarling mouth, dark vapor streaming from the body, ominous demonic
-aura, evil corruption visible on body, side view full body,
-{visual_features} darkened and tattered. {STYLE_BLOCK}
---ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 200 --oref [CHAR_REF] --ow 25
+A divine celestial {visual_subject} ascended into ethereal form, body
+rendered in radiant pale gold and ivory ink with luminous golden details
+glowing softly from within, {features_in_gold}, full body clearly visible
+centered side view, calm transcendent regal pose, subtle vermillion and
+gold mandorla halo behind without obscuring the body, plain clean
+uncluttered composition, no smoke no clouds covering the body.
+{STYLE_BLOCK_GOLD}
+--ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 200
 ```
 
-> **進化 / 黑化重要參數**:
-> - `--ow 25` 把 omni 權重從預設 100 降到 25,讓 prompt 的「轉變」描述能蓋過 anchor 姿勢
-> - `--sw 200` 把 style 權重提高到 200,維持水墨風一致
-> - `{visual_subject}` = 簡化版主體(例:`azure dragon` / `white tiger` / `vermillion phoenix`)
-> - `{visual_features}` = 該神獸的關鍵特徵(例:`deer-like antlers, long flowing whiskers, scales rendered with delicate ink brush strokes`),從 §4 的 `{visual}` 抽出
->
-> 如果 `--ow 25` 還是看不出轉變,降到 `--ow 10`,再不行直接拿掉 `--oref`(只剩 sref 鎖風格)。
+### 3.4 黑化(Corrupted Form) — **不用 oref + 身體變色焦黑 + 紅脈 + 強調全身**
+```
+A corrupted demonic {visual_subject}, body rendered in deep charcoal
+black throughout with dark corrupted {features_dark} streaked with
+crimson red veins of evil corruption, glowing crimson red eyes piercing
+fiercely, full body clearly visible centered side view, sinister hunched
+aggressive predatory stance, dark black body color dominant throughout,
+plain clean uncluttered composition, no smoke no miasma covering the body.
+{STYLE_BLOCK_DARK}
+--ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 200
+```
+
+### 進化 / 黑化的 STYLE_BLOCK 變體
+
+要把 `{STYLE_BLOCK}` 結尾的色票替換,不然 MJ 還是會被「dominant ink black」拉回原色:
+
+**`{STYLE_BLOCK_GOLD}`** (進化用):
+```
+Chinese ink wash painting (sumi-e), traditional gongbi line work,
+faded rice paper texture, dominant gold and ivory accents with
+vermillion red, calligraphy brush strokes with flying-white texture,
+flat 2D illustration, no shadow, no 3D rendering, no anime style,
+no cel shading, plain off-white rice paper background
+```
+
+**`{STYLE_BLOCK_DARK}`** (黑化用):
+```
+Chinese ink wash painting (sumi-e), traditional gongbi line work,
+faded rice paper texture, dominant ink black with crimson red veining
+accents, calligraphy brush strokes with flying-white texture, flat 2D
+illustration, no shadow, no 3D rendering, no anime style, no cel shading,
+plain off-white rice paper background
+```
+
+> **進化 / 黑化策略要點(青龍實測通過)**:
+> - **不用 `--oref`** — oref 把姿勢釘死,導致看不出轉變;只用 `--sref` 鎖風格、讓 prompt 自由發揮
+> - **`--sw 200`** 把 style 權重拉高,維持水墨風一致
+> - **身體顏色寫進 prompt 重點** — 進化金/象牙白、黑化焦黑+紅脈(不是只在身體周圍加效果)
+> - **「full body clearly visible」+「no smoke covering」** 確保全身可見不被遮
+> - `{features_in_gold}` 範例:`golden stripes`(虎)/ `golden plumage`(鳥)/ `golden scales glowing`(龍/魚)
+> - `{features_dark}` 範例:`fur`(獸)/ `feathers`(鳥)/ `scales`(龍/魚)
 
 ### 3.5 v7 syntax 重點(避免踩雷)
 - **`--cref` 是 v6 舊語法,v7 已失效** — 一律用 `--oref`(Omni Reference)
@@ -242,7 +266,7 @@ aura, evil corruption visible on body, side view full body,
 
 | id | 站 (idle) | 走 (walk) | 進化 (ascended) | 黑化 (corrupted) |
 |---|---|---|---|---|
-| `azure-dragon` (= STYLE_REF) | | | | |
+| `azure-dragon` (= STYLE_REF) | https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png | https://cdn.midjourney.com/2018dd0d-441e-47d5-b18e-47911032ec66/0_1.png | https://cdn.midjourney.com/94276159-c158-4a99-9435-ad6f1c627092/0_2.png | https://cdn.midjourney.com/24a4ce59-fb2d-4130-b5f9-e2ffc8386f49/0_2.png |
 | `white-tiger` | | | | |
 | `vermilion-bird` | | | | |
 | `black-tortoise` | | | | |
