@@ -287,9 +287,9 @@ plain off-white rice paper background
 | `bi-xie` | https://cdn.midjourney.com/f375c29c-e14e-419a-8067-a55242b34e9e/0_3.png | | https://cdn.midjourney.com/5d1403c7-0853-4370-80dc-99d3cc4986de/0_3.png | https://cdn.midjourney.com/ecf233e1-c3ed-447a-a46f-964d0e1e4fa5/0_3.png |
 | `tian-lu` | https://cdn.midjourney.com/3d6afdd7-df90-4264-bf24-904ba3b1bf6e/0_2.png | | https://cdn.midjourney.com/cfb1a90b-03fe-4e66-9042-3a52fefaa539/0_0.png | https://cdn.midjourney.com/4f75eec5-b4e6-4250-83e3-a246a2c4fece/0_2.png |
 | `nine-tail-fox` | https://cdn.midjourney.com/d99436c1-3152-4453-adbf-22d7d12993de/0_3.png | | https://cdn.midjourney.com/c87f1d29-7d3f-47e5-89c5-bbc1bedf21ec/0_1.png | https://cdn.midjourney.com/8ea9d048-d66a-449b-a8c2-e40a787ed739/0_3.png |
-| `di-ting` | | | | |
-| `kai-ming` | | | | |
-| `zou-yu` | | | | |
+| `di-ting` | https://cdn.midjourney.com/766c62dd-129d-4014-ba2f-88e819e8b7e8/0_0.png | | https://cdn.midjourney.com/0a55105d-7377-4e40-b922-551b22f9e3b2/0_0.png | https://cdn.midjourney.com/5e61da1e-179f-4f75-a543-686e43587bf6/0_2.png |
+| `kai-ming` | https://cdn.midjourney.com/86714531-9637-49fc-a50e-e004f7687b6d/0_1.png | | https://cdn.midjourney.com/2e9dda33-79c7-435c-b0c8-d29d45890809/0_1.png | https://cdn.midjourney.com/75f85430-5f0a-4375-9424-98d5cbd7a0ad/0_3.png |
+| `zou-yu` | https://cdn.midjourney.com/72605015-cf12-4452-911d-4e180f46b6ef/0_3.png | | https://cdn.midjourney.com/8f0c11a5-c952-4946-aec7-392ea6eb55f5/0_1.png | https://cdn.midjourney.com/a219bb6f-6791-43db-b4c2-89d9c4066e37/0_3.png |
 | `bo` | | | | |
 | `lu-wu` | | | | |
 | `ying-zhao` | | | | |
