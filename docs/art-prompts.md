@@ -269,24 +269,24 @@ plain off-white rice paper background
 | `azure-dragon` (= STYLE_REF) | https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png | https://cdn.midjourney.com/2018dd0d-441e-47d5-b18e-47911032ec66/0_1.png | https://cdn.midjourney.com/94276159-c158-4a99-9435-ad6f1c627092/0_2.png | https://cdn.midjourney.com/24a4ce59-fb2d-4130-b5f9-e2ffc8386f49/0_2.png |
 | `white-tiger` | https://cdn.midjourney.com/115ea07e-9077-4e50-955c-706061a3baf5/0_0.png | https://cdn.midjourney.com/dbb63e05-cc0f-41b0-b124-7bd06c907909/0_3.png | https://cdn.midjourney.com/e787b18f-e47a-4e5c-8e0e-f791754f1016/0_1.png | https://cdn.midjourney.com/5911a696-7b5c-49e3-abd1-7a839ca1ef96/0_0.png |
 | `vermilion-bird` | https://cdn.midjourney.com/2aa88b1d-bd6d-4cfb-b516-b9e4746b837a/0_3.png | https://cdn.midjourney.com/f62bf3e8-4460-4565-9c72-46b43041d9cc/0_2.png | https://cdn.midjourney.com/50dd600d-41f0-488e-b07b-443b701852dd/0_2.png | https://cdn.midjourney.com/ea83e5f2-2ae1-4e2e-89d1-a4a0ef408bd4/0_1.png |
-| `black-tortoise` | | | | |
-| `ying-long` | | | | |
-| `zhu-long` | | | | |
-| `jiao-long` | | | | |
-| `hui` | | | | |
-| `kui` | | | | |
-| `feng-huang` | | | | |
-| `luan-niao` | | | | |
-| `qing-niao` | | | | |
-| `bi-fang` | | | | |
-| `zhong-ming` | | | | |
+| `black-tortoise` | https://cdn.midjourney.com/1e5384ec-a38f-4c34-ba8b-b648c5f9d1d3/0_3.png | | https://cdn.midjourney.com/c2be7999-6c94-4abf-8560-0bc0d50c613b/0_3.png | https://cdn.midjourney.com/045948a5-181d-4093-9d8e-b36abd530dab/0_0.png |
+| `ying-long` | https://cdn.midjourney.com/8f5dff9a-5545-4cac-9be7-712b0894af3c/0_0.png | | https://cdn.midjourney.com/ccd3010b-472a-46e9-b3a8-1bc564ab8d54/0_1.png | https://cdn.midjourney.com/16da3942-39ed-4521-a824-e38a36bad680/0_1.png |
+| `zhu-long` | https://cdn.midjourney.com/a8f4e55a-d6d6-4558-b5cf-94d0872eda44/0_1.png | | https://cdn.midjourney.com/4e5ff960-5815-4848-a85e-2f7c8409ed58/0_2.png | https://cdn.midjourney.com/ad6a13a6-1952-43d2-8d28-5dabac230833/0_2.png |
+| `jiao-long` | https://cdn.midjourney.com/01625e81-e466-4464-8b34-dc62936dca96/0_3.png | | https://cdn.midjourney.com/762f39d6-545c-4430-bc8a-ac07c0a8334d/0_1.png | https://cdn.midjourney.com/d4a7b2c0-884e-4e1b-9c18-d5765484f31e/0_2.png |
+| `hui` | https://cdn.midjourney.com/bb2aa215-678b-4c02-be42-7ecd2e234189/0_2.png | | https://cdn.midjourney.com/921a40f6-280c-4ea2-bafd-94e4eecee6de/0_3.png | https://cdn.midjourney.com/7714e1be-78c4-4cf2-99ad-01ae82d59b0b/0_2.png |
+| `kui` | https://cdn.midjourney.com/aede5e6e-d2c0-4132-bb65-39fee1d9956e/0_3.png | | https://cdn.midjourney.com/842cecbe-693d-4099-a45c-67356f45e30e/0_2.png | https://cdn.midjourney.com/07407128-65bc-4341-9cec-1024dc6a7bcc/0_0.png |
+| `feng-huang` | https://cdn.midjourney.com/a17ff3f7-b23c-4069-9520-324f8cf4afca/0_1.png | | https://cdn.midjourney.com/00445c03-da86-47f4-8fb9-f5481fcf061b/0_0.png | https://cdn.midjourney.com/859de1f5-5518-4ed3-8825-f55416909154/0_2.png |
+| `luan-niao` | https://cdn.midjourney.com/5befbdff-4526-4a26-98fb-4ac767541b43/0_0.png | | https://cdn.midjourney.com/87e0cc61-394f-4415-b1fa-863ecb056d51/0_1.png | https://cdn.midjourney.com/b271f299-8517-4bc7-a744-739badfbf5d9/0_2.png |
+| `qing-niao` | https://cdn.midjourney.com/cda920bf-80bb-40b5-a5ef-a3a2035d43e2/0_0.png | | https://cdn.midjourney.com/0ee0af38-2fb9-44e2-9388-70897125b400/0_0.png | https://cdn.midjourney.com/0e282e44-7d4f-4588-9c10-35244786def3/0_0.png |
+| `bi-fang` | https://cdn.midjourney.com/22e73744-ca92-44b0-a739-9df6ebd0d3f4/0_2.png | | https://cdn.midjourney.com/cbe79c55-657e-429d-8632-0ef96ec59592/0_2.png | https://cdn.midjourney.com/f371e4bc-4bd7-47f6-a463-48b7da63bca1/0_2.png |
+| `zhong-ming` | https://cdn.midjourney.com/40c652b4-aa55-4cd0-b382-f01f44669d10/0_0.png | | https://cdn.midjourney.com/f5d0b52a-e7e9-4924-9df2-6d5672d9e735/0_3.png | https://cdn.midjourney.com/3d312b95-6686-4133-b765-82de95bc59c3/0_1.png |
 | `san-zu-wu` | | | | |
-| `qilin` | | | | |
-| `pixiu` | | | | |
-| `bai-ze` | | | | |
-| `bi-xie` | | | | |
-| `tian-lu` | | | | |
-| `nine-tail-fox` | | | | |
+| `qilin` | https://cdn.midjourney.com/9033069b-248e-48ba-84c6-24de2a5e95aa/0_0.png | | https://cdn.midjourney.com/9dfa7a3d-8a57-4cba-9e10-e40417b01746/0_3.png | https://cdn.midjourney.com/7dd88097-b99c-4302-b9c7-e5b55466069e/0_2.png |
+| `pixiu` | https://cdn.midjourney.com/db1e6093-7d7a-4374-bdf8-37495a8562fc/0_1.png | | https://cdn.midjourney.com/ece0a98d-39a0-496d-83c6-ff47cf97ddb6/0_2.png | https://cdn.midjourney.com/b8d3975a-2c96-4a3e-b63f-bb61ad72a643/0_1.png |
+| `bai-ze` | https://cdn.midjourney.com/578f44de-99dd-48ea-b862-9743a3cde97a/0_1.png | | https://cdn.midjourney.com/3b097b26-e549-4251-8a95-cd71c158258d/0_0.png | https://cdn.midjourney.com/9b5cc659-8bbc-4fa0-96bf-401d510282bd/0_3.png |
+| `bi-xie` | https://cdn.midjourney.com/f375c29c-e14e-419a-8067-a55242b34e9e/0_3.png | | https://cdn.midjourney.com/5d1403c7-0853-4370-80dc-99d3cc4986de/0_3.png | https://cdn.midjourney.com/ecf233e1-c3ed-447a-a46f-964d0e1e4fa5/0_3.png |
+| `tian-lu` | https://cdn.midjourney.com/3d6afdd7-df90-4264-bf24-904ba3b1bf6e/0_2.png | | https://cdn.midjourney.com/cfb1a90b-03fe-4e66-9042-3a52fefaa539/0_0.png | https://cdn.midjourney.com/4f75eec5-b4e6-4250-83e3-a246a2c4fece/0_2.png |
+| `nine-tail-fox` | https://cdn.midjourney.com/d99436c1-3152-4453-adbf-22d7d12993de/0_3.png | | https://cdn.midjourney.com/c87f1d29-7d3f-47e5-89c5-bbc1bedf21ec/0_1.png | https://cdn.midjourney.com/8ea9d048-d66a-449b-a8c2-e40a787ed739/0_3.png |
 | `di-ting` | | | | |
 | `kai-ming` | | | | |
 | `zou-yu` | | | | |
