@@ -119,6 +119,7 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         const species = getCreature(pet.speciesId);
         return {
           petId: pet.id,
+          speciesId: pet.speciesId,
           emoji: species?.emoji ?? '❓',
           stockName: stock.name,
           pnl,
