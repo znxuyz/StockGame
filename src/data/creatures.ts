@@ -1,13 +1,14 @@
 import type { CreatureSpecies } from '@/types';
 
 /**
- * 20 隻精選神獸(10 山海經 + 10 原創)。
+ * 10 隻精選山海經神獸。
  *
  * 設計:
- *  - 山海經 10 隻按輪廓辨識度精選,每隻有獨特剪影
- *  - 原創 10 隻補強差異化(部分扣股票主題)
+ *  - 從 40 隻原列表精選 10 隻有獨特剪影的(青龍/白虎/朱雀/玄武四象 +
+ *    應龍/麒麟/九尾狐/開明獸/何羅魚/帝江)
  *  - 黑化採方案甲(原寵物變色),所以這裡不放四凶獨立種類
  *  - 美術 prompt / 視覺特徵在 scripts/gen-art-prompts.mjs 集中管理
+ *  - 之後若要擴充寵物多樣性,再考慮加原創或更多 mythology
  */
 export const CREATURES: CreatureSpecies[] = [
   // ────── 四象(4) ──────
@@ -90,78 +91,6 @@ export const CREATURES: CreatureSpecies[] = [
     category: 'spirit',
     description: '六足四翼,渾敦無面,識歌舞之神鳥。',
     emoji: '🎭'
-  },
-
-  // ────── 原創(10) ──────
-  {
-    id: 'suanpan-shou',
-    name: '算盤獸',
-    category: 'lucky',
-    description: '由八列算珠化成的小獸,木框為身、流蘇為腿,撥動之聲合於市井節律。',
-    emoji: '🧮'
-  },
-  {
-    id: 'yinzhang-ling',
-    name: '印章靈',
-    category: 'lucky',
-    description: '朱紅印章化生的精靈,底刻篆文,所至之處皆顯印記。',
-    emoji: '🪧'
-  },
-  {
-    id: 'qian-gui',
-    name: '錢龜',
-    category: 'lucky',
-    description: '殼由方孔銅錢層疊而成,每行步履皆吐財氣,富商護宅之獸。',
-    emoji: '💴'
-  },
-  {
-    id: 'bi-hu',
-    name: '筆狐',
-    category: 'beast',
-    description: '書齋之狐,身由筆觸聚成,尾即一枝毛筆,行走處留墨痕。',
-    emoji: '🖌️'
-  },
-  {
-    id: 'bianzhong-shou',
-    name: '編鐘獸',
-    category: 'beast',
-    description: '身懸數十青銅編鐘,鐘架為腿,奔走則自鳴於山谷。',
-    emoji: '🔔'
-  },
-  {
-    id: 'denglong-yu',
-    name: '燈籠魚',
-    category: 'aquatic',
-    description: '元宵節走水之魚,魚身上頂紅紙燈籠,燭光透出宛若海中小月。',
-    emoji: '🏮'
-  },
-  {
-    id: 'qi-ling',
-    name: '棋靈',
-    category: 'spirit',
-    description: '黑白圍棋子聚成之靈,半黑半白合抱而行,思敏如局中老叟。',
-    emoji: '♟️'
-  },
-  {
-    id: 'lianhua-shou',
-    name: '蓮華獸',
-    category: 'spirit',
-    description: '蓮花重瓣化身,蓮藕為腿、花粉為光,所至之處水靜不波。',
-    emoji: '🪷'
-  },
-  {
-    id: 'shan-tong',
-    name: '山童',
-    category: 'spirit',
-    description: '由石塊與松枝拼合而成的童子,山峰為冠、雲為披風,山行如御風。',
-    emoji: '⛰️'
-  },
-  {
-    id: 'tao-jing',
-    name: '桃精',
-    category: 'spirit',
-    description: '三千年蟠桃化生之精,桃花為鬃、桃葉為翅,得之者壽。',
-    emoji: '🍑'
   }
 ];
 
@@ -175,3 +104,4 @@ export function pickRandomCreature(): CreatureSpecies {
   const idx = Math.floor(Math.random() * CREATURES.length);
   return CREATURES[idx];
 }
+

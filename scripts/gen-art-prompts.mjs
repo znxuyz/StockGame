@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-// 產生 Midjourney v7 prompts for 20 隻精選神獸(10 山海經 + 10 原創)。
+// 產生 Midjourney v7 prompts for 10 隻精選山海經神獸。
 //
 // 用法:
 //   node scripts/gen-art-prompts.mjs > docs/art-prompts-todo.md
 //
 // 自動模式:讀 docs/art-prompts.md §6 表格,只輸出**現在可以跑**的 prompt。
 //   - 任何 idle 沒填 URL → 列 idle prompt(只用 sref)
-//   - 山海經 asc/corrupt 沒填 URL → 列 prompt(只用 sref,sw 200)
-//   - 原創 asc/corrupt 沒填 URL && idle 已填 → 列 prompt(sref sw 200 + oref ow 100)
-//     原創沒 idle URL 時 asc/corrupt 跳過(MJ 沒參考圖會自由發揮,跑出無關物種)
-//   - walk 沒填 URL && idle 已填 → 列 walk prompt(sref + oref)
+//   - 任何 asc/corrupt 沒填 URL → 列 prompt(只用 sref,sw 200)
+//   - walk 沒填 URL && idle 已填 → 列 walk prompt(sref + oref idle)
 // 全部填完就無輸出。每收到一批新 URL 後重跑這個腳本就會推進到下一階段。
+//
+// (歷史包袱:script 還留 original / weird / oref-on-asc-corrupt 機制,
+//  之前為原創神獸設計;原創撤掉後這些 flag 沒被觸發,留著備用。)
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -149,131 +150,9 @@ const CREATURES = [
     negative: 'face, eyes, mouth, nose, facial features, less than six legs, less than four wings',
   },
 
-  // ────── 原創 10 隻 ──────
-  // 教訓:MJ 看到 "creature with X as body" 會解讀成「creature 旁邊放 X」或
-  // 「creature 揹著 X」(而不是 X 取代身體)。要強迫融合,必須用 anatomy
-  // 直敘句:"BODY IS X","HEAD IS REPLACED BY X","no separate X"。
-  // 加上 --weird 250 讓 MJ 願意接受奇異融合(從每隻 prompt 自帶)。
-  {
-    id: 'suanpan-shou',
-    name: '算盤獸',
-    original: true,
-    visual:
-      'An original Chinese mythology beast painted in traditional ink wash style. Anatomy: ENTIRE BODY IS A LIVING WOODEN ABACUS — the wooden abacus frame with rows of sliding bamboo beads is itself the torso (no separate animal body underneath; the abacus frame is what is alive); four short red silk tassel legs sprouting directly from the bottom edge of the abacus frame; small calligraphic eyes painted on the top wooden beam; side view full body.',
-    subject: 'living abacus-bodied beast where the wooden abacus frame is the torso itself',
-    featuresGold: 'golden bamboo beads and golden silk tassels',
-    featuresDark: 'bead rows and tassels',
-    negative:
-      'human holding abacus, person, hand, animal carrying abacus, animal next to abacus, separate abacus tool',
-  },
-  {
-    id: 'yinzhang-ling',
-    name: '印章靈',
-    original: true,
-    visual:
-      'An original Chinese mythology spirit creature painted in traditional ink wash style. Anatomy: ENTIRE BODY IS A LIVING VERMILLION SEAL STAMP — a square solid red ink-stamp block with engraved Chinese seal characters carved on the bottom face is itself the torso (no separate animal body, the stamp block is what is alive); four short bold calligraphy brush stroke legs sprouting directly from the bottom of the stamp block; small expressive eyes on the top face of the stamp; side view full body.',
-    subject: 'living seal-stamp spirit where the square red stamp block is the torso itself',
-    featuresGold: 'golden seal characters and golden brush strokes',
-    featuresDark: 'seal body and brush strokes',
-    negative:
-      'person holding seal, hand pressing seal, animal carrying seal, animal next to seal',
-  },
-  {
-    id: 'qian-gui',
-    name: '錢龜',
-    original: true,
-    visual:
-      'An original Chinese mythology turtle painted in traditional ink wash style. Anatomy: SHELL IS REPLACED by a stack of square-holed Chinese copper coins (each round coin has a clearly visible square hole in the center; the coin stack IS the entire shell, no normal turtle shell pattern at all, no shell underneath the coins); small turtle head, four small legs and tail sticking out from the coin shell; a few loose coins falling behind as it walks; side view full body.',
-    subject: 'turtle whose entire shell is replaced by a stack of square-holed copper coins',
-    featuresGold: 'golden copper coins and golden shell',
-    featuresDark: 'coin shell',
-    negative:
-      'human holding coins, modern coins, paper money, coins next to turtle, normal turtle shell pattern',
-  },
-  {
-    id: 'bi-hu',
-    name: '筆狐',
-    original: true,
-    visual:
-      'An original Chinese mythology fox spirit painted in traditional ink wash style. Anatomy: BODY DRAWN FROM A FEW BOLD CALLIGRAPHY BRUSH STROKES (the fox-shaped silhouette emerges from sweeping ink strokes; the brush strokes ARE the fox body, no separate furry fox underneath); the tail IS A SINGLE CALLIGRAPHY BRUSH integrated directly into the body (wooden brush handle attaches at the rump, bristle tip points up like a tail; no separate brush hovering nearby, no person holding a brush); side view full body.',
-    subject: 'calligraphy-stroke fox whose tail is a single calligraphy brush integrated into the body',
-    featuresGold: 'golden brush strokes and golden brush-tail',
-    featuresDark: 'brush strokes and brush-tail',
-    negative:
-      'human, calligrapher, hand holding brush, fox next to brush, separate brush as accessory, brush floating beside fox',
-  },
-  {
-    id: 'bianzhong-shou',
-    name: '編鐘獸',
-    original: true,
-    visual:
-      'An original Chinese mythology beast painted in traditional ink wash style. Anatomy: ENTIRE BODY IS A LIVING WOODEN BELL-RACK — a vertical wooden bianzhong bell-rack frame with rows of small bronze ceremonial bells dangling from horizontal beams is itself the torso (no separate animal body underneath the rack; the rack frame is what is alive and walking); two thick wooden bell-stand posts as legs; small expressive head emerging directly from the top center of the rack; side view full body.',
-    subject: 'living bell-rack-bodied beast where the wooden bell-rack itself is the torso',
-    featuresGold: 'golden bronze bells and golden bell rack',
-    featuresDark: 'bells and rack',
-    negative:
-      'static bell rack, person striking bells, animal carrying bell rack on back, separate beast underneath rack, beast with rack as backpack',
-  },
-  {
-    id: 'denglong-yu',
-    name: '燈籠魚',
-    original: true,
-    visual:
-      'An original Chinese mythology fish painted in traditional ink wash style. Anatomy: HEAD IS REPLACED by a glowing red Chinese paper lantern (the lantern attaches directly where the fish head would be and IS the head; no normal fish head, no separate lantern hovering above the fish, the lantern is fused into the body at the neck); soft candle flame inside the lantern softly illuminating from within; fish-scaled body and tail with red silk tassels; side view full body, swimming pose.',
-    subject: 'fish whose head is fused with and replaced by a red Chinese paper lantern',
-    featuresGold: 'golden lantern light and golden scales',
-    featuresDark: 'scales and lantern paper',
-    negative:
-      'anglerfish, deep sea fish, person holding lantern, fish carrying lantern, lantern hovering above fish, separate lantern, fish with normal head',
-  },
-  {
-    id: 'qi-ling',
-    name: '棋靈',
-    original: true,
-    visual:
-      'An original Chinese mythology spirit painted in traditional ink wash style. Anatomy: ENTIRE BODY IS A LIVING STACK OF WEIQI (GO) STONES — the body silhouette is literally a piled tower of round black-and-white Go stones (the stones ARE the body, no separate animal body inside; vertically split half black bottom half white top, or stacked in alternating layers); small head with calligraphic eyes on top of the stack; four short legs of stacked stones; side view full body.',
-    subject: 'living stack-of-Go-stones spirit',
-    featuresGold: 'golden replacement stones across the body',
-    featuresDark: 'stones',
-    negative:
-      'human Go player, hand placing stones, chess board, western chess, person near stones, animal next to Go stones',
-  },
-  {
-    id: 'lianhua-shou',
-    name: '蓮華獸',
-    original: true,
-    visual:
-      'An original Chinese mythology beast painted in traditional ink wash style. Anatomy: ENTIRE BODY IS LAYERED LOTUS PETALS — the torso, shoulders and back are formed from overlapping pink-vermillion lotus petals (the petals ARE the body, no separate animal body underneath the petals); four lotus stem-shaped legs with stylized lotus leaves as feet; small face emerging from the central petal cluster; faint pollen halo around the body; side view full body.',
-    subject: 'living lotus-petal-bodied beast',
-    featuresGold: 'golden lotus petals and golden pollen',
-    featuresDark: 'petals and stems',
-    negative:
-      'static lotus flower in pond, plain flower without creature, animal next to lotus, beast carrying flower',
-  },
-  {
-    id: 'shan-tong',
-    name: '山童',
-    original: true,
-    visual:
-      'An original Chinese mythology spirit child painted in traditional ink wash style. Anatomy: ENTIRELY ASSEMBLED FROM STONE AND PINE — the small humanoid torso is a chunk of mountain stone, the arms are pine branches growing directly out of the stone torso, a tiny pointed mountain peak sits on top of the head as a hat, a wisp of cloud trails behind as a cape, two small stone legs (no normal human skin or clothing; the child IS the stone-and-pine assembly); side view full body.',
-    subject: 'living stone-and-pine humanoid child spirit',
-    featuresGold: 'golden stone body and golden pine branches',
-    featuresDark: 'stone and pine branches',
-    negative:
-      'adult, full-grown person, normal human, hiking person, kid wearing costume, child holding stone',
-  },
-  {
-    id: 'tao-jing',
-    name: '桃精',
-    original: true,
-    visual:
-      'An original Chinese mythology peach spirit painted in traditional ink wash style. Anatomy: ENTIRE BODY IS A LIVING PEACH FRUIT — the round pink-vermillion peach itself is the torso (no separate animal body inside the peach); peach blossom petals forming a flowing mane around the neck attached directly to the peach; peach leaves as wings spreading from the back of the peach; two slender peach-stem-like legs sprouting from the bottom of the peach fruit; small face emerging from the front of the peach; side view full body.',
-    subject: 'living peach-fruit-bodied spirit',
-    featuresGold: 'golden peach skin and golden blossom mane',
-    featuresDark: 'peach skin and blossom',
-    negative:
-      'static fruit on plate, plain peach without creature, peach in basket, fruit next to animal, animal carrying peach',
-  },
+  // ────── 原創神獸已從專案撤掉(MJ 跑出來「creature 揹著 X」而不是
+  // 「X 取代身體」,即使加 fusion 直敘 + --weird 250 仍效果不穩;先聚焦
+  // 山海經 10 隻把 sprite 接進遊戲,有需要再回來補)。 ──────
 ];
 
 const FOOTER = '--ar 1:1 --style raw --v 7';

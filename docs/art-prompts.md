@@ -154,11 +154,9 @@ plain off-white rice paper background
 
 ---
 
-## 4. 20 隻精選花名冊
+## 4. 10 隻精選花名冊
 
-從原 40 隻山海經神獸縮編到 20 隻(10 山海經 + 10 原創),強調剪影差異化。完整 prompt(visual / subject / featuresGold / featuresDark / negative)集中在 `scripts/gen-art-prompts.mjs`,執行 `node scripts/gen-art-prompts.mjs > docs/art-prompts-batch1.md` 取得可貼進 MJ 的 36 條 prompt。
-
-### 山海經 10 隻
+從原 40 隻山海經神獸精選 10 隻,每隻有獨特剪影。完整 prompt(visual / subject / featuresGold / featuresDark / negative)集中在 `scripts/gen-art-prompts.mjs`。
 
 | # | id | 中文 | 類別 | 獨特特徵(prompt 強調點) |
 |---|---|---|---|---|
@@ -173,20 +171,7 @@ plain off-white rice paper background
 | 9 | `he-luo` | 何羅魚 | 水族 | 一頭十身扇形 |
 | 10 | `di-jiang` | 帝江 | 靈體 | 無臉圓團 + 六腿 + 四翅 |
 
-### 原創 10 隻
-
-| # | id | 中文 | 類別 | 獨特特徵 | 主題連結 |
-|---|---|---|---|---|---|
-| 11 | `suanpan-shou` | 算盤獸 | 招財 | 算盤珠身 + 流蘇腿 | 股票 |
-| 12 | `yinzhang-ling` | 印章靈 | 招財 | 朱紅印章身 + 篆字底刻 | 簽約/印記 |
-| 13 | `qian-gui` | 錢龜 | 招財 | 銅錢層疊龜甲 | 錢 |
-| 14 | `bi-hu` | 筆狐 | 異獸 | 筆觸構成狐身 + 毛筆尾 | 水墨自指 |
-| 15 | `bianzhong-shou` | 編鐘獸 | 異獸 | 編鐘鐘架身軀 | 樂器 |
-| 16 | `denglong-yu` | 燈籠魚 | 水族 | 紅紙燈籠頭 + 魚身 | 節慶 |
-| 17 | `qi-ling` | 棋靈 | 靈體 | 黑白圍棋子身 | 策略 |
-| 18 | `lianhua-shou` | 蓮華獸 | 靈體 | 蓮花瓣身 + 蓮藕腿 | 花卉 |
-| 19 | `shan-tong` | 山童 | 靈體 | 石頭+松枝小人 + 山峰帽 | 山岳 |
-| 20 | `tao-jing` | 桃精 | 靈體 | 桃形身 + 桃花鬃 + 桃葉翅 | 仙桃 |
+> **原創神獸暫不採用**(MJ 即使加 anatomy 直敘 + `--weird 250` 仍跑成「creature 揹著 X」而非「X 取代身體」,效果不穩)。先把山海經 10 隻 sprite 接進遊戲,日後若要擴充寵物多樣性再回來補。
 
 ---
 
@@ -248,16 +233,6 @@ node scripts/gen-art-prompts.mjs > docs/art-prompts-todo.md
 | `kai-ming` | https://cdn.midjourney.com/86714531-9637-49fc-a50e-e004f7687b6d/0_1.png | | https://cdn.midjourney.com/2e9dda33-79c7-435c-b0c8-d29d45890809/0_1.png | https://cdn.midjourney.com/75f85430-5f0a-4375-9424-98d5cbd7a0ad/0_3.png |
 | `he-luo` | https://cdn.midjourney.com/c4ad41eb-fcb2-4a6a-a27c-90255e180eeb/0_2.png | | https://cdn.midjourney.com/3f66fdf7-1bcf-474a-bc11-6d36bead1315/0_2.png | https://cdn.midjourney.com/11ab80c0-69d0-42d2-9faa-5d9b9e63eb92/0_1.png |
 | `di-jiang` | https://cdn.midjourney.com/94401036-87b0-4c12-8494-d0ccd0acf1a2/0_1.png | | https://cdn.midjourney.com/915921dc-e53b-4d98-88ed-2fbf6164c369/0_0.png | https://cdn.midjourney.com/410b7ea4-5bdf-4b1d-896d-0a28377e1c77/0_1.png |
-| `suanpan-shou` | | | | |
-| `yinzhang-ling` | | | | |
-| `qian-gui` | | | | |
-| `bi-hu` | | | | |
-| `bianzhong-shou` | | | | |
-| `denglong-yu` | | | | |
-| `qi-ling` | | | | |
-| `lianhua-shou` | | | | |
-| `shan-tong` | | | | |
-| `tao-jing` | | | | |
 
 ---
 
