@@ -154,109 +154,66 @@ plain off-white rice paper background
 
 ---
 
-## 4. 40 隻神獸視覺描述表
+## 4. 10 隻精選花名冊
 
-順序按 `creatures.ts` 排列,**id 與檔名一致**。建議跑完一個 category(4–8 隻)就把所有產出 URL 填回這份文件,避免之後找不到。
+從原 40 隻山海經神獸精選 10 隻,每隻有獨特剪影。完整 prompt(visual / subject / featuresGold / featuresDark / negative)集中在 `scripts/gen-art-prompts.mjs`。
 
-### 四象 four-symbols
+| # | id | 中文 | 類別 | 獨特特徵(prompt 強調點) |
+|---|---|---|---|---|
+| 1 | `azure-dragon` | 青龍 | 四象 | 蛇身 + 四爪 + 鹿角 + 長鬚(STYLE_REF) |
+| 2 | `white-tiger` | 白虎 | 四象 | 雪白毛 + 粗黑墨紋條橫貫全身 |
+| 3 | `vermilion-bird` | 朱雀 | 四象 | 烈紅羽 + 拖尾火焰 |
+| 4 | `black-tortoise` | 玄武 | 四象 | 龜甲 + 盤蛇纏繞 |
+| 5 | `ying-long` | 應龍 | 龍族 | 龍身 + 羽毛翅膀(非蝙蝠翼) |
+| 6 | `qilin` | 麒麟 | 招財 | 鹿身 + 龍鱗 + 單獨角 + 火焰鬃毛 |
+| 7 | `nine-tail-fox` | 九尾狐 | 異獸 | 九條尾巴扇形展開 |
+| 8 | `kai-ming` | 開明獸 | 異獸 | 虎身 + 九顆人頭 |
+| 9 | `he-luo` | 何羅魚 | 水族 | 一頭十身扇形 |
+| 10 | `di-jiang` | 帝江 | 靈體 | 無臉圓團 + 六腿 + 四翅 |
 
-| # | id | 中文 | `{visual}`(替換進模板) |
-|---|---|---|---|
-| 1 | `azure-dragon` | 青龍 | (見 §2,跳過站) |
-| 2 | `white-tiger` | 白虎 | A majestic white tiger of Chinese mythology, bold black ink stripes flowing across snow-white fur, fierce eyes, sharp claws, side view full body |
-| 3 | `vermilion-bird` | 朱雀 | A vermillion phoenix-like sacred bird of Chinese mythology, fiery red plumage with golden highlights, long elegant tail feathers trailing flames, side view full body |
-| 4 | `black-tortoise` | 玄武 | A massive ancient black tortoise of Chinese mythology with a long serpent intertwined around its mossy patterned shell, dignified northern guardian, side view full body |
-
-### 龍族 dragon
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 5 | `ying-long` | 應龍 | A winged dragon of Chinese mythology, classical Chinese dragon body with feathered wings spread wide, four-clawed warrior posture, ancient battle aura, side view full body |
-| 6 | `zhu-long` | 燭龍 | A colossal torch dragon of Chinese mythology, immense red-scaled serpent body with a human-like face, eyes radiating bright torch light, side view full body |
-| 7 | `jiao-long` | 蛟 | A jiao water serpent dragon of Chinese mythology, slick dark-scaled serpentine body without antlers, surrounded by curling water swirls, side view full body |
-| 8 | `hui` | 虺 | A young hui pre-dragon serpent of Chinese mythology, small simple coiled snake form, subtle thin scales, plain humble pose, side view full body |
-| 9 | `kui` | 夔 | A kui thunder beast of Chinese mythology, one-legged ox-like beast with single horn, body crackling with arcing lightning, drum-skin texture on torso, side view full body |
-
-### 鳥族 bird
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 10 | `feng-huang` | 鳳凰 | A radiant phoenix of Chinese mythology, five-color plumage rendered in ink black + vermillion red + muted gold + sage green + ivory, long tail feathers like rising flames, side view full body |
-| 11 | `luan-niao` | 鸞鳥 | A luan auspicious bird of Chinese mythology, peacock-like elegant body, harmonious graceful posture, ornate tail feathers, side view full body |
-| 12 | `qing-niao` | 青鳥 | A small swift azure-blue messenger bird of Chinese mythology, alert graceful pose, small scroll tied to leg, side view full body |
-| 13 | `bi-fang` | 畢方 | A bifang fire crane of Chinese mythology, one-legged crane body with red ink markings, small flames trailing behind wings, side view full body |
-| 14 | `zhong-ming` | 重明鳥 | A zhongming twin-pupil bird of Chinese mythology, large eagle-like body with distinctive double-pupil eyes, vigilant proud pose, side view full body |
-| 15 | `san-zu-wu` | 三足烏 | A sanzuwu three-legged crow of Chinese mythology, jet-black ink crow with three legs, golden sun disc emblem glowing behind, side view full body |
-
-### 招財 lucky
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 16 | `qilin` | 麒麟 | A qilin of Chinese mythology, deer-like body covered in dragon scales, single antler, fire mane along the neck, peaceful sage aura, side view full body |
-| 17 | `pixiu` | 貔貅 | A pixiu winged lion-beast of Chinese mythology, fierce muscular body, gaping mouth, small wings, scattered ancient gold coins around its feet, side view full body |
-| 18 | `bai-ze` | 白澤 | A baize wisdom beast of Chinese mythology, white lion-like body with multiple eyes along its torso, contemplative wise pose, ancient scrolls floating nearby, side view full body |
-| 19 | `bi-xie` | 辟邪 | A bixie female pixiu variant of Chinese mythology, similar to pixiu but more refined and elegant, two small horns, protective stance, side view full body |
-| 20 | `tian-lu` | 天祿 | A tianlu male pixiu variant of Chinese mythology, single horn, regal commanding stance, golden ink highlights, side view full body |
-
-### 異獸 beast(含 飛廉/角端/朱厭/巴蛇 等)
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 21 | `nine-tail-fox` | 九尾狐 | A nine-tailed fox of Chinese mythology, graceful slender fox body with nine flowing fanned-out tails, golden-red ink wash, mysterious gaze, side view full body |
-| 22 | `di-ting` | 諦聽 | A diting hybrid beast of Chinese mythology, lying low to ground listening, dragon-like head, ox ears, tiger paws, lion mane, scaled body, side view full body |
-| 23 | `kai-ming` | 開明獸 | A kaiming nine-headed guardian of Chinese mythology, tiger body with nine human heads emerging from neck, fierce gate-keeper stance, side view full body |
-| 24 | `zou-yu` | 騶虞 | A zouyu benevolent tiger of Chinese mythology, white tiger body with long flowing black ink stripes, gentle calm expression despite fierce form, side view full body |
-| 25 | `bo` | 駁 | A bo white horse-beast of Chinese mythology, white horse-like body with saw-shaped teeth visible, fierce mane, predator's stance, side view full body |
-| 26 | `lu-wu` | 陸吾 | A luwu mountain god of Chinese mythology, tiger body with nine swishing tails, human face on tiger head, tiger claws, mountain-deity aura, side view full body |
-| 27 | `ying-zhao` | 英招 | A yingzhao patrol deity of Chinese mythology, horse body with human face, tiger stripes on flank, large bird wings spread, ready to soar, side view full body |
-| 28 | `ru-shou` | 蓐收 | A rushou autumn metal god of Chinese mythology, fierce warrior figure with a snake coiled on left ear, riding a swirling cloud, side view full body |
-| 29 | `fei-lian` | 飛廉 | A feilian wind deity of Chinese mythology, deer-like body with sparrow head and snake tail, wind currents trailing from body in motion, side view full body |
-| 30 | `jiao-duan` | 角端 | A jiaoduan single-horned beast of Chinese mythology, swift rhino-like body with one straight horn, far-traveling pose mid-stride, side view full body |
-| 31 | `zhu-yan` | 朱厭 | A zhuyan ominous beast of Chinese mythology, small-headed white-furred beast with bright red feet, unsettling staring gaze, ominous war-omen aura, side view full body |
-
-### 水族 aquatic
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 32 | `kun` | 鯤 | A kun colossal mythical fish of Chinese mythology, mountain-sized deep-sea fish body, mid-transformation with bird-like wings beginning to emerge from sides, side view full body |
-| 33 | `heng-gong` | 橫公魚 | A henggong fish of Chinese mythology, fish body in mid-transformation with humanoid features partially emerging, mysterious dual-form, side view full body |
-| 34 | `wen-yao` | 文鰩魚 | A wenyao flying fish of Chinese mythology, fish body with elegant bird wings, leaping out of water mid-flight, glittering ink-stroke scales, side view full body |
-| 35 | `he-luo` | 何羅魚 | A heluo fish of Chinese mythology, surreal one-headed fish with ten splayed bodies fanning out from a single head, hydra-like, side view full body |
-| 36 | `lu` | 鯥 | A lu hybrid fish of Chinese mythology, fish body with snake tail, small bird wings, ox-like ribs visible, surreal chimera, side view full body |
-| 37 | `ba-she` | 巴蛇 | A bashe colossal serpent of Chinese mythology, immense dark snake body with a slight midriff bulge (having swallowed an elephant), intimidating coiled stance, side view full body |
-
-### 靈體 spirit
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 38 | `di-jiang` | 帝江 | A dijiang formless deity of Chinese mythology, faceless round blob-like body with six legs and four wings, abstract dancing posture, side view full body |
-| 39 | `qi-tu` | 鵸鵌 | A qitu surreal bird of Chinese mythology, three-headed bird with six tails fanning symmetrically, balanced ornamental pose, side view full body |
-| 40 | `zhi` | 彘 | A zhi mountain beast of Chinese mythology, tiger body with a human face, fierce stance on a cloud-wreathed peak, storm-bringing aura, side view full body |
+> **原創神獸暫不採用**(MJ 即使加 anatomy 直敘 + `--weird 250` 仍跑成「creature 揹著 X」而非「X 取代身體」,效果不穩)。先把山海經 10 隻 sprite 接進遊戲,日後若要擴充寵物多樣性再回來補。
 
 ---
 
 ## 5. 推薦執行順序
 
-### Phase 1:Anchor(第 1 天,當天搞定)
-1. 跑 §2 青龍站,Fast Mode 反覆試到滿意 → URL 存成 STYLE_REF
-2. 用 §3.2/3.3/3.4 模板跑青龍的「走 / 進化 / 黑化」(`[CHAR_REF]` = 青龍站 URL)
-3. 看青龍 4 個動作擺一起風格是不是統一,**不統一就回 step 1 改 anchor**
+### Phase 1:Anchor(已完成)
+青龍 4 動作完成,STYLE_REF 已固定:
+```
+https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png
+```
 
-### Phase 2:批量(第 2–5 天,Slow Mode 排隊跑)
-照 §4 表格從上到下,每隻先跑「站」,記 URL 當該隻的 CHAR_REF,再跑該隻的走 / 進化 / 黑化。
-- 一隻 = 4 張 prompt = 16 個 4-grid variants(MJ 一次出 4 張)
-- 40 隻 × 4 動作 = 160 prompts ≈ 640 張變體裡面挑 160 張用
-- **不要追求完美**,每組 4 變體中有 1 張能用就採用
+### Phase 2(進行中):跑剩下的 prompt — 自動模式
 
-### Phase 3:後續美術(寵物完成再回頭談)
-- PWA app icon(取代目前 favicon.svg 占位)
-- 地圖背景(沙漠 → 水墨山水)
-- 地圖裝飾物(松 / 石 / 雲,取代仙人掌 emoji)
-- 境界光環圈(目前是純色 ring,改水墨筆刷圈)
-- Modal / 按鈕 / 卡片框(古紙 / 印章風)
-- 50 個成就獎章圖示
+每次都跑同一個指令,自動算出**現在能跑什麼**:
 
-這些等寵物 sprite 全部就位、接進遊戲確認可行後再來寫 prompt,避免方向錯了重做。
+```bash
+node scripts/gen-art-prompts.mjs > docs/art-prompts-todo.md
+```
+
+腳本讀 §6 表格、按以下規則展開 prompt:
+
+| 條件 | 動作 |
+|---|---|
+| idle 沒填 | 列 idle prompt(只用 sref) |
+| 山海經 asc/corrupt 沒填 | 列 prompt(只 sref,sw 200) |
+| **原創** asc/corrupt 沒填 + idle 已填 | 列 prompt(sref sw 200 **+ oref idle ow 100**) |
+| **原創** asc/corrupt 沒填 + idle **未填** | 跳過(MJ 沒參考圖會跑出無關物種,等 idle 先) |
+| walk 沒填 + idle 已填 | 列 walk prompt(sref + oref) |
+
+**為什麼原創需要 oref**:MJ 沒看過「會走路的算盤」這種概念,光靠文字描述會把 asc/corrupt 跑成一般四腳獸。idle 一旦完成、變成 MJ 看得到的「該獸長相」,後面 asc/corrupt/walk 就會以它為形狀基準。
+
+收到新 URL → 我 commit 進 §6 → 重跑這個腳本 → 進入下一波。全部填完腳本會印「所有 prompt 都跑完了 ✓」。
+
+### Phase 4:Sprite 整合
+- 80 張原圖到齊(20 × 4 動作)後,寫 background removal + atlas 打包腳本
+- 接到 `src/game/petSprite.ts`
+- 對 idle / walk frame 套 §9 的類別色 tint(差異化策略 C)
+
+### Phase 5:後續美術(sprite 接好再做)
+- PWA app icon、地圖背景、地圖裝飾(松 / 石 / 雲)、境界光環圈、Modal / 按鈕 / 卡片框、成就獎章
+
+> **不追求完美**:每組 4 變體 MJ 出來,有 1 張能用就採用,別重 roll。
 
 ---
 
@@ -267,45 +224,15 @@ plain off-white rice paper background
 | id | 站 (idle) | 走 (walk) | 進化 (ascended) | 黑化 (corrupted) |
 |---|---|---|---|---|
 | `azure-dragon` (= STYLE_REF) | https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png | https://cdn.midjourney.com/2018dd0d-441e-47d5-b18e-47911032ec66/0_1.png | https://cdn.midjourney.com/94276159-c158-4a99-9435-ad6f1c627092/0_2.png | https://cdn.midjourney.com/24a4ce59-fb2d-4130-b5f9-e2ffc8386f49/0_2.png |
-| `white-tiger` | | | | |
-| `vermilion-bird` | | | | |
-| `black-tortoise` | | | | |
-| `ying-long` | | | | |
-| `zhu-long` | | | | |
-| `jiao-long` | | | | |
-| `hui` | | | | |
-| `kui` | | | | |
-| `feng-huang` | | | | |
-| `luan-niao` | | | | |
-| `qing-niao` | | | | |
-| `bi-fang` | | | | |
-| `zhong-ming` | | | | |
-| `san-zu-wu` | | | | |
-| `qilin` | | | | |
-| `pixiu` | | | | |
-| `bai-ze` | | | | |
-| `bi-xie` | | | | |
-| `tian-lu` | | | | |
-| `nine-tail-fox` | | | | |
-| `di-ting` | | | | |
-| `kai-ming` | | | | |
-| `zou-yu` | | | | |
-| `bo` | | | | |
-| `lu-wu` | | | | |
-| `ying-zhao` | | | | |
-| `ru-shou` | | | | |
-| `fei-lian` | | | | |
-| `jiao-duan` | | | | |
-| `zhu-yan` | | | | |
-| `kun` | | | | |
-| `heng-gong` | | | | |
-| `wen-yao` | | | | |
-| `he-luo` | | | | |
-| `lu` | | | | |
-| `ba-she` | | | | |
-| `di-jiang` | | | | |
-| `qi-tu` | | | | |
-| `zhi` | | | | |
+| `white-tiger` | https://cdn.midjourney.com/115ea07e-9077-4e50-955c-706061a3baf5/0_0.png | https://cdn.midjourney.com/dbb63e05-cc0f-41b0-b124-7bd06c907909/0_3.png | https://cdn.midjourney.com/e787b18f-e47a-4e5c-8e0e-f791754f1016/0_1.png | https://cdn.midjourney.com/5911a696-7b5c-49e3-abd1-7a839ca1ef96/0_0.png |
+| `vermilion-bird` | https://cdn.midjourney.com/2aa88b1d-bd6d-4cfb-b516-b9e4746b837a/0_3.png | https://cdn.midjourney.com/f62bf3e8-4460-4565-9c72-46b43041d9cc/0_2.png | https://cdn.midjourney.com/50dd600d-41f0-488e-b07b-443b701852dd/0_2.png | https://cdn.midjourney.com/ea83e5f2-2ae1-4e2e-89d1-a4a0ef408bd4/0_1.png |
+| `black-tortoise` | https://cdn.midjourney.com/1e5384ec-a38f-4c34-ba8b-b648c5f9d1d3/0_3.png | | https://cdn.midjourney.com/c2be7999-6c94-4abf-8560-0bc0d50c613b/0_3.png | https://cdn.midjourney.com/045948a5-181d-4093-9d8e-b36abd530dab/0_0.png |
+| `ying-long` | https://cdn.midjourney.com/8f5dff9a-5545-4cac-9be7-712b0894af3c/0_0.png | | https://cdn.midjourney.com/ccd3010b-472a-46e9-b3a8-1bc564ab8d54/0_1.png | https://cdn.midjourney.com/16da3942-39ed-4521-a824-e38a36bad680/0_1.png |
+| `qilin` | https://cdn.midjourney.com/9033069b-248e-48ba-84c6-24de2a5e95aa/0_0.png | | https://cdn.midjourney.com/9dfa7a3d-8a57-4cba-9e10-e40417b01746/0_3.png | https://cdn.midjourney.com/7dd88097-b99c-4302-b9c7-e5b55466069e/0_2.png |
+| `nine-tail-fox` | https://cdn.midjourney.com/d99436c1-3152-4453-adbf-22d7d12993de/0_3.png | | https://cdn.midjourney.com/c87f1d29-7d3f-47e5-89c5-bbc1bedf21ec/0_1.png | https://cdn.midjourney.com/8ea9d048-d66a-449b-a8c2-e40a787ed739/0_3.png |
+| `kai-ming` | https://cdn.midjourney.com/86714531-9637-49fc-a50e-e004f7687b6d/0_1.png | | https://cdn.midjourney.com/2e9dda33-79c7-435c-b0c8-d29d45890809/0_1.png | https://cdn.midjourney.com/75f85430-5f0a-4375-9424-98d5cbd7a0ad/0_3.png |
+| `he-luo` | https://cdn.midjourney.com/c4ad41eb-fcb2-4a6a-a27c-90255e180eeb/0_2.png | | https://cdn.midjourney.com/3f66fdf7-1bcf-474a-bc11-6d36bead1315/0_2.png | https://cdn.midjourney.com/11ab80c0-69d0-42d2-9faa-5d9b9e63eb92/0_1.png |
+| `di-jiang` | https://cdn.midjourney.com/94401036-87b0-4c12-8494-d0ccd0acf1a2/0_1.png | | https://cdn.midjourney.com/915921dc-e53b-4d98-88ed-2fbf6164c369/0_0.png | https://cdn.midjourney.com/410b7ea4-5bdf-4b1d-896d-0a28377e1c77/0_1.png |
 
 ---
 
@@ -340,3 +267,75 @@ white-tiger__idle.png
 - **檢查 reference 欄位**:送出前確認 Style References + Omni Reference 都有縮圖,Image Prompts 欄是**空**的(若有 URL 塞錯,點縮圖右上 X 移除)
 - **背景**:prompt 已寫 plain off-white rice paper,**不要**加 white background / transparent background(MJ 對 transparent 支援不穩,我們用後製去背)
 - **Fast vs Relax**:Standard plan 有 15 fast hours/月,160 prompts 全用 Fast 約 2.7 hours,綽綽有餘;Relax 卡住就直接切 Fast,別硬等
+
+---
+
+## 9. Sprite 整合期備忘 — 類別後製色調(差異化策略 A+C)
+
+水墨統一風格 + MJ 收斂效應導致「不同神獸看起來太像」(尤其同類別內部:四腳獸群、龍蛇群、鳥群)。**生成階段不修**(會破壞風格一致性),改在 sprite 接進遊戲時做後製色調 tint,放大「不同類別」的視覺記憶。
+
+打 atlas / 接 `petSprite.ts` 那步要記得:
+
+- 依 `creatures.ts` 的 `category` 加極淡 hue tint(透明度 5–10%,不能蓋掉墨色):
+  - `four-symbols` → 不加(它們本來就是四個顏色錨點)
+  - `dragon` → 微青(`#0aa5b5` 5%)
+  - `bird` → 微暖紅(`#c43a2c` 5%)
+  - `lucky` → 微金(`#c89a3c` 5%)
+  - `beast` → 微土黃(`#9c7a3a` 5%)
+  - `aquatic` → 微藍(`#3a6fa8` 8%)
+  - `spirit` → 微紫(`#7a4a9c` 8%)
+- ascended frame **不加 tint**(已是金白,不要污染)
+- corrupted frame **不加 tint**(已是黑紅,不要污染)
+- 只 tint idle / walk 兩個 frame
+
+實作可以是 canvas `globalCompositeOperation = 'multiply'` + 全圖填單色,或在 PIXI/Phaser shader 裡做。等 sprite 接進來那時再寫。
+
+策略總綱(對應對話中討論的選項):
+- **A 接受**:遊戲內有中文名 + 圖鑑 + 進化階,玩家不會擺一起逐張比對;不為了完美主義燒週末
+- **C 後製類別色調**:零成本拉開類別記憶(本節)
+- B(個別重做 prompt)目前不採用,除非有具體幾隻看不下去再針對性處理
+
+---
+
+## 10. Sprite 下載 + 整合(本機操作)
+
+§6 表格的 cdn.midjourney.com URL **必須在本機(你的電腦)下載並 commit 進 repo**,Phaser 才有圖可載。沙盒 / CI 環境連 MJ CDN 會 403。
+
+### 一鍵下載
+
+```bash
+node scripts/download-sprites.mjs
+```
+
+腳本會:
+- 讀 §6 表格的 idle / ascended / corrupted 三欄(walk 不下載,MVP 不做走路動畫)
+- 下載原圖、用 sharp 縮成 256×256 PNG
+- 存到 `public/sprites/<id>__<frame>.png`
+- 已存在的檔案跳過(idempotent)。要全部覆蓋加 `--force`
+
+### 確認 + commit
+
+```bash
+ls public/sprites/   # 預期 30 張(10 隻 × 3 frame)
+git add public/sprites/
+git commit -m "art: add 10 mythology pet sprites"
+git push
+```
+
+### 整合落地點
+
+- `src/game/scene.ts::WorldScene.preload()` — 載入 30 個 texture(`pet:<id>:<frame>`)
+- `src/game/petSprite.ts::selectFrame()` — 依 tier + isCorrupted 選 frame
+  - `cursed1/2/3` → corrupted
+  - `god/saint/celestial` → ascended
+  - 其餘 → idle
+- 場景背景 `RICE_PAPER_BG = '#efe6cf'` 配合 sprite 米紙底,降低邊界感
+- **Sprite 載不到 → 自動 fallback 用 emoji**(舊行為保留,所以 Phaser 啟動就算 30 張全缺也不會炸)
+
+### Walk frame 之後想補
+
+如果之後想做走路動畫:
+- `docs/art-prompts.md` §6 walk 欄填上 7 隻仍缺 walk 的 URL(青龍/白虎/朱雀已有)
+- `node scripts/gen-art-prompts.mjs > docs/art-prompts-todo.md` 算還可跑哪些
+- 跑完 walk 後改 `download-sprites.mjs` 把 walk 也納入下載
+- 改 `petSprite.ts` step() 在移動時切到 walk frame

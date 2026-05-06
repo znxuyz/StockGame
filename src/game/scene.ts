@@ -1,14 +1,17 @@
 import Phaser from 'phaser';
-import { PetSprite, type PetSpriteData } from './petSprite';
+import { PetSprite, spriteKey, type PetSpriteData, type PetFrame } from './petSprite';
+import { CREATURES } from '@/data/creatures';
 
 /**
- * 沙漠世界場景。
+ * 水墨世界場景。
  *
  * 設計：
  *  - 世界範圍 1500x1500，攝影機可拖曳
  *  - 寵物以「id 雜湊 → 領地中心」決定位置，避免重疊
  *  - 點擊寵物 emit 'pet-click'（React 端訂閱開個股資訊）
  *  - 沙漠裝飾：仙人掌、石頭，靜態裝飾不互動
+ *  - preload 載入所有寵物 sprite(idle/asc/corrupt 三 frame),
+ *    public/sprites/ 缺檔的話 PetSprite 會 fallback 用 emoji
  *
  * 為什麼用 Phaser：
  *  - 寵物動畫 / 位移用 Phaser scene loop 比 React rerender 順
@@ -19,6 +22,10 @@ import { PetSprite, type PetSpriteData } from './petSprite';
 export const WORLD_SIZE = 1500;
 const GRID_CELL = 220; // 每個寵物的「巢穴」格子大小
 const COLS = Math.floor(WORLD_SIZE / GRID_CELL);
+const PET_FRAMES: PetFrame[] = ['idle', 'ascended', 'corrupted'];
+
+/** 場景底色:暖米紙色,讓寵物 sprite 自帶的米紙底不會跟場景出現顯著邊界 */
+const RICE_PAPER_BG = '#efe6cf';
 
 export class WorldScene extends Phaser.Scene {
   private sprites: Map<string, PetSprite> = new Map();
@@ -33,8 +40,25 @@ export class WorldScene extends Phaser.Scene {
     super('WorldScene');
   }
 
+  preload() {
+    // 對 10 隻神獸 × 3 frame 全部嘗試載入。檔案不在會 emit error event,
+    // PetSprite 會偵測 textures.exists 為 false 時自動 fallback 用 emoji,
+    // 所以這邊讓錯誤靜默(只 console.warn),避免整個 scene 卡住。
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      console.warn(`[WorldScene] sprite 載入失敗,fallback emoji:${file.key}`);
+    });
+
+    for (const c of CREATURES) {
+      for (const frame of PET_FRAMES) {
+        const key = spriteKey(c.id, frame);
+        const path = `${import.meta.env.BASE_URL ?? '/'}sprites/${c.id}__${frame}.png`;
+        this.load.image(key, path);
+      }
+    }
+  }
+
   create() {
-    this.cameras.main.setBackgroundColor('#f5deb3');
+    this.cameras.main.setBackgroundColor(RICE_PAPER_BG);
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
     // 起始置中
     this.cameras.main.scrollX = (WORLD_SIZE - this.cameras.main.width) / 2;
