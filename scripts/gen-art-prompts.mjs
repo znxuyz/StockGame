@@ -154,11 +154,15 @@ const CREATURES = [
   {
     id: 'san-zu-wu',
     name: '三足烏',
+    // MJ 訓練資料壓倒性都是兩腳鳥,prompt 必須狂強調三腳 + 用 --no 排除,
+    // 不然 4 變體可能全部出兩腳。
     visual:
-      'A sanzuwu three-legged crow of Chinese mythology, jet-black ink crow with three legs, golden sun disc emblem glowing behind, side view full body',
-    subject: 'sanzuwu three-legged crow of Chinese mythology',
+      'A sanzuwu three-legged crow of Chinese mythology, jet-black ink raven body with anatomically THREE legs visible (one extra middle leg between the standard two), all three legs clearly drawn standing on the ground in tripod stance, distinct gap between each leg, golden sun disc emblem glowing radiant behind, side view full body',
+    subject:
+      'sanzuwu three-legged crow of Chinese mythology with three legs in tripod stance (anatomically THREE legs, not two)',
     featuresGold: 'golden plumage with luminous golden sun disc',
     featuresDark: 'feathers',
+    negative: 'two legs, two-legged bird, normal crow anatomy',
   },
   // ── 招財 lucky
   {
@@ -393,11 +397,15 @@ const CREATURES = [
 
 const FOOTER = '--ar 1:1 --style raw --v 7';
 
+function negFlag(c) {
+  return c.negative ? ` --no ${c.negative}` : '';
+}
+
 function idlePrompt(c) {
   return (
     `${c.visual}, calm static pose centered on canvas, side view full body, ` +
     `quiet contemplative aura. ${STYLE_BLOCK}\n` +
-    `${FOOTER} --sref ${STYLE_REF} --sw 100`
+    `${FOOTER} --sref ${STYLE_REF} --sw 100${negFlag(c)}`
   );
 }
 
@@ -409,7 +417,7 @@ function ascendedPrompt(c) {
     `calm transcendent regal pose, subtle vermillion and gold mandorla halo behind ` +
     `without obscuring the body, plain clean uncluttered composition, no smoke ` +
     `no clouds covering the body. ${STYLE_BLOCK_GOLD}\n` +
-    `${FOOTER} --sref ${STYLE_REF} --sw 200`
+    `${FOOTER} --sref ${STYLE_REF} --sw 200${negFlag(c)}`
   );
 }
 
@@ -421,7 +429,7 @@ function corruptedPrompt(c) {
     `body clearly visible centered side view, sinister hunched aggressive ` +
     `predatory stance, dark black body color dominant throughout, plain clean ` +
     `uncluttered composition, no smoke no miasma covering the body. ${STYLE_BLOCK_DARK}\n` +
-    `${FOOTER} --sref ${STYLE_REF} --sw 200`
+    `${FOOTER} --sref ${STYLE_REF} --sw 200${negFlag(c)}`
   );
 }
 
@@ -429,7 +437,7 @@ function walkPrompt(c, charRef) {
   return (
     `${c.visual}, walking pose mid-stride, body facing right, dynamic balance ` +
     `with one limb lifted, sense of movement. ${STYLE_BLOCK}\n` +
-    `${FOOTER} --sref ${STYLE_REF} --sw 100 --oref ${charRef} --ow 100`
+    `${FOOTER} --sref ${STYLE_REF} --sw 100 --oref ${charRef} --ow 100${negFlag(c)}`
   );
 }
 

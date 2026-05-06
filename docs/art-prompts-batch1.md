@@ -308,22 +308,22 @@ A corrupted demonic zhongming twin-pupil eagle-like bird of Chinese mythology, b
 ### idle
 
 ```
-A sanzuwu three-legged crow of Chinese mythology, jet-black ink crow with three legs, golden sun disc emblem glowing behind, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
+A sanzuwu three-legged crow of Chinese mythology, jet-black ink raven body with anatomically THREE legs visible (one extra middle leg between the standard two), all three legs clearly drawn standing on the ground in tripod stance, distinct gap between each leg, golden sun disc emblem glowing radiant behind, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no two legs, two-legged bird, normal crow anatomy
 ```
 
 ### ascended
 
 ```
-A divine celestial sanzuwu three-legged crow of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage with luminous golden sun disc glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A divine celestial sanzuwu three-legged crow of Chinese mythology with three legs in tripod stance (anatomically THREE legs, not two) ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage with luminous golden sun disc glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no two legs, two-legged bird, normal crow anatomy
 ```
 
 ### corrupted
 
 ```
-A corrupted demonic sanzuwu three-legged crow of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A corrupted demonic sanzuwu three-legged crow of Chinese mythology with three legs in tripod stance (anatomically THREE legs, not two), body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no two legs, two-legged bird, normal crow anatomy
 ```
 
 ---
