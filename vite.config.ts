@@ -6,7 +6,7 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
-    includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+    includeAssets: ['favicon.svg'],
     manifest: {
       name: '山海經股票養成',
       short_name: '神獸股市',
@@ -16,22 +16,14 @@ export default defineConfig({
       display: 'standalone',
       orientation: 'portrait',
       lang: 'zh-Hant',
+      // 用 SVG（any 尺寸 + maskable），原本指向的 icon-192.png / icon-512.png
+      // 不在 repo 裡會 404；換成既有的 favicon.svg 才不會壞 manifest。
       icons: [
         {
-          src: 'icons/icon-192.png',
-          sizes: '192x192',
-          type: 'image/png'
-        },
-        {
-          src: 'icons/icon-512.png',
-          sizes: '512x512',
-          type: 'image/png'
-        },
-        {
-          src: 'icons/icon-512-maskable.png',
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'maskable'
+          src: 'favicon.svg',
+          sizes: 'any',
+          type: 'image/svg+xml',
+          purpose: 'any maskable'
         }
       ]
     },
