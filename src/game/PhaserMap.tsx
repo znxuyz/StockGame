@@ -23,6 +23,29 @@ interface PhaserMapProps {
  *  - holdings/pets/prices 任一變動就 syncPets() 推到 scene
  *  - scene 點擊事件透過 ref 轉成 React props.onPetClick
  */
+
+/**
+ * 等到 scene.create() 跑完、可以安全呼叫 syncPets / setClickHandler 才執行 cb。
+ *
+ * 重點：剛 new Phaser.Game() 完，scene.scene / scene.events 還是 undefined，
+ * 要等 game READY → SceneManager.bootQueue → sys.init 把 plugin 注入完才會有。
+ * 直接讀 scene.scene.isActive() 會炸 "Cannot read properties of undefined (reading 'isActive')"。
+ */
+function waitForSceneReady(
+  game: Phaser.Game,
+  scene: WorldScene,
+  cb: () => void
+): void {
+  const onCreate = () => cb();
+  const attach = () => {
+    // scene.scene 已 inject，可以安全檢查 isActive
+    if (scene.scene.isActive()) cb();
+    else scene.events.once(Phaser.Scenes.Events.CREATE, onCreate);
+  };
+  if (game.isBooted) attach();
+  else game.events.once(Phaser.Core.Events.READY, attach);
+}
+
 export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -52,12 +75,12 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
     });
     gameRef.current = game;
 
-    // 場景啟動完成後設 click handler（scene.create 是 async-like）
+    // scene.events / scene.scene 由 SceneManager.bootQueue 在 game READY 後注入；
+    // 在 bootQueue 跑之前直接讀 scene.scene.isActive() 會炸 undefined。
     const setHandler = () => {
       scene.setClickHandler((id) => onPetClickRef.current(id));
     };
-    if (scene.scene.isActive()) setHandler();
-    else scene.events.once(Phaser.Scenes.Events.CREATE, setHandler);
+    waitForSceneReady(game, scene, setHandler);
 
     return () => {
       sceneRef.current = null;
@@ -73,7 +96,9 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
   const prices = useLiveQuery(() => db.prices.toArray(), []);
 
   useEffect(() => {
-    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+    const game = gameRef.current;
+    if (!scene || !game) return;
     if (!holdings || !pets || !stocks) return;
 
     const stockMap = new Map(stocks.map((s) => [s.code, s]));
@@ -101,17 +126,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
       })
       .filter((x): x is PetSpriteData => x !== null);
 
-    // sceneRef.current.scene.isActive 在 scene.create 之前可能 false，要等
-    const trySync = () => {
-      const scene = sceneRef.current;
-      if (!scene) return;
-      if (scene.scene.isActive()) {
-        scene.syncPets(data);
-      } else {
-        scene.events.once(Phaser.Scenes.Events.CREATE, () => scene.syncPets(data));
-      }
-    };
-    trySync();
+    // scene.scene / scene.events 在 game READY 後才存在；create() 後 isActive() 才為 true
+    waitForSceneReady(game, scene, () => scene.syncPets(data));
   }, [holdings, pets, stocks, prices]);
 
   const isEmpty = (holdings ?? []).length === 0;
