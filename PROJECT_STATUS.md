@@ -2,7 +2,9 @@
 
 > 山海經股票養成（StockGame）目前狀態總覽。所有數字、門檻、欄位皆實際反映 `main` 分支的程式碼，不是泛泛說明。
 
-最後更新對應 commit：`5ed38a2`（Records page 完成；MVP 8 個 commit 都已合併到 main）。
+最後更新對應 commit：`d78730f`（PhaserMap scene boot race 修復 + PWA manifest icons 修復；PR #4 squash merged 到 main）。
+
+部署：https://stockgame-692.pages.dev（Cloudflare Pages，Production = `main` branch，自動部署）。
 
 ---
 
@@ -19,6 +21,7 @@
 | 50 個成就（7 大類） | ✅ |
 | Phaser 沙漠地圖、寵物隨機漫步、可拖曳鏡頭 | ✅ |
 | PWA（可加桌面變 App）、本機儲存 | ✅ |
+| Cloudflare Pages 部署（含 mis API 反向代理 Function） | ✅ 已上線 `stockgame-692.pages.dev` |
 | 自動排程更新股價 | ❌ 目前只有手動 🔄 按鈕 |
 | 大盤對比（0050 / 加權指數） | ❌ |
 | 雲端同步 / 帳號 / 社群 | ❌（依使用者決議「先單機」） |
@@ -344,7 +347,9 @@ cursed3     0x111111
 
 ### A. 上線必要
 
-- [ ] **部署到 Cloudflare Pages**（已寫好 `functions/api/mis/[[path]].ts`，連 GitHub repo 即可）
+- [x] **部署到 Cloudflare Pages**（`stockgame-692.pages.dev`，main 自動部署）
+- [x] 修 PhaserMap scene boot race（讀 `scene.scene.isActive()` 在 SceneManager 注入 plugin 前會炸 undefined；改用 `game.scene.isBooted` 判斷，PR #4）
+- [x] 修 PWA manifest icons 404（改用既有 `favicon.svg`，加現代 `mobile-web-app-capable` meta）
 - [ ] 第一次部署後實機測試：抓 2330 / 0050 / 5269（上市/ETF/上櫃各一檔）
 - [ ] 設置自訂 domain（可選，免費 `*.pages.dev` 就夠）
 
@@ -363,13 +368,16 @@ cursed3     0x111111
 - [ ] XIRR 在大筆現金注入日的修正：現金注入不算「新增本金」就好，再評估
 - [ ] 國定假日表 `src/data/holidays.json` + 假日不嘗試抓盤中
 
-### D. 美術 / 動畫（中期）
+### D. 美術 / 動畫（**下一步重點**）
+
+目前所有寵物用 emoji 占位、地圖只有 emoji 裝飾物。導入正式美術後，遊戲質感會跳級。
 
 - [ ] 神獸 sprite sheet（40 隻 × 走 / 站 / 進化動畫；可考慮 AI 生成 + 後製成像素風）
-- [ ] 沙漠地圖背景圖（替換目前 SVG decoration）
-- [ ] 進化「渡劫」全螢幕動畫
-- [ ] 黑化動畫（黑霧、紅眼）
+- [ ] 沙漠地圖背景圖（替換目前 emoji decoration、可分區域：沙丘 / 綠洲 / 廢墟）
+- [ ] 進化「渡劫」全螢幕動畫（雷光、光柱、變身光效）
+- [ ] 黑化動畫（黑霧、紅眼、震動）
 - [ ] 圖鑑 modal 的格子改成卡片翻面 / 收集進度動畫
+- [ ] 真正的 PWA app icon（取代現在的 `favicon.svg` 占位）
 
 ### E. 雲端 / 社群（長期，依使用者「先單機」決議延後）
 

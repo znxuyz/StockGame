@@ -40,6 +40,13 @@ npm run preview      # 預覽 build
 npm run typecheck    # 型別檢查
 ```
 
-## 開發分支
+## 部署
 
-所有變更先在 `claude/stock-tracking-game-UbL2n` 分支，檢查後再合併到 `main`。
+- 正式網址：https://stockgame-692.pages.dev（Cloudflare Pages）
+- Production 綁定 `main` branch，push 到 main 自動部署
+- Feature branch 會拿到獨立 preview URL（`<commit>.stockgame-692.pages.dev`）
+
+## 開發流程
+
+新功能 / 修 bug 走 feature branch → 開 PR → 合進 `main`，正式網址自動更新。
+不直接 push main。
