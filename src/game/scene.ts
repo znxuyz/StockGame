@@ -9,7 +9,7 @@ import { CREATURES } from '@/data/creatures';
  *  - 世界範圍 1500x1500，攝影機可拖曳
  *  - 寵物以「id 雜湊 → 領地中心」決定位置，避免重疊
  *  - 點擊寵物 emit 'pet-click'（React 端訂閱開個股資訊）
- *  - 沙漠裝飾：仙人掌、石頭，靜態裝飾不互動
+ *  - 場景裝飾：松、石、雲、月,靜態裝飾不互動(水墨意象,emoji 占位)
  *  - preload 嘗試載入有 art:true 的物種立繪;沒檔的物種完全不 load
  *    (避免 console 一堆 404 錯誤),PetSprite 看 texture exist 自動切 fallback
  *
@@ -67,11 +67,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 沙漠裝飾：簡單的仙人掌 / 沙丘 emoji 散佈。
-   * 用 deterministic 偽亂數，避免每次 reload 位置變動。
+   * 場景裝飾:水墨意象 emoji(松、石、雲、月)散佈。
+   * 用 deterministic 偽亂數,避免每次 reload 位置變動。
+   * 之後若有正式美術 asset(水墨松/石/雲圖檔)再替換。
    */
   private drawDecorations() {
-    const decoEmojis = ['🌵', '🪨', '🌾'];
+    const decoEmojis = ['🌲', '🪨', '☁️', '🌙'];
     for (let i = 0; i < 60; i++) {
       const x = pseudoRand(i * 31) * WORLD_SIZE;
       const y = pseudoRand(i * 17 + 5) * WORLD_SIZE;

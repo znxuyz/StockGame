@@ -37,7 +37,7 @@ export default function Bestiary() {
   return (
     <div className="bg-white rounded-lg p-3 border border-gray-200">
       <h4 className="text-sm font-bold mb-2">
-        📚 山海經圖鑑 ({owned}/{total})
+        📚 神祇圖鑑 ({owned}/{total})
       </h4>
       <div className="space-y-3">
         {[...grouped.entries()].map(([cat, list]) => (
