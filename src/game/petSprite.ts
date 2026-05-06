@@ -175,6 +175,7 @@ export class PetSprite {
   }
 
   applyData(data: PetSpriteData) {
+    const prevPnl = this.data?.pnl;
     this.data = data;
     this.ring.setStrokeStyle(4, TIER_COLOR[data.tier]);
 
@@ -201,6 +202,20 @@ export class PetSprite {
     this.pnlText.setText(`${sign}${formatThousands(Math.round(data.pnl))}`);
     this.pnlText.setColor(data.pnl >= 0 ? '#e23b3b' : '#1f9e4a');
     this.nameText.setText(`${data.stockName} · Lv.${data.level}`);
+
+    // 損益變動時閃光:漲淡黃、跌淡紅
+    // 第一次 applyData(prevPnl undefined)不閃,避免初始化跳一次
+    if (prevPnl !== undefined && prevPnl !== data.pnl) {
+      this.flashPnL(data.pnl > prevPnl ? 0xfde68a : 0xfecaca);
+    }
+  }
+
+  /** PnL 標籤閃光 500ms 後恢復白底 */
+  flashPnL(color: number) {
+    this.pnlBg.setFillStyle(color, 0.95);
+    this.scene.time.delayedCall(500, () => {
+      this.pnlBg.setFillStyle(0xffffff, 0.95);
+    });
   }
 
   /** 在 territory 內隨機選新目標 */

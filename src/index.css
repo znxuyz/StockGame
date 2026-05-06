@@ -43,3 +43,15 @@ button {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* 即時價變動閃光（PetInfoModal 用,500ms 後恢復本來底色） */
+@keyframes flash-up {
+  0% { background-color: rgba(253, 230, 138, 0.85); }
+  100% { background-color: transparent; }
+}
+@keyframes flash-down {
+  0% { background-color: rgba(254, 202, 202, 0.85); }
+  100% { background-color: transparent; }
+}
+.flash-up { animation: flash-up 500ms ease-out; }
+.flash-down { animation: flash-down 500ms ease-out; }
