@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// 產生 Midjourney v7 prompts for 38 隻剩下的神獸(青龍/白虎已完成)。
-// 用法:node scripts/gen-art-prompts.mjs > docs/art-prompts-batch.md
+// 產生 Midjourney v7 prompts for 20 隻精選神獸(10 山海經 + 10 原創)。
+// 用法:
+//   node scripts/gen-art-prompts.mjs           > docs/art-prompts-batch1.md   (idle/asc/corrupt)
+//   node scripts/gen-art-prompts.mjs --batch=2 > docs/art-prompts-batch2.md   (walk,吃 §6 idle URL)
 //
-// 兩波輸出:
-//   --batch=1 (預設) idle + ascended + corrupted(沒有 oref 依賴,可立即批量跑)
-//   --batch=2          walk(需要從 art-prompts.md §6 把每隻 idle URL 抓出來當 oref)
+// batch1 會跳過 batch1Done=true 的 8 隻已完成神獸;batch2 對 20 隻全跑(walk 都還沒做)。
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -33,365 +33,225 @@ const STYLE_BLOCK_DARK =
   'illustration, no shadow, no 3D rendering, no anime style, no cel shading, ' +
   'plain off-white rice paper background';
 
-// id 對應 src/data/creatures.ts 與 docs/art-prompts.md §6 表格欄。
-// visual = §3.1 / §3.2 模板的 {visual}(完整視覺描述,含 side view full body)
-// subject = §3.3 / §3.4 模板的 {visual_subject}(去掉「A majestic / A radiant」之類冠詞,改成名詞片語)
-// featuresGold / featuresDark = §3.3 / §3.4 模板的 {features_in_gold} / {features_dark}
-// skipIdle = idle 已完成、不需要再產生 idle prompt
+// 欄位:
+//   id           對應 src/data/creatures.ts 與 docs/art-prompts.md §6 表格欄
+//   visual       §3.1 / §3.2 模板的 {visual}(完整描述,含 side view full body)
+//   subject      §3.3 / §3.4 模板的 {visual_subject}(去掉 "A majestic" 之類冠詞)
+//   featuresGold §3.3 模板 {features_in_gold}
+//   featuresDark §3.4 模板 {features_dark}
+//   negative     可選,組進 --no flag(用於強制 anatomy / 排除常見錯誤)
+//   batch1Done   true = idle/asc/corrupt 已完成,batch1 跳過,batch2 仍要跑 walk
 const CREATURES = [
-  // ── 四象 four-symbols(青龍 + 白虎已完成,不列入)
+  // ────── 山海經 8 隻(batch1 已完成) ──────
+  {
+    id: 'azure-dragon',
+    name: '青龍',
+    batch1Done: true,
+    visual:
+      'An azure dragon (青龍) of Chinese mythology, sinuous serpentine body coiling with quiet power, four-clawed legs, prominent deer-like antlers branching back, long flowing whiskers from the snout, scales rendered with delicate ink brush strokes, side view full body',
+    subject: 'azure dragon with serpentine body, four-clawed legs and deer antlers',
+    featuresGold: 'golden scales and golden antlers',
+    featuresDark: 'scales and antlers',
+  },
+  {
+    id: 'white-tiger',
+    name: '白虎',
+    batch1Done: true,
+    visual:
+      'A majestic white tiger of Chinese mythology, snow-white fur covered in BOLD flowing BLACK INK STRIPES across the entire body (stripes are the dominant high-contrast visual feature), fierce eyes, sharp claws, side view full body',
+    subject: 'white tiger with bold black ink stripes across snow-white fur',
+    featuresGold: 'golden stripes on ivory fur',
+    featuresDark: 'fur and stripes',
+    negative: 'plain white tiger, no stripes, faded stripes',
+  },
   {
     id: 'vermilion-bird',
     name: '朱雀',
+    batch1Done: true,
     visual:
-      'A vermillion phoenix-like sacred bird of Chinese mythology, fiery red plumage with golden highlights, long elegant tail feathers trailing flames, side view full body',
-    subject: 'vermillion phoenix-like sacred bird of Chinese mythology',
-    featuresGold: 'golden plumage and golden tail feathers',
+      'A vermillion phoenix-like sacred bird of Chinese mythology, fiery red plumage with golden highlights, long elegant tail feathers TRAILING ACTUAL FLAMES (visible flame trails not just colored feathers), side view full body',
+    subject: 'vermillion phoenix-like bird with flames trailing from its tail',
+    featuresGold: 'golden plumage and golden flame-trail tail',
     featuresDark: 'feathers',
-    skipIdle: true,
   },
   {
     id: 'black-tortoise',
     name: '玄武',
+    batch1Done: true,
     visual:
-      'A massive ancient black tortoise of Chinese mythology with a long serpent intertwined around its mossy patterned shell, dignified northern guardian, side view full body',
-    subject: 'ancient black tortoise of Chinese mythology with a long serpent intertwined around its shell',
-    featuresGold: 'golden shell patterns and golden serpent scales',
-    featuresDark: 'shell carapace and serpent body',
+      'A massive ancient black tortoise of Chinese mythology, large mossy patterned tortoise shell as the central body, with a long DARK SERPENT prominently INTERTWINED around the shell (snake head and tail both clearly visible, snake body wrapping the shell distinctly), dignified northern guardian, side view full body',
+    subject: 'ancient black tortoise with a serpent intertwined around its shell',
+    featuresGold: 'golden shell patterns and golden serpent',
+    featuresDark: 'shell and serpent',
+    negative: 'tortoise without snake, plain turtle',
   },
-  // ── 龍族 dragon
   {
     id: 'ying-long',
     name: '應龍',
+    batch1Done: true,
     visual:
-      'A winged dragon of Chinese mythology, classical Chinese dragon body with feathered wings spread wide, four-clawed warrior posture, ancient battle aura, side view full body',
-    subject: 'winged dragon of Chinese mythology',
+      'A winged dragon of Chinese mythology, classical Chinese dragon serpentine body with LARGE FEATHERED EAGLE-LIKE WINGS (definitively feathered, not bat wings), wings spread wide, four-clawed warrior posture, side view full body',
+    subject: 'winged dragon with feathered eagle-like wings spread wide',
     featuresGold: 'golden scales and golden feathered wings',
     featuresDark: 'scales and feathered wings',
+    negative: 'bat wings, leathery wings, membrane wings',
   },
-  {
-    id: 'zhu-long',
-    name: '燭龍',
-    visual:
-      'A colossal torch dragon of Chinese mythology, immense red-scaled serpent body with a human-like face, eyes radiating bright torch light, side view full body',
-    subject: 'colossal torch dragon of Chinese mythology with a human-like face',
-    featuresGold: 'golden scales and luminous golden eyes',
-    featuresDark: 'scales',
-  },
-  {
-    id: 'jiao-long',
-    name: '蛟',
-    visual:
-      'A jiao water serpent dragon of Chinese mythology, slick dark-scaled serpentine body without antlers, surrounded by curling water swirls, side view full body',
-    subject: 'jiao water serpent dragon of Chinese mythology',
-    featuresGold: 'golden scales',
-    featuresDark: 'scales',
-  },
-  {
-    id: 'hui',
-    name: '虺',
-    visual:
-      'A young hui pre-dragon serpent of Chinese mythology, small simple coiled snake form, subtle thin scales, plain humble pose, side view full body',
-    subject: 'young hui pre-dragon serpent of Chinese mythology',
-    featuresGold: 'golden scales',
-    featuresDark: 'scales',
-  },
-  {
-    id: 'kui',
-    name: '夔',
-    visual:
-      'A kui thunder beast of Chinese mythology, one-legged ox-like beast with single horn, body crackling with arcing lightning, drum-skin texture on torso, side view full body',
-    subject: 'kui one-legged thunder beast of Chinese mythology',
-    featuresGold: 'golden hide and golden lightning arcs',
-    featuresDark: 'hide',
-  },
-  // ── 鳥族 bird
-  {
-    id: 'feng-huang',
-    name: '鳳凰',
-    visual:
-      'A radiant phoenix of Chinese mythology, five-color plumage rendered in ink black + vermillion red + muted gold + sage green + ivory, long tail feathers like rising flames, side view full body',
-    subject: 'radiant phoenix of Chinese mythology',
-    featuresGold: 'golden plumage and golden tail feathers',
-    featuresDark: 'feathers',
-  },
-  {
-    id: 'luan-niao',
-    name: '鸞鳥',
-    visual:
-      'A luan auspicious bird of Chinese mythology, peacock-like elegant body, harmonious graceful posture, ornate tail feathers, side view full body',
-    subject: 'luan auspicious peacock-like bird of Chinese mythology',
-    featuresGold: 'golden plumage and golden ornate tail feathers',
-    featuresDark: 'feathers',
-  },
-  {
-    id: 'qing-niao',
-    name: '青鳥',
-    visual:
-      'A small swift azure-blue messenger bird of Chinese mythology, alert graceful pose, small scroll tied to leg, side view full body',
-    subject: 'small swift messenger bird of Chinese mythology with a small scroll tied to leg',
-    featuresGold: 'golden plumage',
-    featuresDark: 'feathers',
-  },
-  {
-    id: 'bi-fang',
-    name: '畢方',
-    visual:
-      'A bifang fire crane of Chinese mythology, one-legged crane body with red ink markings, small flames trailing behind wings, side view full body',
-    subject: 'bifang one-legged fire crane of Chinese mythology',
-    featuresGold: 'golden plumage and golden flame trails',
-    featuresDark: 'feathers',
-  },
-  {
-    id: 'zhong-ming',
-    name: '重明鳥',
-    visual:
-      'A zhongming twin-pupil bird of Chinese mythology, large eagle-like body with distinctive double-pupil eyes, vigilant proud pose, side view full body',
-    subject: 'zhongming twin-pupil eagle-like bird of Chinese mythology',
-    featuresGold: 'golden plumage and luminous golden double-pupil eyes',
-    featuresDark: 'feathers',
-  },
-  {
-    id: 'san-zu-wu',
-    name: '三足烏',
-    // MJ 訓練資料壓倒性都是兩腳鳥,prompt 必須狂強調三腳 + 用 --no 排除,
-    // 不然 4 變體可能全部出兩腳。
-    visual:
-      'A sanzuwu three-legged crow of Chinese mythology, jet-black ink raven body with anatomically THREE legs visible (one extra middle leg between the standard two), all three legs clearly drawn standing on the ground in tripod stance, distinct gap between each leg, golden sun disc emblem glowing radiant behind, side view full body',
-    subject:
-      'sanzuwu three-legged crow of Chinese mythology with three legs in tripod stance (anatomically THREE legs, not two)',
-    featuresGold: 'golden plumage with luminous golden sun disc',
-    featuresDark: 'feathers',
-    negative: 'two legs, two-legged bird, normal crow anatomy',
-  },
-  // ── 招財 lucky
   {
     id: 'qilin',
     name: '麒麟',
+    batch1Done: true,
     visual:
-      'A qilin of Chinese mythology, deer-like body covered in dragon scales, single antler, fire mane along the neck, peaceful sage aura, side view full body',
-    subject: 'qilin of Chinese mythology with deer-like body and dragon scales',
+      'A qilin of Chinese mythology, body must show ALL four traits together: deer-like body shape, dragon SCALES covering the body (clearly scaled not furry), single straight antler protruding from forehead, FIRE FLAME mane along the neck (actual visible flames not just orange fur), peaceful sage aura, side view full body',
+    subject: 'qilin with deer body, dragon scales, single antler and flame mane',
     featuresGold: 'golden scales and golden flame mane',
     featuresDark: 'scales and mane',
+    negative: 'plain horse, deer without scales, deer without antler',
   },
-  {
-    id: 'pixiu',
-    name: '貔貅',
-    visual:
-      'A pixiu winged lion-beast of Chinese mythology, fierce muscular body, gaping mouth, small wings, scattered ancient gold coins around its feet, side view full body',
-    subject: 'pixiu winged lion-beast of Chinese mythology',
-    featuresGold: 'golden fur and golden wings',
-    featuresDark: 'fur and wings',
-  },
-  {
-    id: 'bai-ze',
-    name: '白澤',
-    visual:
-      'A baize wisdom beast of Chinese mythology, white lion-like body with multiple eyes along its torso, contemplative wise pose, ancient scrolls floating nearby, side view full body',
-    subject: 'baize lion-like wisdom beast of Chinese mythology with multiple eyes along its torso',
-    featuresGold: 'golden fur and luminous golden eyes',
-    featuresDark: 'fur',
-  },
-  {
-    id: 'bi-xie',
-    name: '辟邪',
-    visual:
-      'A bixie female pixiu variant of Chinese mythology, similar to pixiu but more refined and elegant, two small horns, protective stance, side view full body',
-    subject: 'bixie female pixiu variant of Chinese mythology with two small horns',
-    featuresGold: 'golden fur and golden horns',
-    featuresDark: 'fur and horns',
-  },
-  {
-    id: 'tian-lu',
-    name: '天祿',
-    visual:
-      'A tianlu male pixiu variant of Chinese mythology, single horn, regal commanding stance, golden ink highlights, side view full body',
-    subject: 'tianlu male pixiu variant of Chinese mythology with a single horn',
-    featuresGold: 'golden fur and golden horn',
-    featuresDark: 'fur and horn',
-  },
-  // ── 異獸 beast
   {
     id: 'nine-tail-fox',
     name: '九尾狐',
+    batch1Done: true,
     visual:
-      'A nine-tailed fox of Chinese mythology, graceful slender fox body with nine flowing fanned-out tails, golden-red ink wash, mysterious gaze, side view full body',
-    subject: 'nine-tailed fox of Chinese mythology with nine flowing fanned-out tails',
-    featuresGold: 'golden fur and golden tails',
+      'A nine-tailed fox of Chinese mythology, graceful slender fox body with EXACTLY NINE distinct flowing tails fanning out symmetrically (count each tail individually as one separate fluffy tail; nine tails not less), golden-red ink wash, mysterious gaze, side view full body',
+    subject: 'fox with exactly nine fanned-out tails',
+    featuresGold: 'golden fur and golden nine tails',
     featuresDark: 'fur and tails',
-  },
-  {
-    id: 'di-ting',
-    name: '諦聽',
-    visual:
-      'A diting hybrid beast of Chinese mythology, lying low to ground listening, dragon-like head, ox ears, tiger paws, lion mane, scaled body, side view full body',
-    subject: 'diting hybrid beast of Chinese mythology with dragon head, ox ears, tiger paws, lion mane and scaled body',
-    featuresGold: 'golden scales and golden mane',
-    featuresDark: 'scales and mane',
+    negative: 'less than nine tails, fewer tails, single tail',
   },
   {
     id: 'kai-ming',
     name: '開明獸',
+    batch1Done: true,
     visual:
-      'A kaiming nine-headed guardian of Chinese mythology, tiger body with nine human heads emerging from neck, fierce gate-keeper stance, side view full body',
-    subject: 'kaiming nine-headed guardian of Chinese mythology with a tiger body and nine human heads',
-    featuresGold: 'golden fur and golden manes around each head',
-    featuresDark: 'fur',
+      'A kaiming nine-headed guardian of Chinese mythology, tiger-shaped body with EXACTLY NINE distinct human heads emerging from its neck and shoulders (count each head individually; nine heads not less), each head has a calm human face, fierce gate-keeper stance, side view full body',
+    subject: 'tiger-bodied guardian with exactly nine human heads emerging from its neck',
+    featuresGold: 'golden fur and golden human heads',
+    featuresDark: 'fur and heads',
+    negative: 'single head, less than nine heads, fewer heads',
   },
-  {
-    id: 'zou-yu',
-    name: '騶虞',
-    visual:
-      'A zouyu benevolent tiger of Chinese mythology, white tiger body with long flowing black ink stripes, gentle calm expression despite fierce form, side view full body',
-    subject: 'zouyu benevolent tiger of Chinese mythology',
-    featuresGold: 'golden stripes',
-    featuresDark: 'fur',
-  },
-  {
-    id: 'bo',
-    name: '駁',
-    visual:
-      'A bo white horse-beast of Chinese mythology, white horse-like body with saw-shaped teeth visible, fierce mane, predator’s stance, side view full body',
-    subject: 'bo horse-beast of Chinese mythology with saw-shaped teeth',
-    featuresGold: 'golden mane and golden hide',
-    featuresDark: 'mane and hide',
-  },
-  {
-    id: 'lu-wu',
-    name: '陸吾',
-    visual:
-      'A luwu mountain god of Chinese mythology, tiger body with nine swishing tails, human face on tiger head, tiger claws, mountain-deity aura, side view full body',
-    subject: 'luwu mountain god of Chinese mythology with a tiger body, nine tails and a human face',
-    featuresGold: 'golden fur and golden tails',
-    featuresDark: 'fur and tails',
-  },
-  {
-    id: 'ying-zhao',
-    name: '英招',
-    visual:
-      'A yingzhao patrol deity of Chinese mythology, horse body with human face, tiger stripes on flank, large bird wings spread, ready to soar, side view full body',
-    subject: 'yingzhao patrol deity of Chinese mythology with a horse body, human face, tiger stripes and bird wings',
-    featuresGold: 'golden hide and golden wings',
-    featuresDark: 'hide and wings',
-  },
-  {
-    id: 'ru-shou',
-    name: '蓐收',
-    visual:
-      'A rushou autumn metal god of Chinese mythology, fierce warrior figure with a snake coiled on left ear, riding a swirling cloud, side view full body',
-    subject: 'rushou autumn metal god of Chinese mythology with a snake coiled on left ear riding a cloud',
-    featuresGold: 'golden armor and golden cloud',
-    featuresDark: 'armor and cloud',
-  },
-  {
-    id: 'fei-lian',
-    name: '飛廉',
-    visual:
-      'A feilian wind deity of Chinese mythology, deer-like body with sparrow head and snake tail, wind currents trailing from body in motion, side view full body',
-    subject: 'feilian wind deity of Chinese mythology with a deer body, sparrow head and snake tail',
-    featuresGold: 'golden hide and golden wind currents',
-    featuresDark: 'hide',
-  },
-  {
-    id: 'jiao-duan',
-    name: '角端',
-    visual:
-      'A jiaoduan single-horned beast of Chinese mythology, swift rhino-like body with one straight horn, far-traveling pose mid-stride, side view full body',
-    subject: 'jiaoduan single-horned rhino-like beast of Chinese mythology',
-    featuresGold: 'golden hide and golden horn',
-    featuresDark: 'hide and horn',
-  },
-  {
-    id: 'zhu-yan',
-    name: '朱厭',
-    visual:
-      'A zhuyan ominous beast of Chinese mythology, small-headed white-furred beast with bright red feet, unsettling staring gaze, ominous war-omen aura, side view full body',
-    subject: 'zhuyan ominous white-furred beast of Chinese mythology with bright red feet',
-    featuresGold: 'golden fur',
-    featuresDark: 'fur',
-  },
-  // ── 水族 aquatic
-  {
-    id: 'kun',
-    name: '鯤',
-    visual:
-      'A kun colossal mythical fish of Chinese mythology, mountain-sized deep-sea fish body, mid-transformation with bird-like wings beginning to emerge from sides, side view full body',
-    subject: 'kun colossal mythical fish of Chinese mythology with bird wings emerging',
-    featuresGold: 'golden scales and golden wings',
-    featuresDark: 'scales and wings',
-  },
-  {
-    id: 'heng-gong',
-    name: '橫公魚',
-    visual:
-      'A henggong fish of Chinese mythology, fish body in mid-transformation with humanoid features partially emerging, mysterious dual-form, side view full body',
-    subject: 'henggong fish of Chinese mythology mid-transformation with humanoid features',
-    featuresGold: 'golden scales',
-    featuresDark: 'scales',
-  },
-  {
-    id: 'wen-yao',
-    name: '文鰩魚',
-    visual:
-      'A wenyao flying fish of Chinese mythology, fish body with elegant bird wings, leaping out of water mid-flight, glittering ink-stroke scales, side view full body',
-    subject: 'wenyao flying fish of Chinese mythology with bird wings',
-    featuresGold: 'golden scales and golden wings',
-    featuresDark: 'scales and wings',
-  },
+
+  // ────── 山海經 2 隻(batch1 待跑,強化 anatomy prompt) ──────
   {
     id: 'he-luo',
     name: '何羅魚',
     visual:
-      'A heluo fish of Chinese mythology, surreal one-headed fish with ten splayed bodies fanning out from a single head, hydra-like, side view full body',
-    subject: 'heluo one-headed ten-bodied fish of Chinese mythology',
-    featuresGold: 'golden scales',
+      'A heluo fish of Chinese mythology, anatomically ONE single fish head from which exactly TEN distinct fish bodies fan out symmetrically (count each separate fish body; ten bodies not less), each body has its own tail, hydra-like fan-shaped silhouette, all ten bodies clearly drawn separate from each other, side view full body',
+    subject: 'fish with one head and exactly ten fanned-out fish bodies',
+    featuresGold: 'golden scales and golden ten-body fan',
     featuresDark: 'scales',
+    negative: 'multiple heads, two heads, less than ten bodies, single body',
   },
-  {
-    id: 'lu',
-    name: '鯥',
-    visual:
-      'A lu hybrid fish of Chinese mythology, fish body with snake tail, small bird wings, ox-like ribs visible, surreal chimera, side view full body',
-    subject: 'lu hybrid fish of Chinese mythology with snake tail, bird wings and ox-like ribs',
-    featuresGold: 'golden scales and golden wings',
-    featuresDark: 'scales and wings',
-  },
-  {
-    id: 'ba-she',
-    name: '巴蛇',
-    visual:
-      'A bashe colossal serpent of Chinese mythology, immense dark snake body with a slight midriff bulge (having swallowed an elephant), intimidating coiled stance, side view full body',
-    subject: 'bashe colossal serpent of Chinese mythology with a midriff bulge',
-    featuresGold: 'golden scales',
-    featuresDark: 'scales',
-  },
-  // ── 靈體 spirit
   {
     id: 'di-jiang',
     name: '帝江',
     visual:
-      'A dijiang formless deity of Chinese mythology, faceless round blob-like body with six legs and four wings, abstract dancing posture, side view full body',
-    subject: 'dijiang formless faceless deity of Chinese mythology with six legs and four wings',
-    featuresGold: 'golden body and golden wings',
-    featuresDark: 'body and wings',
+      'A dijiang formless deity of Chinese mythology, completely FACELESS round blob-like body (no eyes, no mouth, no nose, no facial features visible at all on the body), exactly SIX legs visible (count each leg distinctly; six legs not less), exactly FOUR feathered wings spread symmetrically (two on each side), abstract dancing posture, side view full body',
+    subject: 'completely faceless round blob deity with exactly six legs and four feathered wings',
+    featuresGold: 'golden blob body and golden feathered wings',
+    featuresDark: 'blob body and wings',
+    negative: 'face, eyes, mouth, nose, facial features, less than six legs, less than four wings',
+  },
+
+  // ────── 原創 10 隻(visual 都注入 "ink wash style" 確保畫風一致) ──────
+  {
+    id: 'suanpan-shou',
+    name: '算盤獸',
+    visual:
+      'An original Chinese mythology beast painted in traditional ink wash style, body composed of stacked horizontal abacus rows (wooden frame with sliding bamboo beads visible on each row; clearly an abacus structure that has come alive), four red silk tassels as legs, small calligraphic eyes peeking from the top frame, side view full body, alive moving creature not a static tool',
+    subject: 'abacus-bodied beast with stacked bead-row body and silk-tassel legs',
+    featuresGold: 'golden bamboo beads and golden silk tassels',
+    featuresDark: 'bead rows and tassels',
+    negative: 'human holding abacus, person, hand, realistic abacus tool only',
   },
   {
-    id: 'qi-tu',
-    name: '鵸鵌',
+    id: 'yinzhang-ling',
+    name: '印章靈',
     visual:
-      'A qitu surreal bird of Chinese mythology, three-headed bird with six tails fanning symmetrically, balanced ornamental pose, side view full body',
-    subject: 'qitu three-headed six-tailed bird of Chinese mythology',
-    featuresGold: 'golden plumage and golden tails',
-    featuresDark: 'feathers and tails',
+      'An original Chinese mythology spirit creature painted in traditional ink wash style, shaped like a walking vermillion red seal stamp (square solid red ink-stamp body with engraved Chinese seal characters carved on the bottom face), four legs formed of bold calligraphy brush strokes, small expressive eyes on the top face, side view full body, alive moving creature not a static stamp',
+    subject: 'walking vermillion seal-stamp spirit with square red body and brush-stroke legs',
+    featuresGold: 'golden seal characters and golden brush strokes',
+    featuresDark: 'seal body and brush strokes',
+    negative: 'person holding seal, hand pressing seal, static stamp tool only',
   },
   {
-    id: 'zhi',
-    name: '彘',
+    id: 'qian-gui',
+    name: '錢龜',
     visual:
-      'A zhi mountain beast of Chinese mythology, tiger body with a human face, fierce stance on a cloud-wreathed peak, storm-bringing aura, side view full body',
-    subject: 'zhi mountain beast of Chinese mythology with a tiger body and human face',
-    featuresGold: 'golden fur and golden cloud aura',
-    featuresDark: 'fur',
+      'An original Chinese mythology turtle painted in traditional ink wash style, shell entirely composed of stacked square-holed Chinese copper coins (each round coin has a clearly visible square hole in the center; coins layered like roof tiles), small turtle head and four legs emerging from the coin shell, several loose coins falling behind as it walks, side view full body',
+    subject: 'small turtle with a shell of stacked square-holed copper coins',
+    featuresGold: 'golden copper coins and golden shell',
+    featuresDark: 'coin shell',
+    negative: 'human holding coins, modern coins, paper money',
+  },
+  {
+    id: 'bi-hu',
+    name: '筆狐',
+    visual:
+      'An original Chinese mythology fox spirit painted in traditional ink wash style, fox-shaped silhouette but the entire body is composed of dynamic flowing calligraphy brush strokes (the fox outline emerges from sweeping ink strokes), tail in the form of an actual upright Chinese calligraphy brush with a wooden handle and pointed bristle tip, faint ink trails behind footprints, side view full body',
+    subject: 'calligraphy-stroke fox with a literal Chinese calligraphy brush as its tail',
+    featuresGold: 'golden brush strokes and golden brush-tail',
+    featuresDark: 'brush strokes and brush-tail',
+    negative: 'human, calligrapher person, hand holding brush',
+  },
+  {
+    id: 'bianzhong-shou',
+    name: '編鐘獸',
+    visual:
+      'An original Chinese mythology beast painted in traditional ink wash style, body is a vertical wooden bell-rack hung with rows of small bronze ceremonial bells (bianzhong; the bells dangle from the rack), two legs formed of wooden bell-stand posts, small expressive head emerging from the top of the rack, side view full body, alive moving creature not a static rack',
+    subject: 'bell-rack-bodied beast with hanging bronze ceremonial bells and wooden post legs',
+    featuresGold: 'golden bronze bells and golden bell rack',
+    featuresDark: 'bells and rack',
+    negative: 'static bell rack, person striking bells, museum exhibit',
+  },
+  {
+    id: 'denglong-yu',
+    name: '燈籠魚',
+    visual:
+      'An original Chinese mythology fish painted in traditional ink wash style, with a glowing red Chinese paper lantern as its head (Chinese characters faintly visible on the lantern paper, soft candle flame inside softly illuminating from within), fish-like scaled body, fins and tail with red silk tassels, side view full body, swimming pose',
+    subject: 'fish with a red Chinese paper lantern for a head and silk-tassel fins',
+    featuresGold: 'golden lantern light and golden scales',
+    featuresDark: 'scales and lantern paper',
+    negative: 'anglerfish, deep sea fish, person holding lantern',
+  },
+  {
+    id: 'qi-ling',
+    name: '棋靈',
+    visual:
+      'An original Chinese mythology spirit creature painted in traditional ink wash style, body composed entirely of stacked black and white weiqi (Go) game stones (clearly recognizable as Go pieces, half black stones half white stones split vertically down the body silhouette), small head with calligraphic eyes, four short legs of stacked stones, side view full body',
+    subject: 'weiqi-stone-bodied spirit with half-black-half-white stacked Go stones',
+    featuresGold: 'golden replacement stones across the body',
+    featuresDark: 'stones',
+    negative: 'human Go player, hand placing stones, chess board, western chess',
+  },
+  {
+    id: 'lianhua-shou',
+    name: '蓮華獸',
+    visual:
+      'An original Chinese mythology beast painted in traditional ink wash style, body composed of multiple layered lotus flower petals (a creature shaped from blooming lotus petals; petals form the torso and back), four lotus stem-shaped legs with stylized lotus leaves as feet, small face emerging from the central petal cluster, faint pollen halo around the body, side view full body',
+    subject: 'lotus-petal-bodied beast with stem legs and pollen halo',
+    featuresGold: 'golden lotus petals and golden pollen',
+    featuresDark: 'petals and stems',
+    negative: 'static lotus flower, plain flower without creature',
+  },
+  {
+    id: 'shan-tong',
+    name: '山童',
+    visual:
+      'An original Chinese mythology spirit child painted in traditional ink wash style, small humanoid figure made of stone and pine: small stone body, pine branches growing as arms, a tiny pointed mountain peak as a hat on the head, a flowing wisp of cloud trailing as a cape behind, two small stone legs, side view full body, child-sized humanoid',
+    subject: 'small humanoid mountain-spirit child with stone body, pine arms, mountain-peak hat and cloud cape',
+    featuresGold: 'golden stone body and golden pine branches',
+    featuresDark: 'stone and pine branches',
+    negative: 'adult, full-grown person, normal human, hiking person',
+  },
+  {
+    id: 'tao-jing',
+    name: '桃精',
+    visual:
+      'An original Chinese mythology peach spirit beast painted in traditional ink wash style, round peach fruit body with a soft pink-vermillion blush, peach blossom petals forming a flowing mane around the neck, peach leaves as wings spread on the back, two slender peach-stem-like legs, small face emerging from the peach, side view full body',
+    subject: 'peach-fruit-bodied spirit with peach-blossom mane and peach-leaf wings',
+    featuresGold: 'golden peach skin and golden blossom mane',
+    featuresDark: 'peach skin and blossom',
+    negative: 'static fruit, plain peach without creature, normal peach',
   },
 ];
 
@@ -470,21 +330,18 @@ if (batch === 1) {
   console.log('# Batch 1 — idle / ascended / corrupted prompts');
   console.log('');
   console.log('> 自動產生,by `scripts/gen-art-prompts.mjs`');
+  console.log('> 跳過 batch1Done=true 的 8 隻已完成神獸,只列出 12 隻待跑(2 山海經 + 10 原創)。');
   console.log('> 跑完每隻就把 4 個動作的 image link 填回 `docs/art-prompts.md` §6 表格。');
   console.log('> walk 在 idle 跑完之後另外用 `--batch=2` 產生(吃 idle URL 當 oref)。');
   console.log('');
   for (const c of CREATURES) {
+    if (c.batch1Done) continue;
     console.log(`---\n`);
     console.log(`## \`${c.id}\` ${c.name}\n`);
-    if (!c.skipIdle) {
-      console.log('### idle\n');
-      console.log('```');
-      console.log(idlePrompt(c));
-      console.log('```\n');
-    } else {
-      console.log('### idle\n');
-      console.log('> _已完成,跳過。_\n');
-    }
+    console.log('### idle\n');
+    console.log('```');
+    console.log(idlePrompt(c));
+    console.log('```\n');
     console.log('### ascended\n');
     console.log('```');
     console.log(ascendedPrompt(c));

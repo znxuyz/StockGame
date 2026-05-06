@@ -154,109 +154,70 @@ plain off-white rice paper background
 
 ---
 
-## 4. 40 隻神獸視覺描述表
+## 4. 20 隻精選花名冊
 
-順序按 `creatures.ts` 排列,**id 與檔名一致**。建議跑完一個 category(4–8 隻)就把所有產出 URL 填回這份文件,避免之後找不到。
+從原 40 隻山海經神獸縮編到 20 隻(10 山海經 + 10 原創),強調剪影差異化。完整 prompt(visual / subject / featuresGold / featuresDark / negative)集中在 `scripts/gen-art-prompts.mjs`,執行 `node scripts/gen-art-prompts.mjs > docs/art-prompts-batch1.md` 取得可貼進 MJ 的 36 條 prompt。
 
-### 四象 four-symbols
+### 山海經 10 隻
 
-| # | id | 中文 | `{visual}`(替換進模板) |
-|---|---|---|---|
-| 1 | `azure-dragon` | 青龍 | (見 §2,跳過站) |
-| 2 | `white-tiger` | 白虎 | A majestic white tiger of Chinese mythology, bold black ink stripes flowing across snow-white fur, fierce eyes, sharp claws, side view full body |
-| 3 | `vermilion-bird` | 朱雀 | A vermillion phoenix-like sacred bird of Chinese mythology, fiery red plumage with golden highlights, long elegant tail feathers trailing flames, side view full body |
-| 4 | `black-tortoise` | 玄武 | A massive ancient black tortoise of Chinese mythology with a long serpent intertwined around its mossy patterned shell, dignified northern guardian, side view full body |
+| # | id | 中文 | 類別 | 獨特特徵(prompt 強調點) |
+|---|---|---|---|---|
+| 1 | `azure-dragon` | 青龍 | 四象 | 蛇身 + 四爪 + 鹿角 + 長鬚(STYLE_REF) |
+| 2 | `white-tiger` | 白虎 | 四象 | 雪白毛 + 粗黑墨紋條橫貫全身 |
+| 3 | `vermilion-bird` | 朱雀 | 四象 | 烈紅羽 + 拖尾火焰 |
+| 4 | `black-tortoise` | 玄武 | 四象 | 龜甲 + 盤蛇纏繞 |
+| 5 | `ying-long` | 應龍 | 龍族 | 龍身 + 羽毛翅膀(非蝙蝠翼) |
+| 6 | `qilin` | 麒麟 | 招財 | 鹿身 + 龍鱗 + 單獨角 + 火焰鬃毛 |
+| 7 | `nine-tail-fox` | 九尾狐 | 異獸 | 九條尾巴扇形展開 |
+| 8 | `kai-ming` | 開明獸 | 異獸 | 虎身 + 九顆人頭 |
+| 9 | `he-luo` | 何羅魚 | 水族 | 一頭十身扇形 |
+| 10 | `di-jiang` | 帝江 | 靈體 | 無臉圓團 + 六腿 + 四翅 |
 
-### 龍族 dragon
+### 原創 10 隻
 
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 5 | `ying-long` | 應龍 | A winged dragon of Chinese mythology, classical Chinese dragon body with feathered wings spread wide, four-clawed warrior posture, ancient battle aura, side view full body |
-| 6 | `zhu-long` | 燭龍 | A colossal torch dragon of Chinese mythology, immense red-scaled serpent body with a human-like face, eyes radiating bright torch light, side view full body |
-| 7 | `jiao-long` | 蛟 | A jiao water serpent dragon of Chinese mythology, slick dark-scaled serpentine body without antlers, surrounded by curling water swirls, side view full body |
-| 8 | `hui` | 虺 | A young hui pre-dragon serpent of Chinese mythology, small simple coiled snake form, subtle thin scales, plain humble pose, side view full body |
-| 9 | `kui` | 夔 | A kui thunder beast of Chinese mythology, one-legged ox-like beast with single horn, body crackling with arcing lightning, drum-skin texture on torso, side view full body |
-
-### 鳥族 bird
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 10 | `feng-huang` | 鳳凰 | A radiant phoenix of Chinese mythology, five-color plumage rendered in ink black + vermillion red + muted gold + sage green + ivory, long tail feathers like rising flames, side view full body |
-| 11 | `luan-niao` | 鸞鳥 | A luan auspicious bird of Chinese mythology, peacock-like elegant body, harmonious graceful posture, ornate tail feathers, side view full body |
-| 12 | `qing-niao` | 青鳥 | A small swift azure-blue messenger bird of Chinese mythology, alert graceful pose, small scroll tied to leg, side view full body |
-| 13 | `bi-fang` | 畢方 | A bifang fire crane of Chinese mythology, one-legged crane body with red ink markings, small flames trailing behind wings, side view full body |
-| 14 | `zhong-ming` | 重明鳥 | A zhongming twin-pupil bird of Chinese mythology, large eagle-like body with distinctive double-pupil eyes, vigilant proud pose, side view full body |
-| 15 | `san-zu-wu` | 三足烏 | A sanzuwu three-legged crow of Chinese mythology, jet-black ink crow with three legs, golden sun disc emblem glowing behind, side view full body |
-
-### 招財 lucky
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 16 | `qilin` | 麒麟 | A qilin of Chinese mythology, deer-like body covered in dragon scales, single antler, fire mane along the neck, peaceful sage aura, side view full body |
-| 17 | `pixiu` | 貔貅 | A pixiu winged lion-beast of Chinese mythology, fierce muscular body, gaping mouth, small wings, scattered ancient gold coins around its feet, side view full body |
-| 18 | `bai-ze` | 白澤 | A baize wisdom beast of Chinese mythology, white lion-like body with multiple eyes along its torso, contemplative wise pose, ancient scrolls floating nearby, side view full body |
-| 19 | `bi-xie` | 辟邪 | A bixie female pixiu variant of Chinese mythology, similar to pixiu but more refined and elegant, two small horns, protective stance, side view full body |
-| 20 | `tian-lu` | 天祿 | A tianlu male pixiu variant of Chinese mythology, single horn, regal commanding stance, golden ink highlights, side view full body |
-
-### 異獸 beast(含 飛廉/角端/朱厭/巴蛇 等)
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 21 | `nine-tail-fox` | 九尾狐 | A nine-tailed fox of Chinese mythology, graceful slender fox body with nine flowing fanned-out tails, golden-red ink wash, mysterious gaze, side view full body |
-| 22 | `di-ting` | 諦聽 | A diting hybrid beast of Chinese mythology, lying low to ground listening, dragon-like head, ox ears, tiger paws, lion mane, scaled body, side view full body |
-| 23 | `kai-ming` | 開明獸 | A kaiming nine-headed guardian of Chinese mythology, tiger body with nine human heads emerging from neck, fierce gate-keeper stance, side view full body |
-| 24 | `zou-yu` | 騶虞 | A zouyu benevolent tiger of Chinese mythology, white tiger body with long flowing black ink stripes, gentle calm expression despite fierce form, side view full body |
-| 25 | `bo` | 駁 | A bo white horse-beast of Chinese mythology, white horse-like body with saw-shaped teeth visible, fierce mane, predator's stance, side view full body |
-| 26 | `lu-wu` | 陸吾 | A luwu mountain god of Chinese mythology, tiger body with nine swishing tails, human face on tiger head, tiger claws, mountain-deity aura, side view full body |
-| 27 | `ying-zhao` | 英招 | A yingzhao patrol deity of Chinese mythology, horse body with human face, tiger stripes on flank, large bird wings spread, ready to soar, side view full body |
-| 28 | `ru-shou` | 蓐收 | A rushou autumn metal god of Chinese mythology, fierce warrior figure with a snake coiled on left ear, riding a swirling cloud, side view full body |
-| 29 | `fei-lian` | 飛廉 | A feilian wind deity of Chinese mythology, deer-like body with sparrow head and snake tail, wind currents trailing from body in motion, side view full body |
-| 30 | `jiao-duan` | 角端 | A jiaoduan single-horned beast of Chinese mythology, swift rhino-like body with one straight horn, far-traveling pose mid-stride, side view full body |
-| 31 | `zhu-yan` | 朱厭 | A zhuyan ominous beast of Chinese mythology, small-headed white-furred beast with bright red feet, unsettling staring gaze, ominous war-omen aura, side view full body |
-
-### 水族 aquatic
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 32 | `kun` | 鯤 | A kun colossal mythical fish of Chinese mythology, mountain-sized deep-sea fish body, mid-transformation with bird-like wings beginning to emerge from sides, side view full body |
-| 33 | `heng-gong` | 橫公魚 | A henggong fish of Chinese mythology, fish body in mid-transformation with humanoid features partially emerging, mysterious dual-form, side view full body |
-| 34 | `wen-yao` | 文鰩魚 | A wenyao flying fish of Chinese mythology, fish body with elegant bird wings, leaping out of water mid-flight, glittering ink-stroke scales, side view full body |
-| 35 | `he-luo` | 何羅魚 | A heluo fish of Chinese mythology, surreal one-headed fish with ten splayed bodies fanning out from a single head, hydra-like, side view full body |
-| 36 | `lu` | 鯥 | A lu hybrid fish of Chinese mythology, fish body with snake tail, small bird wings, ox-like ribs visible, surreal chimera, side view full body |
-| 37 | `ba-she` | 巴蛇 | A bashe colossal serpent of Chinese mythology, immense dark snake body with a slight midriff bulge (having swallowed an elephant), intimidating coiled stance, side view full body |
-
-### 靈體 spirit
-
-| # | id | 中文 | `{visual}` |
-|---|---|---|---|
-| 38 | `di-jiang` | 帝江 | A dijiang formless deity of Chinese mythology, faceless round blob-like body with six legs and four wings, abstract dancing posture, side view full body |
-| 39 | `qi-tu` | 鵸鵌 | A qitu surreal bird of Chinese mythology, three-headed bird with six tails fanning symmetrically, balanced ornamental pose, side view full body |
-| 40 | `zhi` | 彘 | A zhi mountain beast of Chinese mythology, tiger body with a human face, fierce stance on a cloud-wreathed peak, storm-bringing aura, side view full body |
+| # | id | 中文 | 類別 | 獨特特徵 | 主題連結 |
+|---|---|---|---|---|---|
+| 11 | `suanpan-shou` | 算盤獸 | 招財 | 算盤珠身 + 流蘇腿 | 股票 |
+| 12 | `yinzhang-ling` | 印章靈 | 招財 | 朱紅印章身 + 篆字底刻 | 簽約/印記 |
+| 13 | `qian-gui` | 錢龜 | 招財 | 銅錢層疊龜甲 | 錢 |
+| 14 | `bi-hu` | 筆狐 | 異獸 | 筆觸構成狐身 + 毛筆尾 | 水墨自指 |
+| 15 | `bianzhong-shou` | 編鐘獸 | 異獸 | 編鐘鐘架身軀 | 樂器 |
+| 16 | `denglong-yu` | 燈籠魚 | 水族 | 紅紙燈籠頭 + 魚身 | 節慶 |
+| 17 | `qi-ling` | 棋靈 | 靈體 | 黑白圍棋子身 | 策略 |
+| 18 | `lianhua-shou` | 蓮華獸 | 靈體 | 蓮花瓣身 + 蓮藕腿 | 花卉 |
+| 19 | `shan-tong` | 山童 | 靈體 | 石頭+松枝小人 + 山峰帽 | 山岳 |
+| 20 | `tao-jing` | 桃精 | 靈體 | 桃形身 + 桃花鬃 + 桃葉翅 | 仙桃 |
 
 ---
 
 ## 5. 推薦執行順序
 
-### Phase 1:Anchor(第 1 天,當天搞定)
-1. 跑 §2 青龍站,Fast Mode 反覆試到滿意 → URL 存成 STYLE_REF
-2. 用 §3.2/3.3/3.4 模板跑青龍的「走 / 進化 / 黑化」(`[CHAR_REF]` = 青龍站 URL)
-3. 看青龍 4 個動作擺一起風格是不是統一,**不統一就回 step 1 改 anchor**
+### Phase 1:Anchor(已完成)
+青龍 4 動作完成,STYLE_REF 已固定:
+```
+https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png
+```
 
-### Phase 2:批量(第 2–5 天,Slow Mode 排隊跑)
-照 §4 表格從上到下,每隻先跑「站」,記 URL 當該隻的 CHAR_REF,再跑該隻的走 / 進化 / 黑化。
-- 一隻 = 4 張 prompt = 16 個 4-grid variants(MJ 一次出 4 張)
-- 40 隻 × 4 動作 = 160 prompts ≈ 640 張變體裡面挑 160 張用
-- **不要追求完美**,每組 4 變體中有 1 張能用就採用
+### Phase 2(進行中):剩 12 隻 idle / asc / corrupt
+- **8 隻已完成不重跑**:青龍 / 白虎 / 朱雀 / 玄武 / 應龍 / 麒麟 / 九尾狐 / 開明獸
+- **12 隻待跑**:何羅魚 + 帝江 + 10 隻原創
+- prompt 全部在 `docs/art-prompts-batch1.md`(自動產生,12 × 3 = 36 條)
+- 每隻挑 1 張變體 → URL 貼回 §6 表格
 
-### Phase 3:後續美術(寵物完成再回頭談)
-- PWA app icon(取代目前 favicon.svg 占位)
-- 地圖背景(沙漠 → 水墨山水)
-- 地圖裝飾物(松 / 石 / 雲,取代仙人掌 emoji)
-- 境界光環圈(目前是純色 ring,改水墨筆刷圈)
-- Modal / 按鈕 / 卡片框(古紙 / 印章風)
-- 50 個成就獎章圖示
+### Phase 3:walk batch
+- §6 idle 全到齊後跑:`node scripts/gen-art-prompts.mjs --batch=2 > docs/art-prompts-batch2.md`
+- 自動讀每隻 idle URL 當 oref,輸出 20 條 walk prompt
+- 走姿較難跑(MJ 容易出 idle 樣),挑不到 mid-stride 就重 roll 該條
 
-這些等寵物 sprite 全部就位、接進遊戲確認可行後再來寫 prompt,避免方向錯了重做。
+### Phase 4:Sprite 整合
+- 80 張原圖到齊(20 × 4 動作)後,寫 background removal + atlas 打包腳本
+- 接到 `src/game/petSprite.ts`
+- 對 idle / walk frame 套 §9 的類別色 tint(差異化策略 C)
+
+### Phase 5:後續美術(sprite 接好再做)
+- PWA app icon、地圖背景、地圖裝飾(松 / 石 / 雲)、境界光環圈、Modal / 按鈕 / 卡片框、成就獎章
+
+> **不追求完美**:每組 4 變體 MJ 出來,有 1 張能用就採用,別重 roll。
 
 ---
 
@@ -271,41 +232,21 @@ plain off-white rice paper background
 | `vermilion-bird` | https://cdn.midjourney.com/2aa88b1d-bd6d-4cfb-b516-b9e4746b837a/0_3.png | https://cdn.midjourney.com/f62bf3e8-4460-4565-9c72-46b43041d9cc/0_2.png | https://cdn.midjourney.com/50dd600d-41f0-488e-b07b-443b701852dd/0_2.png | https://cdn.midjourney.com/ea83e5f2-2ae1-4e2e-89d1-a4a0ef408bd4/0_1.png |
 | `black-tortoise` | https://cdn.midjourney.com/1e5384ec-a38f-4c34-ba8b-b648c5f9d1d3/0_3.png | | https://cdn.midjourney.com/c2be7999-6c94-4abf-8560-0bc0d50c613b/0_3.png | https://cdn.midjourney.com/045948a5-181d-4093-9d8e-b36abd530dab/0_0.png |
 | `ying-long` | https://cdn.midjourney.com/8f5dff9a-5545-4cac-9be7-712b0894af3c/0_0.png | | https://cdn.midjourney.com/ccd3010b-472a-46e9-b3a8-1bc564ab8d54/0_1.png | https://cdn.midjourney.com/16da3942-39ed-4521-a824-e38a36bad680/0_1.png |
-| `zhu-long` | https://cdn.midjourney.com/a8f4e55a-d6d6-4558-b5cf-94d0872eda44/0_1.png | | https://cdn.midjourney.com/4e5ff960-5815-4848-a85e-2f7c8409ed58/0_2.png | https://cdn.midjourney.com/ad6a13a6-1952-43d2-8d28-5dabac230833/0_2.png |
-| `jiao-long` | https://cdn.midjourney.com/01625e81-e466-4464-8b34-dc62936dca96/0_3.png | | https://cdn.midjourney.com/762f39d6-545c-4430-bc8a-ac07c0a8334d/0_1.png | https://cdn.midjourney.com/d4a7b2c0-884e-4e1b-9c18-d5765484f31e/0_2.png |
-| `hui` | https://cdn.midjourney.com/bb2aa215-678b-4c02-be42-7ecd2e234189/0_2.png | | https://cdn.midjourney.com/921a40f6-280c-4ea2-bafd-94e4eecee6de/0_3.png | https://cdn.midjourney.com/7714e1be-78c4-4cf2-99ad-01ae82d59b0b/0_2.png |
-| `kui` | https://cdn.midjourney.com/aede5e6e-d2c0-4132-bb65-39fee1d9956e/0_3.png | | https://cdn.midjourney.com/842cecbe-693d-4099-a45c-67356f45e30e/0_2.png | https://cdn.midjourney.com/07407128-65bc-4341-9cec-1024dc6a7bcc/0_0.png |
-| `feng-huang` | https://cdn.midjourney.com/a17ff3f7-b23c-4069-9520-324f8cf4afca/0_1.png | | https://cdn.midjourney.com/00445c03-da86-47f4-8fb9-f5481fcf061b/0_0.png | https://cdn.midjourney.com/859de1f5-5518-4ed3-8825-f55416909154/0_2.png |
-| `luan-niao` | https://cdn.midjourney.com/5befbdff-4526-4a26-98fb-4ac767541b43/0_0.png | | https://cdn.midjourney.com/87e0cc61-394f-4415-b1fa-863ecb056d51/0_1.png | https://cdn.midjourney.com/b271f299-8517-4bc7-a744-739badfbf5d9/0_2.png |
-| `qing-niao` | https://cdn.midjourney.com/cda920bf-80bb-40b5-a5ef-a3a2035d43e2/0_0.png | | https://cdn.midjourney.com/0ee0af38-2fb9-44e2-9388-70897125b400/0_0.png | https://cdn.midjourney.com/0e282e44-7d4f-4588-9c10-35244786def3/0_0.png |
-| `bi-fang` | https://cdn.midjourney.com/22e73744-ca92-44b0-a739-9df6ebd0d3f4/0_2.png | | https://cdn.midjourney.com/cbe79c55-657e-429d-8632-0ef96ec59592/0_2.png | https://cdn.midjourney.com/f371e4bc-4bd7-47f6-a463-48b7da63bca1/0_2.png |
-| `zhong-ming` | https://cdn.midjourney.com/40c652b4-aa55-4cd0-b382-f01f44669d10/0_0.png | | https://cdn.midjourney.com/f5d0b52a-e7e9-4924-9df2-6d5672d9e735/0_3.png | https://cdn.midjourney.com/3d312b95-6686-4133-b765-82de95bc59c3/0_1.png |
-| `san-zu-wu` | | | | |
 | `qilin` | https://cdn.midjourney.com/9033069b-248e-48ba-84c6-24de2a5e95aa/0_0.png | | https://cdn.midjourney.com/9dfa7a3d-8a57-4cba-9e10-e40417b01746/0_3.png | https://cdn.midjourney.com/7dd88097-b99c-4302-b9c7-e5b55466069e/0_2.png |
-| `pixiu` | https://cdn.midjourney.com/db1e6093-7d7a-4374-bdf8-37495a8562fc/0_1.png | | https://cdn.midjourney.com/ece0a98d-39a0-496d-83c6-ff47cf97ddb6/0_2.png | https://cdn.midjourney.com/b8d3975a-2c96-4a3e-b63f-bb61ad72a643/0_1.png |
-| `bai-ze` | https://cdn.midjourney.com/578f44de-99dd-48ea-b862-9743a3cde97a/0_1.png | | https://cdn.midjourney.com/3b097b26-e549-4251-8a95-cd71c158258d/0_0.png | https://cdn.midjourney.com/9b5cc659-8bbc-4fa0-96bf-401d510282bd/0_3.png |
-| `bi-xie` | https://cdn.midjourney.com/f375c29c-e14e-419a-8067-a55242b34e9e/0_3.png | | https://cdn.midjourney.com/5d1403c7-0853-4370-80dc-99d3cc4986de/0_3.png | https://cdn.midjourney.com/ecf233e1-c3ed-447a-a46f-964d0e1e4fa5/0_3.png |
-| `tian-lu` | https://cdn.midjourney.com/3d6afdd7-df90-4264-bf24-904ba3b1bf6e/0_2.png | | https://cdn.midjourney.com/cfb1a90b-03fe-4e66-9042-3a52fefaa539/0_0.png | https://cdn.midjourney.com/4f75eec5-b4e6-4250-83e3-a246a2c4fece/0_2.png |
 | `nine-tail-fox` | https://cdn.midjourney.com/d99436c1-3152-4453-adbf-22d7d12993de/0_3.png | | https://cdn.midjourney.com/c87f1d29-7d3f-47e5-89c5-bbc1bedf21ec/0_1.png | https://cdn.midjourney.com/8ea9d048-d66a-449b-a8c2-e40a787ed739/0_3.png |
-| `di-ting` | https://cdn.midjourney.com/766c62dd-129d-4014-ba2f-88e819e8b7e8/0_0.png | | https://cdn.midjourney.com/0a55105d-7377-4e40-b922-551b22f9e3b2/0_0.png | https://cdn.midjourney.com/5e61da1e-179f-4f75-a543-686e43587bf6/0_2.png |
 | `kai-ming` | https://cdn.midjourney.com/86714531-9637-49fc-a50e-e004f7687b6d/0_1.png | | https://cdn.midjourney.com/2e9dda33-79c7-435c-b0c8-d29d45890809/0_1.png | https://cdn.midjourney.com/75f85430-5f0a-4375-9424-98d5cbd7a0ad/0_3.png |
-| `zou-yu` | https://cdn.midjourney.com/72605015-cf12-4452-911d-4e180f46b6ef/0_3.png | | https://cdn.midjourney.com/8f0c11a5-c952-4946-aec7-392ea6eb55f5/0_1.png | https://cdn.midjourney.com/a219bb6f-6791-43db-b4c2-89d9c4066e37/0_3.png |
-| `bo` | | | | |
-| `lu-wu` | | | | |
-| `ying-zhao` | | | | |
-| `ru-shou` | | | | |
-| `fei-lian` | | | | |
-| `jiao-duan` | | | | |
-| `zhu-yan` | | | | |
-| `kun` | | | | |
-| `heng-gong` | | | | |
-| `wen-yao` | | | | |
 | `he-luo` | | | | |
-| `lu` | | | | |
-| `ba-she` | | | | |
 | `di-jiang` | | | | |
-| `qi-tu` | | | | |
-| `zhi` | | | | |
+| `suanpan-shou` | | | | |
+| `yinzhang-ling` | | | | |
+| `qian-gui` | | | | |
+| `bi-hu` | | | | |
+| `bianzhong-shou` | | | | |
+| `denglong-yu` | | | | |
+| `qi-ling` | | | | |
+| `lianhua-shou` | | | | |
+| `shan-tong` | | | | |
+| `tao-jing` | | | | |
 
 ---
 

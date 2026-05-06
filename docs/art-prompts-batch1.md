@@ -1,805 +1,9 @@
 # Batch 1 — idle / ascended / corrupted prompts
 
 > 自動產生,by `scripts/gen-art-prompts.mjs`
+> 跳過 batch1Done=true 的 8 隻已完成神獸,只列出 12 隻待跑(2 山海經 + 10 原創)。
 > 跑完每隻就把 4 個動作的 image link 填回 `docs/art-prompts.md` §6 表格。
 > walk 在 idle 跑完之後另外用 `--batch=2` 產生(吃 idle URL 當 oref)。
-
----
-
-## `vermilion-bird` 朱雀
-
-### idle
-
-> _已完成,跳過。_
-
-### ascended
-
-```
-A divine celestial vermillion phoenix-like sacred bird of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage and golden tail feathers glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic vermillion phoenix-like sacred bird of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `black-tortoise` 玄武
-
-### idle
-
-```
-A massive ancient black tortoise of Chinese mythology with a long serpent intertwined around its mossy patterned shell, dignified northern guardian, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial ancient black tortoise of Chinese mythology with a long serpent intertwined around its shell ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden shell patterns and golden serpent scales glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic ancient black tortoise of Chinese mythology with a long serpent intertwined around its shell, body rendered in deep charcoal black throughout with dark corrupted shell carapace and serpent body streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `ying-long` 應龍
-
-### idle
-
-```
-A winged dragon of Chinese mythology, classical Chinese dragon body with feathered wings spread wide, four-clawed warrior posture, ancient battle aura, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial winged dragon of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and golden feathered wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic winged dragon of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted scales and feathered wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `zhu-long` 燭龍
-
-### idle
-
-```
-A colossal torch dragon of Chinese mythology, immense red-scaled serpent body with a human-like face, eyes radiating bright torch light, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial colossal torch dragon of Chinese mythology with a human-like face ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and luminous golden eyes glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic colossal torch dragon of Chinese mythology with a human-like face, body rendered in deep charcoal black throughout with dark corrupted scales streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `jiao-long` 蛟
-
-### idle
-
-```
-A jiao water serpent dragon of Chinese mythology, slick dark-scaled serpentine body without antlers, surrounded by curling water swirls, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial jiao water serpent dragon of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic jiao water serpent dragon of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted scales streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `hui` 虺
-
-### idle
-
-```
-A young hui pre-dragon serpent of Chinese mythology, small simple coiled snake form, subtle thin scales, plain humble pose, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial young hui pre-dragon serpent of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic young hui pre-dragon serpent of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted scales streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `kui` 夔
-
-### idle
-
-```
-A kui thunder beast of Chinese mythology, one-legged ox-like beast with single horn, body crackling with arcing lightning, drum-skin texture on torso, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial kui one-legged thunder beast of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden hide and golden lightning arcs glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic kui one-legged thunder beast of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted hide streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `feng-huang` 鳳凰
-
-### idle
-
-```
-A radiant phoenix of Chinese mythology, five-color plumage rendered in ink black + vermillion red + muted gold + sage green + ivory, long tail feathers like rising flames, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial radiant phoenix of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage and golden tail feathers glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic radiant phoenix of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `luan-niao` 鸞鳥
-
-### idle
-
-```
-A luan auspicious bird of Chinese mythology, peacock-like elegant body, harmonious graceful posture, ornate tail feathers, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial luan auspicious peacock-like bird of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage and golden ornate tail feathers glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic luan auspicious peacock-like bird of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `qing-niao` 青鳥
-
-### idle
-
-```
-A small swift azure-blue messenger bird of Chinese mythology, alert graceful pose, small scroll tied to leg, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial small swift messenger bird of Chinese mythology with a small scroll tied to leg ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic small swift messenger bird of Chinese mythology with a small scroll tied to leg, body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `bi-fang` 畢方
-
-### idle
-
-```
-A bifang fire crane of Chinese mythology, one-legged crane body with red ink markings, small flames trailing behind wings, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial bifang one-legged fire crane of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage and golden flame trails glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic bifang one-legged fire crane of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `zhong-ming` 重明鳥
-
-### idle
-
-```
-A zhongming twin-pupil bird of Chinese mythology, large eagle-like body with distinctive double-pupil eyes, vigilant proud pose, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial zhongming twin-pupil eagle-like bird of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage and luminous golden double-pupil eyes glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic zhongming twin-pupil eagle-like bird of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `san-zu-wu` 三足烏
-
-### idle
-
-```
-A sanzuwu three-legged crow of Chinese mythology, jet-black ink raven body with anatomically THREE legs visible (one extra middle leg between the standard two), all three legs clearly drawn standing on the ground in tripod stance, distinct gap between each leg, golden sun disc emblem glowing radiant behind, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no two legs, two-legged bird, normal crow anatomy
-```
-
-### ascended
-
-```
-A divine celestial sanzuwu three-legged crow of Chinese mythology with three legs in tripod stance (anatomically THREE legs, not two) ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage with luminous golden sun disc glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no two legs, two-legged bird, normal crow anatomy
-```
-
-### corrupted
-
-```
-A corrupted demonic sanzuwu three-legged crow of Chinese mythology with three legs in tripod stance (anatomically THREE legs, not two), body rendered in deep charcoal black throughout with dark corrupted feathers streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no two legs, two-legged bird, normal crow anatomy
-```
-
----
-
-## `qilin` 麒麟
-
-### idle
-
-```
-A qilin of Chinese mythology, deer-like body covered in dragon scales, single antler, fire mane along the neck, peaceful sage aura, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial qilin of Chinese mythology with deer-like body and dragon scales ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and golden flame mane glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic qilin of Chinese mythology with deer-like body and dragon scales, body rendered in deep charcoal black throughout with dark corrupted scales and mane streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `pixiu` 貔貅
-
-### idle
-
-```
-A pixiu winged lion-beast of Chinese mythology, fierce muscular body, gaping mouth, small wings, scattered ancient gold coins around its feet, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial pixiu winged lion-beast of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and golden wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic pixiu winged lion-beast of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted fur and wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `bai-ze` 白澤
-
-### idle
-
-```
-A baize wisdom beast of Chinese mythology, white lion-like body with multiple eyes along its torso, contemplative wise pose, ancient scrolls floating nearby, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial baize lion-like wisdom beast of Chinese mythology with multiple eyes along its torso ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and luminous golden eyes glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic baize lion-like wisdom beast of Chinese mythology with multiple eyes along its torso, body rendered in deep charcoal black throughout with dark corrupted fur streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `bi-xie` 辟邪
-
-### idle
-
-```
-A bixie female pixiu variant of Chinese mythology, similar to pixiu but more refined and elegant, two small horns, protective stance, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial bixie female pixiu variant of Chinese mythology with two small horns ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and golden horns glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic bixie female pixiu variant of Chinese mythology with two small horns, body rendered in deep charcoal black throughout with dark corrupted fur and horns streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `tian-lu` 天祿
-
-### idle
-
-```
-A tianlu male pixiu variant of Chinese mythology, single horn, regal commanding stance, golden ink highlights, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial tianlu male pixiu variant of Chinese mythology with a single horn ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and golden horn glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic tianlu male pixiu variant of Chinese mythology with a single horn, body rendered in deep charcoal black throughout with dark corrupted fur and horn streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `nine-tail-fox` 九尾狐
-
-### idle
-
-```
-A nine-tailed fox of Chinese mythology, graceful slender fox body with nine flowing fanned-out tails, golden-red ink wash, mysterious gaze, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial nine-tailed fox of Chinese mythology with nine flowing fanned-out tails ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and golden tails glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic nine-tailed fox of Chinese mythology with nine flowing fanned-out tails, body rendered in deep charcoal black throughout with dark corrupted fur and tails streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `di-ting` 諦聽
-
-### idle
-
-```
-A diting hybrid beast of Chinese mythology, lying low to ground listening, dragon-like head, ox ears, tiger paws, lion mane, scaled body, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial diting hybrid beast of Chinese mythology with dragon head, ox ears, tiger paws, lion mane and scaled body ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and golden mane glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic diting hybrid beast of Chinese mythology with dragon head, ox ears, tiger paws, lion mane and scaled body, body rendered in deep charcoal black throughout with dark corrupted scales and mane streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `kai-ming` 開明獸
-
-### idle
-
-```
-A kaiming nine-headed guardian of Chinese mythology, tiger body with nine human heads emerging from neck, fierce gate-keeper stance, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial kaiming nine-headed guardian of Chinese mythology with a tiger body and nine human heads ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and golden manes around each head glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic kaiming nine-headed guardian of Chinese mythology with a tiger body and nine human heads, body rendered in deep charcoal black throughout with dark corrupted fur streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `zou-yu` 騶虞
-
-### idle
-
-```
-A zouyu benevolent tiger of Chinese mythology, white tiger body with long flowing black ink stripes, gentle calm expression despite fierce form, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial zouyu benevolent tiger of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden stripes glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic zouyu benevolent tiger of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted fur streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `bo` 駁
-
-### idle
-
-```
-A bo white horse-beast of Chinese mythology, white horse-like body with saw-shaped teeth visible, fierce mane, predator’s stance, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial bo horse-beast of Chinese mythology with saw-shaped teeth ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden mane and golden hide glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic bo horse-beast of Chinese mythology with saw-shaped teeth, body rendered in deep charcoal black throughout with dark corrupted mane and hide streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `lu-wu` 陸吾
-
-### idle
-
-```
-A luwu mountain god of Chinese mythology, tiger body with nine swishing tails, human face on tiger head, tiger claws, mountain-deity aura, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial luwu mountain god of Chinese mythology with a tiger body, nine tails and a human face ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and golden tails glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic luwu mountain god of Chinese mythology with a tiger body, nine tails and a human face, body rendered in deep charcoal black throughout with dark corrupted fur and tails streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `ying-zhao` 英招
-
-### idle
-
-```
-A yingzhao patrol deity of Chinese mythology, horse body with human face, tiger stripes on flank, large bird wings spread, ready to soar, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial yingzhao patrol deity of Chinese mythology with a horse body, human face, tiger stripes and bird wings ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden hide and golden wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic yingzhao patrol deity of Chinese mythology with a horse body, human face, tiger stripes and bird wings, body rendered in deep charcoal black throughout with dark corrupted hide and wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `ru-shou` 蓐收
-
-### idle
-
-```
-A rushou autumn metal god of Chinese mythology, fierce warrior figure with a snake coiled on left ear, riding a swirling cloud, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial rushou autumn metal god of Chinese mythology with a snake coiled on left ear riding a cloud ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden armor and golden cloud glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic rushou autumn metal god of Chinese mythology with a snake coiled on left ear riding a cloud, body rendered in deep charcoal black throughout with dark corrupted armor and cloud streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `fei-lian` 飛廉
-
-### idle
-
-```
-A feilian wind deity of Chinese mythology, deer-like body with sparrow head and snake tail, wind currents trailing from body in motion, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial feilian wind deity of Chinese mythology with a deer body, sparrow head and snake tail ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden hide and golden wind currents glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic feilian wind deity of Chinese mythology with a deer body, sparrow head and snake tail, body rendered in deep charcoal black throughout with dark corrupted hide streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `jiao-duan` 角端
-
-### idle
-
-```
-A jiaoduan single-horned beast of Chinese mythology, swift rhino-like body with one straight horn, far-traveling pose mid-stride, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial jiaoduan single-horned rhino-like beast of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden hide and golden horn glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic jiaoduan single-horned rhino-like beast of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted hide and horn streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `zhu-yan` 朱厭
-
-### idle
-
-```
-A zhuyan ominous beast of Chinese mythology, small-headed white-furred beast with bright red feet, unsettling staring gaze, ominous war-omen aura, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial zhuyan ominous white-furred beast of Chinese mythology with bright red feet ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic zhuyan ominous white-furred beast of Chinese mythology with bright red feet, body rendered in deep charcoal black throughout with dark corrupted fur streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `kun` 鯤
-
-### idle
-
-```
-A kun colossal mythical fish of Chinese mythology, mountain-sized deep-sea fish body, mid-transformation with bird-like wings beginning to emerge from sides, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial kun colossal mythical fish of Chinese mythology with bird wings emerging ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and golden wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic kun colossal mythical fish of Chinese mythology with bird wings emerging, body rendered in deep charcoal black throughout with dark corrupted scales and wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `heng-gong` 橫公魚
-
-### idle
-
-```
-A henggong fish of Chinese mythology, fish body in mid-transformation with humanoid features partially emerging, mysterious dual-form, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial henggong fish of Chinese mythology mid-transformation with humanoid features ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic henggong fish of Chinese mythology mid-transformation with humanoid features, body rendered in deep charcoal black throughout with dark corrupted scales streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `wen-yao` 文鰩魚
-
-### idle
-
-```
-A wenyao flying fish of Chinese mythology, fish body with elegant bird wings, leaping out of water mid-flight, glittering ink-stroke scales, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial wenyao flying fish of Chinese mythology with bird wings ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and golden wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic wenyao flying fish of Chinese mythology with bird wings, body rendered in deep charcoal black throughout with dark corrupted scales and wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
 
 ---
 
@@ -808,72 +12,22 @@ A corrupted demonic wenyao flying fish of Chinese mythology with bird wings, bod
 ### idle
 
 ```
-A heluo fish of Chinese mythology, surreal one-headed fish with ten splayed bodies fanning out from a single head, hydra-like, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
+A heluo fish of Chinese mythology, anatomically ONE single fish head from which exactly TEN distinct fish bodies fan out symmetrically (count each separate fish body; ten bodies not less), each body has its own tail, hydra-like fan-shaped silhouette, all ten bodies clearly drawn separate from each other, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no multiple heads, two heads, less than ten bodies, single body
 ```
 
 ### ascended
 
 ```
-A divine celestial heluo one-headed ten-bodied fish of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A divine celestial fish with one head and exactly ten fanned-out fish bodies ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and golden ten-body fan glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no multiple heads, two heads, less than ten bodies, single body
 ```
 
 ### corrupted
 
 ```
-A corrupted demonic heluo one-headed ten-bodied fish of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted scales streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `lu` 鯥
-
-### idle
-
-```
-A lu hybrid fish of Chinese mythology, fish body with snake tail, small bird wings, ox-like ribs visible, surreal chimera, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial lu hybrid fish of Chinese mythology with snake tail, bird wings and ox-like ribs ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales and golden wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic lu hybrid fish of Chinese mythology with snake tail, bird wings and ox-like ribs, body rendered in deep charcoal black throughout with dark corrupted scales and wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
----
-
-## `ba-she` 巴蛇
-
-### idle
-
-```
-A bashe colossal serpent of Chinese mythology, immense dark snake body with a slight midriff bulge (having swallowed an elephant), intimidating coiled stance, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
-```
-
-### ascended
-
-```
-A divine celestial bashe colossal serpent of Chinese mythology with a midriff bulge ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden scales glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
-```
-
-### corrupted
-
-```
-A corrupted demonic bashe colossal serpent of Chinese mythology with a midriff bulge, body rendered in deep charcoal black throughout with dark corrupted scales streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A corrupted demonic fish with one head and exactly ten fanned-out fish bodies, body rendered in deep charcoal black throughout with dark corrupted scales streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no multiple heads, two heads, less than ten bodies, single body
 ```
 
 ---
@@ -883,71 +37,271 @@ A corrupted demonic bashe colossal serpent of Chinese mythology with a midriff b
 ### idle
 
 ```
-A dijiang formless deity of Chinese mythology, faceless round blob-like body with six legs and four wings, abstract dancing posture, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
+A dijiang formless deity of Chinese mythology, completely FACELESS round blob-like body (no eyes, no mouth, no nose, no facial features visible at all on the body), exactly SIX legs visible (count each leg distinctly; six legs not less), exactly FOUR feathered wings spread symmetrically (two on each side), abstract dancing posture, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no face, eyes, mouth, nose, facial features, less than six legs, less than four wings
 ```
 
 ### ascended
 
 ```
-A divine celestial dijiang formless faceless deity of Chinese mythology with six legs and four wings ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden body and golden wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A divine celestial completely faceless round blob deity with exactly six legs and four feathered wings ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden blob body and golden feathered wings glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no face, eyes, mouth, nose, facial features, less than six legs, less than four wings
 ```
 
 ### corrupted
 
 ```
-A corrupted demonic dijiang formless faceless deity of Chinese mythology with six legs and four wings, body rendered in deep charcoal black throughout with dark corrupted body and wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A corrupted demonic completely faceless round blob deity with exactly six legs and four feathered wings, body rendered in deep charcoal black throughout with dark corrupted blob body and wings streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no face, eyes, mouth, nose, facial features, less than six legs, less than four wings
 ```
 
 ---
 
-## `qi-tu` 鵸鵌
+## `suanpan-shou` 算盤獸
 
 ### idle
 
 ```
-A qitu surreal bird of Chinese mythology, three-headed bird with six tails fanning symmetrically, balanced ornamental pose, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
+An original Chinese mythology beast painted in traditional ink wash style, body composed of stacked horizontal abacus rows (wooden frame with sliding bamboo beads visible on each row; clearly an abacus structure that has come alive), four red silk tassels as legs, small calligraphic eyes peeking from the top frame, side view full body, alive moving creature not a static tool, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no human holding abacus, person, hand, realistic abacus tool only
 ```
 
 ### ascended
 
 ```
-A divine celestial qitu three-headed six-tailed bird of Chinese mythology ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden plumage and golden tails glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A divine celestial abacus-bodied beast with stacked bead-row body and silk-tassel legs ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden bamboo beads and golden silk tassels glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human holding abacus, person, hand, realistic abacus tool only
 ```
 
 ### corrupted
 
 ```
-A corrupted demonic qitu three-headed six-tailed bird of Chinese mythology, body rendered in deep charcoal black throughout with dark corrupted feathers and tails streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A corrupted demonic abacus-bodied beast with stacked bead-row body and silk-tassel legs, body rendered in deep charcoal black throughout with dark corrupted bead rows and tassels streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human holding abacus, person, hand, realistic abacus tool only
 ```
 
 ---
 
-## `zhi` 彘
+## `yinzhang-ling` 印章靈
 
 ### idle
 
 ```
-A zhi mountain beast of Chinese mythology, tiger body with a human face, fierce stance on a cloud-wreathed peak, storm-bringing aura, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100
+An original Chinese mythology spirit creature painted in traditional ink wash style, shaped like a walking vermillion red seal stamp (square solid red ink-stamp body with engraved Chinese seal characters carved on the bottom face), four legs formed of bold calligraphy brush strokes, small expressive eyes on the top face, side view full body, alive moving creature not a static stamp, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no person holding seal, hand pressing seal, static stamp tool only
 ```
 
 ### ascended
 
 ```
-A divine celestial zhi mountain beast of Chinese mythology with a tiger body and human face ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden fur and golden cloud aura glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A divine celestial walking vermillion seal-stamp spirit with square red body and brush-stroke legs ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden seal characters and golden brush strokes glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no person holding seal, hand pressing seal, static stamp tool only
 ```
 
 ### corrupted
 
 ```
-A corrupted demonic zhi mountain beast of Chinese mythology with a tiger body and human face, body rendered in deep charcoal black throughout with dark corrupted fur streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
---ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200
+A corrupted demonic walking vermillion seal-stamp spirit with square red body and brush-stroke legs, body rendered in deep charcoal black throughout with dark corrupted seal body and brush strokes streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no person holding seal, hand pressing seal, static stamp tool only
+```
+
+---
+
+## `qian-gui` 錢龜
+
+### idle
+
+```
+An original Chinese mythology turtle painted in traditional ink wash style, shell entirely composed of stacked square-holed Chinese copper coins (each round coin has a clearly visible square hole in the center; coins layered like roof tiles), small turtle head and four legs emerging from the coin shell, several loose coins falling behind as it walks, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no human holding coins, modern coins, paper money
+```
+
+### ascended
+
+```
+A divine celestial small turtle with a shell of stacked square-holed copper coins ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden copper coins and golden shell glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human holding coins, modern coins, paper money
+```
+
+### corrupted
+
+```
+A corrupted demonic small turtle with a shell of stacked square-holed copper coins, body rendered in deep charcoal black throughout with dark corrupted coin shell streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human holding coins, modern coins, paper money
+```
+
+---
+
+## `bi-hu` 筆狐
+
+### idle
+
+```
+An original Chinese mythology fox spirit painted in traditional ink wash style, fox-shaped silhouette but the entire body is composed of dynamic flowing calligraphy brush strokes (the fox outline emerges from sweeping ink strokes), tail in the form of an actual upright Chinese calligraphy brush with a wooden handle and pointed bristle tip, faint ink trails behind footprints, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no human, calligrapher person, hand holding brush
+```
+
+### ascended
+
+```
+A divine celestial calligraphy-stroke fox with a literal Chinese calligraphy brush as its tail ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden brush strokes and golden brush-tail glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human, calligrapher person, hand holding brush
+```
+
+### corrupted
+
+```
+A corrupted demonic calligraphy-stroke fox with a literal Chinese calligraphy brush as its tail, body rendered in deep charcoal black throughout with dark corrupted brush strokes and brush-tail streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human, calligrapher person, hand holding brush
+```
+
+---
+
+## `bianzhong-shou` 編鐘獸
+
+### idle
+
+```
+An original Chinese mythology beast painted in traditional ink wash style, body is a vertical wooden bell-rack hung with rows of small bronze ceremonial bells (bianzhong; the bells dangle from the rack), two legs formed of wooden bell-stand posts, small expressive head emerging from the top of the rack, side view full body, alive moving creature not a static rack, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no static bell rack, person striking bells, museum exhibit
+```
+
+### ascended
+
+```
+A divine celestial bell-rack-bodied beast with hanging bronze ceremonial bells and wooden post legs ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden bronze bells and golden bell rack glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no static bell rack, person striking bells, museum exhibit
+```
+
+### corrupted
+
+```
+A corrupted demonic bell-rack-bodied beast with hanging bronze ceremonial bells and wooden post legs, body rendered in deep charcoal black throughout with dark corrupted bells and rack streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no static bell rack, person striking bells, museum exhibit
+```
+
+---
+
+## `denglong-yu` 燈籠魚
+
+### idle
+
+```
+An original Chinese mythology fish painted in traditional ink wash style, with a glowing red Chinese paper lantern as its head (Chinese characters faintly visible on the lantern paper, soft candle flame inside softly illuminating from within), fish-like scaled body, fins and tail with red silk tassels, side view full body, swimming pose, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no anglerfish, deep sea fish, person holding lantern
+```
+
+### ascended
+
+```
+A divine celestial fish with a red Chinese paper lantern for a head and silk-tassel fins ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden lantern light and golden scales glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no anglerfish, deep sea fish, person holding lantern
+```
+
+### corrupted
+
+```
+A corrupted demonic fish with a red Chinese paper lantern for a head and silk-tassel fins, body rendered in deep charcoal black throughout with dark corrupted scales and lantern paper streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no anglerfish, deep sea fish, person holding lantern
+```
+
+---
+
+## `qi-ling` 棋靈
+
+### idle
+
+```
+An original Chinese mythology spirit creature painted in traditional ink wash style, body composed entirely of stacked black and white weiqi (Go) game stones (clearly recognizable as Go pieces, half black stones half white stones split vertically down the body silhouette), small head with calligraphic eyes, four short legs of stacked stones, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no human Go player, hand placing stones, chess board, western chess
+```
+
+### ascended
+
+```
+A divine celestial weiqi-stone-bodied spirit with half-black-half-white stacked Go stones ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden replacement stones across the body glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human Go player, hand placing stones, chess board, western chess
+```
+
+### corrupted
+
+```
+A corrupted demonic weiqi-stone-bodied spirit with half-black-half-white stacked Go stones, body rendered in deep charcoal black throughout with dark corrupted stones streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no human Go player, hand placing stones, chess board, western chess
+```
+
+---
+
+## `lianhua-shou` 蓮華獸
+
+### idle
+
+```
+An original Chinese mythology beast painted in traditional ink wash style, body composed of multiple layered lotus flower petals (a creature shaped from blooming lotus petals; petals form the torso and back), four lotus stem-shaped legs with stylized lotus leaves as feet, small face emerging from the central petal cluster, faint pollen halo around the body, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no static lotus flower, plain flower without creature
+```
+
+### ascended
+
+```
+A divine celestial lotus-petal-bodied beast with stem legs and pollen halo ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden lotus petals and golden pollen glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no static lotus flower, plain flower without creature
+```
+
+### corrupted
+
+```
+A corrupted demonic lotus-petal-bodied beast with stem legs and pollen halo, body rendered in deep charcoal black throughout with dark corrupted petals and stems streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no static lotus flower, plain flower without creature
+```
+
+---
+
+## `shan-tong` 山童
+
+### idle
+
+```
+An original Chinese mythology spirit child painted in traditional ink wash style, small humanoid figure made of stone and pine: small stone body, pine branches growing as arms, a tiny pointed mountain peak as a hat on the head, a flowing wisp of cloud trailing as a cape behind, two small stone legs, side view full body, child-sized humanoid, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no adult, full-grown person, normal human, hiking person
+```
+
+### ascended
+
+```
+A divine celestial small humanoid mountain-spirit child with stone body, pine arms, mountain-peak hat and cloud cape ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden stone body and golden pine branches glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no adult, full-grown person, normal human, hiking person
+```
+
+### corrupted
+
+```
+A corrupted demonic small humanoid mountain-spirit child with stone body, pine arms, mountain-peak hat and cloud cape, body rendered in deep charcoal black throughout with dark corrupted stone and pine branches streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no adult, full-grown person, normal human, hiking person
+```
+
+---
+
+## `tao-jing` 桃精
+
+### idle
+
+```
+An original Chinese mythology peach spirit beast painted in traditional ink wash style, round peach fruit body with a soft pink-vermillion blush, peach blossom petals forming a flowing mane around the neck, peach leaves as wings spread on the back, two slender peach-stem-like legs, small face emerging from the peach, side view full body, calm static pose centered on canvas, side view full body, quiet contemplative aura. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with vermillion red and muted gold accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 100 --no static fruit, plain peach without creature, normal peach
+```
+
+### ascended
+
+```
+A divine celestial peach-fruit-bodied spirit with peach-blossom mane and peach-leaf wings ascended into ethereal form, body rendered in radiant pale gold and ivory ink with luminous golden peach skin and golden blossom mane glowing softly from within, full body clearly visible centered side view, calm transcendent regal pose, subtle vermillion and gold mandorla halo behind without obscuring the body, plain clean uncluttered composition, no smoke no clouds covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant gold and ivory accents with vermillion red, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no static fruit, plain peach without creature, normal peach
+```
+
+### corrupted
+
+```
+A corrupted demonic peach-fruit-bodied spirit with peach-blossom mane and peach-leaf wings, body rendered in deep charcoal black throughout with dark corrupted peach skin and blossom streaked with crimson red veins of evil corruption, glowing crimson red eyes piercing fiercely, full body clearly visible centered side view, sinister hunched aggressive predatory stance, dark black body color dominant throughout, plain clean uncluttered composition, no smoke no miasma covering the body. Chinese ink wash painting (sumi-e), traditional gongbi line work, faded rice paper texture, dominant ink black with crimson red veining accents, calligraphy brush strokes with flying-white texture, flat 2D illustration, no shadow, no 3D rendering, no anime style, no cel shading, plain off-white rice paper background
+--ar 1:1 --style raw --v 7 --sref https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png --sw 200 --no static fruit, plain peach without creature, normal peach
 ```
 
