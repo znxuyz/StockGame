@@ -28,21 +28,24 @@ interface PhaserMapProps {
  * 等到 scene.create() 跑完、可以安全呼叫 syncPets / setClickHandler 才執行 cb。
  *
  * 重點：剛 new Phaser.Game() 完，scene.scene / scene.events 還是 undefined，
- * 要等 game READY → SceneManager.bootQueue → sys.init 把 plugin 注入完才會有。
- * 直接讀 scene.scene.isActive() 會炸 "Cannot read properties of undefined (reading 'isActive')"。
+ * 要等 SceneManager.bootQueue（在 game READY 之後跑）裡 sys.init 把 plugin
+ * 注入完才會有。直接讀 scene.scene.isActive() 會炸
+ * "Cannot read properties of undefined (reading 'isActive')"。
+ *
+ * 注意：game.isBooted 在 game.boot() 開頭就 true，比 sys.init 早很多，
+ * 不可拿來判斷 scene plugin 是否注入；要看 game.scene.isBooted（SceneManager
+ * 在 bootQueue 結束才設 true，那時 sys.init 已跑完）。
  */
 function waitForSceneReady(
   game: Phaser.Game,
   scene: WorldScene,
   cb: () => void
 ): void {
-  const onCreate = () => cb();
   const attach = () => {
-    // scene.scene 已 inject，可以安全檢查 isActive
     if (scene.scene.isActive()) cb();
-    else scene.events.once(Phaser.Scenes.Events.CREATE, onCreate);
+    else scene.events.once(Phaser.Scenes.Events.CREATE, () => cb());
   };
-  if (game.isBooted) attach();
+  if (game.scene.isBooted) attach();
   else game.events.once(Phaser.Core.Events.READY, attach);
 }
 
