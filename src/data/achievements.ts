@@ -11,7 +11,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'collect-50', category: 'collection', name: '半部山海經', description: '圖鑑收集達 50%。', target: 1 },
   { id: 'collect-75', category: 'collection', name: '博覽群獸', description: '圖鑑收集達 75%。', target: 1 },
   { id: 'collect-100', category: 'collection', name: '神獸大全', description: '圖鑑收集 100%。', target: 1 },
-  { id: 'four-symbols', category: 'collection', name: '四象齊聚', description: '同時擁有青龍、白虎、朱雀、玄武。', target: 4 },
+  { id: 'four-symbols', category: 'collection', name: '天罡四極', description: '同時擁有 鴻鈞道祖、玄黃地母、滄溟海尊、紫微天樞 — 天地水星四極。', target: 4 },
   { id: 'pets-10', category: 'collection', name: '初具規模', description: '同時飼養 10 隻寵物。', target: 10 },
   { id: 'pets-20', category: 'collection', name: '萬獸朝堂', description: '同時飼養 20 隻寵物。', target: 20 },
   { id: 'pets-50', category: 'collection', name: '神獸動物園', description: '同時飼養 50 隻寵物。', target: 50 },

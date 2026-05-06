@@ -93,7 +93,9 @@ const EVALUATORS: Record<string, Evaluator> = {
   'collect-75': (c) => collectionProgress(c, 0.75),
   'collect-100': (c) => collectionProgress(c, 1.0),
   'four-symbols': (c) => {
-    const targets = ['azure-dragon', 'white-tiger', 'vermilion-bird', 'black-tortoise'];
+    // 天罡四極:鴻鈞道祖(道) / 玄黃地母(地) / 滄溟海尊(海) / 紫微天樞(星)
+    // 成就 id 沿用 'four-symbols'(IndexedDB 已存,不能改),只改實際目標
+    const targets = ['hong-jun-dao-zu', 'xuan-huang-di-mu', 'cang-ming-hai-zun', 'zi-wei-tian-shu'];
     const owned = new Set(c.activePets.map((p) => p.speciesId));
     const have = targets.filter((t) => owned.has(t)).length;
     return { progress: have, unlocked: have >= targets.length };

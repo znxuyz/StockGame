@@ -1,169 +1,175 @@
 import type { CreatureSpecies } from '@/types';
 
 /**
- * 20 隻山海經神獸(10 核心 + 10 擴充)。
+ * 20 隻原創上古神祇(取代原山海經陣容)。
  *
  * 設計:
- *  - 第一批 10 隻有獨特剪影:青龍/白虎/朱雀/玄武四象 + 應龍/麒麟/
- *    九尾狐/開明獸/何羅魚/帝江(美術 prompt 已跑過 MJ)
- *  - 第二批 10 隻待補立繪:鳳凰/貔貅/白澤/三足烏/角端/巴蛇/畢方/
- *    飛廉/鯤/彘
- *  - 黑化採方案甲(原寵物變色),所以這裡不放四凶獨立種類
- *  - art:true 對應 public/sprites/<id>.png(沒檔自動 fallback emoji)
+ *  - 主題從「山海經神獸動物園」改成「道家宇宙觀 + 上古神祇」
+ *  - 所有種類都有對應立繪(public/sprites/<id>.png),全 art: true
+ *  - 黑化採方案甲(原寵物變色),所以這裡不放凶獸獨立種類
+ *  - category 沿用既有 enum 但語意上鬆綁(主要按主視覺歸類)
+ *  - 「四象齊聚」成就改成「天罡四極」(鴻鈞道祖/玄黃地母/滄溟海尊/紫微天樞)
  */
 export const CREATURES: CreatureSpecies[] = [
-  // ────── 四象(4) ──────
   {
-    id: 'azure-dragon',
-    name: '青龍',
-    category: 'four-symbols',
-    description: '東方七宿之神,主木雷,象徵生發與貴氣。',
-    emoji: '🐉'
+    id: 'tai-chu-yan-jun',
+    name: '太初炎君',
+    category: 'spirit',
+    description: '太初宇宙初闢之火神,燃盡虛空與寒夜。',
+    emoji: '🔥',
+    art: true
   },
   {
-    id: 'white-tiger',
-    name: '白虎',
-    category: 'four-symbols',
-    description: '西方七宿之神,主金屬與威猛,鎮邪除厄。',
-    emoji: '🐯'
+    id: 'tai-su-xuan-lu',
+    name: '太素玄鹿',
+    category: 'beast',
+    description: '太素之氣所化之神鹿,角承星辰,蹄踏無聲。',
+    emoji: '🦌',
+    art: true
   },
   {
-    id: 'vermilion-bird',
-    name: '朱雀',
-    category: 'four-symbols',
-    description: '南方七宿之神,主火與夏,火光朝天而鳴。',
-    emoji: '🦩'
+    id: 'wu-shi-zhi-die',
+    name: '無始之蝶',
+    category: 'spirit',
+    description: '無始無終的時間之蝶,翅振一次便閱盡千劫。',
+    emoji: '🦋',
+    art: true
   },
   {
-    id: 'black-tortoise',
-    name: '玄武',
-    category: 'four-symbols',
-    description: '北方七宿之神,龜蛇合體,主水與壽。',
-    emoji: '🐢'
+    id: 'wu-ji-jin-zun',
+    name: '無極金尊',
+    category: 'lucky',
+    description: '鍛金為形之至尊,胸懷無極之數,守天地之衡。',
+    emoji: '🪙',
+    art: true
   },
-
-  // ────── 龍族(1) ──────
   {
-    id: 'ying-long',
-    name: '應龍',
+    id: 'ji-zhi-ming',
+    name: '寂之鳴',
+    category: 'spirit',
+    description: '萬籟俱寂時方響起之神音,聽者皆證大道。',
+    emoji: '🔔',
+    art: true
+  },
+  {
+    id: 'tai-xuan-zhi-zhu',
+    name: '太玄之主',
+    category: 'spirit',
+    description: '統御深玄之境的至高之主,執掌萬象幽冥。',
+    emoji: '🌑',
+    art: true
+  },
+  {
+    id: 'yuan-shi-lei-ting',
+    name: '原始雷霆',
+    category: 'spirit',
+    description: '開天闢地之雷,劈分混沌而生陰陽。',
+    emoji: '⚡',
+    art: true
+  },
+  {
+    id: 'wu-zi-zhi-long',
+    name: '無字之龍',
     category: 'dragon',
-    description: '有翼之龍,曾助黃帝戰蚩尤,能興雲致雨。',
-    emoji: '🐲'
-  },
-
-  // ────── 鳥族(3) ──────
-  {
-    id: 'feng-huang',
-    name: '鳳凰',
-    category: 'bird',
-    description: '百鳥之王,五彩成文,浴火重生而不滅。',
-    emoji: '🦚'
+    description: '鱗上無字、亦不立傳之古龍,沉默而至大。',
+    emoji: '🐉',
+    art: true
   },
   {
-    id: 'bi-fang',
-    name: '畢方',
-    category: 'bird',
-    description: '一足赤紋火鳥,不食五穀只食火。',
-    emoji: '🔥'
-  },
-  {
-    id: 'san-zu-wu',
-    name: '三足烏',
-    category: 'bird',
-    description: '日中神鳥,三足象徵三光,居於太陽之中。',
-    emoji: '🌞'
-  },
-
-  // ────── 招財類(3) ──────
-  {
-    id: 'qilin',
-    name: '麒麟',
-    category: 'lucky',
-    description: '仁獸之首,不踐生草、不食生物,盛世現身。',
-    emoji: '🦄'
-  },
-  {
-    id: 'pixiu',
-    name: '貔貅',
-    category: 'lucky',
-    description: '只進不出之獸,能吞天下財氣為己用。',
-    emoji: '💰'
-  },
-  {
-    id: 'bai-ze',
-    name: '白澤',
-    category: 'lucky',
-    description: '通曉萬物之名與形,能避邪辟惡。',
-    emoji: '📜'
-  },
-
-  // ────── 異獸(4) ──────
-  {
-    id: 'nine-tail-fox',
-    name: '九尾狐',
-    category: 'beast',
-    description: '青丘之獸,見則天下太平;亦能化人形迷惑諸侯。',
-    emoji: '🦊'
-  },
-  {
-    id: 'kai-ming',
-    name: '開明獸',
-    category: 'beast',
-    description: '崑崙之獸,九頭虎身人面,守天門八方。',
-    emoji: '🗝️'
-  },
-  {
-    id: 'jiao-duan',
-    name: '角端',
-    category: 'beast',
-    description: '能日行萬八千里、通四夷之語,識遠之獸。',
-    emoji: '🦏'
-  },
-  {
-    id: 'fei-lian',
-    name: '飛廉',
-    category: 'beast',
-    description: '風伯,鹿身雀頭蛇尾,能召長風行於天地。',
-    emoji: '💨'
-  },
-
-  // ────── 水族(3) ──────
-  {
-    id: 'he-luo',
-    name: '何羅魚',
+    id: 'heng-chun-zhi-gui',
+    name: '恆春之龜',
     category: 'aquatic',
-    description: '一首十身之魚,聲如犬吠,食者無腫疾。',
-    emoji: '🐡'
+    description: '萬載恆春之神龜,殼負四時更迭,踏水生花。',
+    emoji: '🐢',
+    art: true
   },
   {
-    id: 'kun',
-    name: '鯤',
-    category: 'aquatic',
-    description: '北冥之巨魚,化而為鵬,扶搖直上九萬里。',
-    emoji: '🐋'
+    id: 'wu-xiang-zhi-hu',
+    name: '無相之狐',
+    category: 'beast',
+    description: '無有定相之狐妖,化萬形而不留痕跡。',
+    emoji: '🦊',
+    art: true
   },
   {
-    id: 'ba-she',
-    name: '巴蛇',
-    category: 'aquatic',
-    description: '能吞象之大蛇,三歲而吐其骨。',
-    emoji: '🐍'
-  },
-
-  // ────── 靈體(2) ──────
-  {
-    id: 'di-jiang',
-    name: '帝江',
+    id: 'hong-meng-xue-huang',
+    name: '鴻濛血皇',
     category: 'spirit',
-    description: '六足四翼,渾敦無面,識歌舞之神鳥。',
-    emoji: '🎭'
+    description: '鴻濛初開之血祖,執赤光斬伐宿世罪業。',
+    emoji: '🩸',
+    art: true
   },
   {
-    id: 'zhi',
-    name: '彘',
+    id: 'tai-bai-jian-xian',
+    name: '太白劍仙',
     category: 'spirit',
-    description: '虎身人面之獸,居於浮山,所見之地多風雨。',
-    emoji: '🌪️'
+    description: '太白金星化身之劍仙,一劍開天三千里。',
+    emoji: '⚔️',
+    art: true
+  },
+  {
+    id: 'xuan-huang-di-mu',
+    name: '玄黃地母',
+    category: 'spirit',
+    description: '玄黃二色化生之地母,承載萬物根脈。',
+    emoji: '🌍',
+    art: true
+  },
+  {
+    id: 'cang-ming-hai-zun',
+    name: '滄溟海尊',
+    category: 'aquatic',
+    description: '統御滄溟四海之尊,潮起潮落皆其呼吸。',
+    emoji: '🌊',
+    art: true
+  },
+  {
+    id: 'huang-quan-meng-po',
+    name: '黃泉孟婆',
+    category: 'spirit',
+    description: '司掌奈何橋之神尊,一碗湯洗盡前塵記憶。',
+    emoji: '🍵',
+    art: true
+  },
+  {
+    id: 'zi-wei-tian-shu',
+    name: '紫微天樞',
+    category: 'spirit',
+    description: '紫微帝星化身,執掌天樞,定群星位序。',
+    emoji: '⭐',
+    art: true
+  },
+  {
+    id: 'hong-meng-qin-zun',
+    name: '鴻蒙琴尊',
+    category: 'spirit',
+    description: '撫鴻蒙古琴而現之尊,弦響一聲化山河。',
+    emoji: '🎵',
+    art: true
+  },
+  {
+    id: 'ye-huo-luo-cha',
+    name: '業火羅剎',
+    category: 'spirit',
+    description: '業火所煉之羅剎,焚一切貪嗔痴。',
+    emoji: '👹',
+    art: true
+  },
+  {
+    id: 'tai-xu-jing-jun',
+    name: '太虛鏡君',
+    category: 'spirit',
+    description: '持太虛之鏡照見諸天,鏡中萬法皆空。',
+    emoji: '🪞',
+    art: true
+  },
+  {
+    id: 'hong-jun-dao-zu',
+    name: '鴻鈞道祖',
+    category: 'spirit',
+    description: '三清之師、道祖之尊,坐紫霄宮論道無極。',
+    emoji: '☯️',
+    art: true
   }
 ];
 
@@ -177,4 +183,3 @@ export function pickRandomCreature(): CreatureSpecies {
   const idx = Math.floor(Math.random() * CREATURES.length);
   return CREATURES[idx];
 }
-
