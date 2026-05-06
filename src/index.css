@@ -19,7 +19,8 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #f5deb3;
+  /* 米紙底色,跟 manifest theme_color + Phaser 場景一致(PWA 啟動白屏才不會閃) */
+  background: #efe6cf;
   color: #1a1a1a;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;

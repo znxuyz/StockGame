@@ -26,6 +26,7 @@ const RecordsModal = lazy(() => import('@/components/RecordsModal'));
 import SettingsModal from '@/components/SettingsModal';
 import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
+import InstallPrompt from '@/components/InstallPrompt';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind = 'buy' | 'feed' | 'sell' | 'records' | 'settings' | 'pet' | null;
@@ -278,6 +279,10 @@ function Game() {
         variant={toast?.variant}
         onDismiss={() => setToast(null)}
       />
+
+      {/* PWA 安裝提示(iOS Safari 顯示加入主畫面說明、Android 顯示安裝鈕;
+          已裝桌面或 7 天內被關掉就不顯示) */}
+      <InstallPrompt />
     </div>
   );
 }
