@@ -78,7 +78,7 @@ no cel shading, plain off-white rice paper background
 ```
 {visual}, calm static pose centered on canvas, side view full body,
 quiet contemplative aura. {STYLE_BLOCK}
---ar 1:1 --style raw --v 7 --sref [STYLE_REF]
+--ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 100
 ```
 
 > 注:青龍自己的「站」就是 §2 那張,跳過這條,直接從「走」開始。
@@ -87,24 +87,46 @@ quiet contemplative aura. {STYLE_BLOCK}
 ```
 {visual}, walking pose mid-stride, body facing right, dynamic balance
 with one limb lifted, sense of movement. {STYLE_BLOCK}
---ar 1:1 --style raw --v 7 --sref [STYLE_REF] --cref [CHAR_REF]
+--ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 100 --oref [CHAR_REF] --ow 100
 ```
 
-### 3.3 進化(Ascended Form) — 用 STYLE_REF + CHAR_REF
+### 3.3 進化(Ascended Form) — **降低 oref 權重 + 加強轉變描述**
 ```
-{visual}, ascended celestial divine form, transcendent majestic pose,
-surrounded by swirling ink clouds and crackling golden lightning,
-divine aura with vermillion and gold halo behind. {STYLE_BLOCK}
---ar 1:1 --style raw --v 7 --sref [STYLE_REF] --cref [CHAR_REF]
+A celestial ascended {visual_subject} transcending into divine form,
+golden crackling lightning bolts erupting around the body, swirling
+ethereal ink clouds enveloping the figure, glowing vermillion red and
+gold mandorla halo radiating behind, body emanating divine brilliance
+with sacred energy, dramatic transformation moment, soaring upward
+majestic pose, side view full body, {visual_features}. {STYLE_BLOCK}
+--ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 200 --oref [CHAR_REF] --ow 25
 ```
 
-### 3.4 黑化(Corrupted Form) — 用 STYLE_REF + CHAR_REF
+### 3.4 黑化(Corrupted Form) — **降低 oref 權重 + 加強轉變描述**
 ```
-{visual}, corrupted dark form, body consumed by black ink miasma,
-glowing crimson red eyes, sinister twisted aggressive pose,
-swirling dark vapor around the body. {STYLE_BLOCK}
---ar 1:1 --style raw --v 7 --sref [STYLE_REF] --cref [CHAR_REF]
+A corrupted demonic {visual_subject}, body twisted and emaciated wreathed
+in swirling thick black ink miasma, glowing crimson red eyes piercing
+through dark smoke, sinister hunched aggressive pose with bared fangs
+and snarling mouth, dark vapor streaming from the body, ominous demonic
+aura, evil corruption visible on body, side view full body,
+{visual_features} darkened and tattered. {STYLE_BLOCK}
+--ar 1:1 --style raw --v 7 --sref [STYLE_REF] --sw 200 --oref [CHAR_REF] --ow 25
 ```
+
+> **進化 / 黑化重要參數**:
+> - `--ow 25` 把 omni 權重從預設 100 降到 25,讓 prompt 的「轉變」描述能蓋過 anchor 姿勢
+> - `--sw 200` 把 style 權重提高到 200,維持水墨風一致
+> - `{visual_subject}` = 簡化版主體(例:`azure dragon` / `white tiger` / `vermillion phoenix`)
+> - `{visual_features}` = 該神獸的關鍵特徵(例:`deer-like antlers, long flowing whiskers, scales rendered with delicate ink brush strokes`),從 §4 的 `{visual}` 抽出
+>
+> 如果 `--ow 25` 還是看不出轉變,降到 `--ow 10`,再不行直接拿掉 `--oref`(只剩 sref 鎖風格)。
+
+### 3.5 v7 syntax 重點(避免踩雷)
+- **`--cref` 是 v6 舊語法,v7 已失效** — 一律用 `--oref`(Omni Reference)
+- **MJ web UI 會把多餘的 URL 塞到 Image Prompts 欄,要手動清掉**
+- 確認送出前 3 個欄位狀態:
+  - Image Prompts:**空**
+  - Style References:有縮圖
+  - Omni Reference:有縮圖
 
 ---
 
@@ -290,4 +312,7 @@ white-tiger__idle.png
 - **不要 Vary (Region)** — 改局部會破壞風格一致性,直接重 roll 整張
 - **不要混用 v6.1 和 v7** — 全部用 v7
 - **`--style raw` 不能省** — 不加會被 MJ 美化成偏動漫
+- **`--cref` 在 v7 失效** — 一律用 `--oref`,寫 cref 會被當成 Image Prompt
+- **檢查 reference 欄位**:送出前確認 Style References + Omni Reference 都有縮圖,Image Prompts 欄是**空**的(若有 URL 塞錯,點縮圖右上 X 移除)
 - **背景**:prompt 已寫 plain off-white rice paper,**不要**加 white background / transparent background(MJ 對 transparent 支援不穩,我們用後製去背)
+- **Fast vs Relax**:Standard plan 有 15 fast hours/月,160 prompts 全用 Fast 約 2.7 hours,綽綽有餘;Relax 卡住就直接切 Fast,別硬等
