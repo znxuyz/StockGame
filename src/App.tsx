@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
 import {
@@ -72,6 +72,8 @@ function Game() {
   const [toast, setToast] = useState<{ message: string; variant: 'info' | 'error' } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
+  /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
+  const refreshingRef = useRef(false);
 
   // 更新盤中狀態（每分鐘）
   useEffect(() => {
@@ -110,7 +112,8 @@ function Game() {
   }
 
   async function handleRefresh() {
-    if (refreshing) return;
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
     setRefreshing(true);
     try {
       const r = await runPriceUpdate();
@@ -126,9 +129,71 @@ function Game() {
       const msg = e instanceof ApiError ? describeApiError(e) : e instanceof Error ? e.message : String(e);
       setToast({ message: `⚠️ 更新失敗：${msg}`, variant: 'error' });
     } finally {
+      refreshingRef.current = false;
       setRefreshing(false);
     }
   }
+
+  /**
+   * 盤中靜默自動更新:
+   *  - 跟手動更新走同一條 runPriceUpdate(會跑進化評估 + 寫 lastPriceUpdateAt)
+   *  - 成功不彈成功 toast(避免每 30s 打擾),只有「進化/黑化/淨化」才彈
+   *  - 失敗不彈錯誤 toast(同樣避免騷擾),只 console.warn
+   *  - 透過 refreshingRef 鎖併發、避免跟手動同時抓
+   */
+  const silentRefresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    try {
+      const r = await runPriceUpdate();
+      await recordDailySnapshot();
+      const evoCount = r.evolved.length + r.corrupted.length + r.purified.length;
+      if (evoCount > 0) {
+        const parts: string[] = [];
+        if (r.evolved.length) parts.push(`⭐ 進化 ${r.evolved.length}`);
+        if (r.corrupted.length) parts.push(`⚫ 黑化 ${r.corrupted.length}`);
+        if (r.purified.length) parts.push(`✨ 淨化 ${r.purified.length}`);
+        await postAction(parts.join('，'));
+      } else {
+        await runAchievementChecks();
+      }
+    } catch (e) {
+      console.warn('[silentRefresh] 自動更新失敗(不彈 toast):', e);
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  }, []);
+
+  /**
+   * 盤中自動 polling:每 30 秒 + 從背景回前景時補一次。
+   * 條件:有持倉 + 盤中 + 頁面 visible。
+   * isMarketOpen 在 setInterval callback 內呼叫(確保跨整點切換能即時生效)。
+   */
+  const hasHoldings = (holdings ?? []).length > 0;
+  useEffect(() => {
+    if (!hasHoldings) return;
+
+    const tick = () => {
+      if (isMarketOpen() && document.visibilityState === 'visible') {
+        silentRefresh();
+      }
+    };
+    const id = setInterval(tick, 30_000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && isMarketOpen()) {
+        silentRefresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [hasHoldings, silentRefresh]);
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
   async function handlePetClickById(petId: string) {
@@ -144,8 +209,6 @@ function Game() {
     return null;
   }
 
-  const hasHoldings = (holdings ?? []).length > 0;
-
   return (
     <div className="w-full h-full flex flex-col bg-sand-100 no-select">
       <TopBar
@@ -154,6 +217,8 @@ function Game() {
         consecutiveDays={settings.consecutiveDays}
         unlockedAchievements={unlockedCount}
         totalAchievements={ACHIEVEMENTS.length}
+        lastPriceUpdateAt={settings.lastPriceUpdateAt}
+        refreshing={refreshing}
       />
 
       <PhaserMap

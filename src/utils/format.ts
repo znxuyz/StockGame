@@ -31,3 +31,20 @@ export function formatPercent(rate: number, withSign = true): string {
 export function daysBetween(from: number, to: number): number {
   return Math.floor((to - from) / 86_400_000);
 }
+
+/**
+ * 相對時間字串(中文,給「上次更新於」這類顯示用)。
+ *  - 10 秒以內 → 「剛剛」
+ *  - 1 分鐘以內 → 「N 秒前」
+ *  - 1 小時以內 → 「N 分前」
+ *  - 24 小時以內 → 「N 時前」
+ *  - 否則 → 「N 天前」
+ */
+export function relativeTime(past: number, now: number = Date.now()): string {
+  const diff = Math.max(0, now - past);
+  if (diff < 10_000) return '剛剛';
+  if (diff < 60_000) return `${Math.floor(diff / 1000)} 秒前`;
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分前`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 時前`;
+  return `${Math.floor(diff / 86_400_000)} 天前`;
+}
