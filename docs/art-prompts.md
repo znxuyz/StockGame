@@ -198,16 +198,27 @@ plain off-white rice paper background
 https://cdn.midjourney.com/99f03b33-c4d5-494f-b65c-58c7a7cd3120/0_3.png
 ```
 
-### Phase 2(進行中):剩 12 隻 idle / asc / corrupt
-- **8 隻已完成不重跑**:青龍 / 白虎 / 朱雀 / 玄武 / 應龍 / 麒麟 / 九尾狐 / 開明獸
-- **12 隻待跑**:何羅魚 + 帝江 + 10 隻原創
-- prompt 全部在 `docs/art-prompts-batch1.md`(自動產生,12 × 3 = 36 條)
-- 每隻挑 1 張變體 → URL 貼回 §6 表格
+### Phase 2(進行中):跑剩下的 prompt — 自動模式
 
-### Phase 3:walk batch
-- §6 idle 全到齊後跑:`node scripts/gen-art-prompts.mjs --batch=2 > docs/art-prompts-batch2.md`
-- 自動讀每隻 idle URL 當 oref,輸出 20 條 walk prompt
-- 走姿較難跑(MJ 容易出 idle 樣),挑不到 mid-stride 就重 roll 該條
+每次都跑同一個指令,自動算出**現在能跑什麼**:
+
+```bash
+node scripts/gen-art-prompts.mjs > docs/art-prompts-todo.md
+```
+
+腳本讀 §6 表格、按以下規則展開 prompt:
+
+| 條件 | 動作 |
+|---|---|
+| idle 沒填 | 列 idle prompt(只用 sref) |
+| 山海經 asc/corrupt 沒填 | 列 prompt(只 sref,sw 200) |
+| **原創** asc/corrupt 沒填 + idle 已填 | 列 prompt(sref sw 200 **+ oref idle ow 100**) |
+| **原創** asc/corrupt 沒填 + idle **未填** | 跳過(MJ 沒參考圖會跑出無關物種,等 idle 先) |
+| walk 沒填 + idle 已填 | 列 walk prompt(sref + oref) |
+
+**為什麼原創需要 oref**:MJ 沒看過「會走路的算盤」這種概念,光靠文字描述會把 asc/corrupt 跑成一般四腳獸。idle 一旦完成、變成 MJ 看得到的「該獸長相」,後面 asc/corrupt/walk 就會以它為形狀基準。
+
+收到新 URL → 我 commit 進 §6 → 重跑這個腳本 → 進入下一波。全部填完腳本會印「所有 prompt 都跑完了 ✓」。
 
 ### Phase 4:Sprite 整合
 - 80 張原圖到齊(20 × 4 動作)後,寫 background removal + atlas 打包腳本
