@@ -340,3 +340,30 @@ white-tiger__idle.png
 - **檢查 reference 欄位**:送出前確認 Style References + Omni Reference 都有縮圖,Image Prompts 欄是**空**的(若有 URL 塞錯,點縮圖右上 X 移除)
 - **背景**:prompt 已寫 plain off-white rice paper,**不要**加 white background / transparent background(MJ 對 transparent 支援不穩,我們用後製去背)
 - **Fast vs Relax**:Standard plan 有 15 fast hours/月,160 prompts 全用 Fast 約 2.7 hours,綽綽有餘;Relax 卡住就直接切 Fast,別硬等
+
+---
+
+## 9. Sprite 整合期備忘 — 類別後製色調(差異化策略 A+C)
+
+水墨統一風格 + MJ 收斂效應導致「不同神獸看起來太像」(尤其同類別內部:四腳獸群、龍蛇群、鳥群)。**生成階段不修**(會破壞風格一致性),改在 sprite 接進遊戲時做後製色調 tint,放大「不同類別」的視覺記憶。
+
+打 atlas / 接 `petSprite.ts` 那步要記得:
+
+- 依 `creatures.ts` 的 `category` 加極淡 hue tint(透明度 5–10%,不能蓋掉墨色):
+  - `four-symbols` → 不加(它們本來就是四個顏色錨點)
+  - `dragon` → 微青(`#0aa5b5` 5%)
+  - `bird` → 微暖紅(`#c43a2c` 5%)
+  - `lucky` → 微金(`#c89a3c` 5%)
+  - `beast` → 微土黃(`#9c7a3a` 5%)
+  - `aquatic` → 微藍(`#3a6fa8` 8%)
+  - `spirit` → 微紫(`#7a4a9c` 8%)
+- ascended frame **不加 tint**(已是金白,不要污染)
+- corrupted frame **不加 tint**(已是黑紅,不要污染)
+- 只 tint idle / walk 兩個 frame
+
+實作可以是 canvas `globalCompositeOperation = 'multiply'` + 全圖填單色,或在 PIXI/Phaser shader 裡做。等 sprite 接進來那時再寫。
+
+策略總綱(對應對話中討論的選項):
+- **A 接受**:遊戲內有中文名 + 圖鑑 + 進化階,玩家不會擺一起逐張比對;不為了完美主義燒週末
+- **C 後製類別色調**:零成本拉開類別記憶(本節)
+- B(個別重做 prompt)目前不採用,除非有具體幾隻看不下去再針對性處理
