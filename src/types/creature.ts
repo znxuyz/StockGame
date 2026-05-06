@@ -42,8 +42,14 @@ export interface CreatureSpecies {
     | 'cursed'; // 四凶（黑化專用）
   /** 簡短描述（彈窗用） */
   description: string;
-  /** placeholder emoji（正式美術 asset 進來前用） */
+  /** placeholder emoji（沒立繪 / 立繪載入失敗時顯示） */
   emoji: string;
+  /**
+   * 是否有對應立繪檔。設 true 時 Phaser 會嘗試載入
+   * `public/sprites/<id>.png`,載得到顯示圖、載不到 fallback 用 emoji。
+   * 不設或 false → 永遠顯示 emoji。
+   */
+  art?: boolean;
   /** 是否凶獸專用（不會在隨機池裡） */
   cursedOnly?: boolean;
 }

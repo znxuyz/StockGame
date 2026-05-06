@@ -1,14 +1,15 @@
 import type { CreatureSpecies } from '@/types';
 
 /**
- * 10 隻精選山海經神獸。
+ * 20 隻山海經神獸(10 核心 + 10 擴充)。
  *
  * 設計:
- *  - 從 40 隻原列表精選 10 隻有獨特剪影的(青龍/白虎/朱雀/玄武四象 +
- *    應龍/麒麟/九尾狐/開明獸/何羅魚/帝江)
+ *  - 第一批 10 隻有獨特剪影:青龍/白虎/朱雀/玄武四象 + 應龍/麒麟/
+ *    九尾狐/開明獸/何羅魚/帝江(美術 prompt 已跑過 MJ)
+ *  - 第二批 10 隻待補立繪:鳳凰/貔貅/白澤/三足烏/角端/巴蛇/畢方/
+ *    飛廉/鯤/彘
  *  - 黑化採方案甲(原寵物變色),所以這裡不放四凶獨立種類
- *  - 美術 prompt / 視覺特徵在 scripts/gen-art-prompts.mjs 集中管理
- *  - 之後若要擴充寵物多樣性,再考慮加原創或更多 mythology
+ *  - art:true 對應 public/sprites/<id>.png(沒檔自動 fallback emoji)
  */
 export const CREATURES: CreatureSpecies[] = [
   // ────── 四象(4) ──────
@@ -50,7 +51,30 @@ export const CREATURES: CreatureSpecies[] = [
     emoji: '🐲'
   },
 
-  // ────── 招財類(1) ──────
+  // ────── 鳥族(3) ──────
+  {
+    id: 'feng-huang',
+    name: '鳳凰',
+    category: 'bird',
+    description: '百鳥之王,五彩成文,浴火重生而不滅。',
+    emoji: '🦚'
+  },
+  {
+    id: 'bi-fang',
+    name: '畢方',
+    category: 'bird',
+    description: '一足赤紋火鳥,不食五穀只食火。',
+    emoji: '🔥'
+  },
+  {
+    id: 'san-zu-wu',
+    name: '三足烏',
+    category: 'bird',
+    description: '日中神鳥,三足象徵三光,居於太陽之中。',
+    emoji: '🌞'
+  },
+
+  // ────── 招財類(3) ──────
   {
     id: 'qilin',
     name: '麒麟',
@@ -58,8 +82,22 @@ export const CREATURES: CreatureSpecies[] = [
     description: '仁獸之首,不踐生草、不食生物,盛世現身。',
     emoji: '🦄'
   },
+  {
+    id: 'pixiu',
+    name: '貔貅',
+    category: 'lucky',
+    description: '只進不出之獸,能吞天下財氣為己用。',
+    emoji: '💰'
+  },
+  {
+    id: 'bai-ze',
+    name: '白澤',
+    category: 'lucky',
+    description: '通曉萬物之名與形,能避邪辟惡。',
+    emoji: '📜'
+  },
 
-  // ────── 異獸(2) ──────
+  // ────── 異獸(4) ──────
   {
     id: 'nine-tail-fox',
     name: '九尾狐',
@@ -74,8 +112,22 @@ export const CREATURES: CreatureSpecies[] = [
     description: '崑崙之獸,九頭虎身人面,守天門八方。',
     emoji: '🗝️'
   },
+  {
+    id: 'jiao-duan',
+    name: '角端',
+    category: 'beast',
+    description: '能日行萬八千里、通四夷之語,識遠之獸。',
+    emoji: '🦏'
+  },
+  {
+    id: 'fei-lian',
+    name: '飛廉',
+    category: 'beast',
+    description: '風伯,鹿身雀頭蛇尾,能召長風行於天地。',
+    emoji: '💨'
+  },
 
-  // ────── 水族(1) ──────
+  // ────── 水族(3) ──────
   {
     id: 'he-luo',
     name: '何羅魚',
@@ -83,14 +135,35 @@ export const CREATURES: CreatureSpecies[] = [
     description: '一首十身之魚,聲如犬吠,食者無腫疾。',
     emoji: '🐡'
   },
+  {
+    id: 'kun',
+    name: '鯤',
+    category: 'aquatic',
+    description: '北冥之巨魚,化而為鵬,扶搖直上九萬里。',
+    emoji: '🐋'
+  },
+  {
+    id: 'ba-she',
+    name: '巴蛇',
+    category: 'aquatic',
+    description: '能吞象之大蛇,三歲而吐其骨。',
+    emoji: '🐍'
+  },
 
-  // ────── 靈體(1) ──────
+  // ────── 靈體(2) ──────
   {
     id: 'di-jiang',
     name: '帝江',
     category: 'spirit',
     description: '六足四翼,渾敦無面,識歌舞之神鳥。',
     emoji: '🎭'
+  },
+  {
+    id: 'zhi',
+    name: '彘',
+    category: 'spirit',
+    description: '虎身人面之獸,居於浮山,所見之地多風雨。',
+    emoji: '🌪️'
   }
 ];
 

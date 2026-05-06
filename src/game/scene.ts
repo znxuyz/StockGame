@@ -1,14 +1,17 @@
 import Phaser from 'phaser';
-import { PetSprite, type PetSpriteData } from './petSprite';
+import { PetSprite, spriteKey, type PetSpriteData } from './petSprite';
+import { CREATURES } from '@/data/creatures';
 
 /**
- * 沙漠世界場景。
+ * 水墨世界場景。
  *
  * 設計：
  *  - 世界範圍 1500x1500，攝影機可拖曳
  *  - 寵物以「id 雜湊 → 領地中心」決定位置，避免重疊
  *  - 點擊寵物 emit 'pet-click'（React 端訂閱開個股資訊）
  *  - 沙漠裝飾：仙人掌、石頭，靜態裝飾不互動
+ *  - preload 嘗試載入有 art:true 的物種立繪;沒檔的物種完全不 load
+ *    (避免 console 一堆 404 錯誤),PetSprite 看 texture exist 自動切 fallback
  *
  * 為什麼用 Phaser：
  *  - 寵物動畫 / 位移用 Phaser scene loop 比 React rerender 順
@@ -19,6 +22,9 @@ import { PetSprite, type PetSpriteData } from './petSprite';
 export const WORLD_SIZE = 1500;
 const GRID_CELL = 220; // 每個寵物的「巢穴」格子大小
 const COLS = Math.floor(WORLD_SIZE / GRID_CELL);
+
+/** 場景底色:暖米紙色,讓寵物立繪自帶的米紙底不會跟場景出現顯著邊界 */
+const RICE_PAPER_BG = '#efe6cf';
 
 export class WorldScene extends Phaser.Scene {
   private sprites: Map<string, PetSprite> = new Map();
@@ -33,8 +39,24 @@ export class WorldScene extends Phaser.Scene {
     super('WorldScene');
   }
 
+  preload() {
+    // 只對 art:true 的物種嘗試載入立繪 — 其他物種一定 fallback emoji,
+    // 不必讓 Phaser 噴一堆 404 進 console。
+    const artSpecies = CREATURES.filter((c) => c.art === true);
+    if (artSpecies.length === 0) return;
+
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      console.warn(`[WorldScene] sprite 載入失敗,fallback emoji:${file.key}`);
+    });
+
+    const base = import.meta.env.BASE_URL ?? '/';
+    for (const c of artSpecies) {
+      this.load.image(spriteKey(c.id), `${base}sprites/${c.id}.png`);
+    }
+  }
+
   create() {
-    this.cameras.main.setBackgroundColor('#f5deb3');
+    this.cameras.main.setBackgroundColor(RICE_PAPER_BG);
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
     // 起始置中
     this.cameras.main.scrollX = (WORLD_SIZE - this.cameras.main.width) / 2;

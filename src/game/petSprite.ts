@@ -1,10 +1,13 @@
 import Phaser from 'phaser';
 
 /**
- * 一隻寵物的視覺單位（emoji + 境界光環 + 損益標籤 + 名稱）。
+ * 一隻寵物的視覺單位（立繪 / emoji + 境界光環 + 損益標籤 + 名稱）。
  *
  * 設計：
- *  - emoji 用 Phaser.GameObjects.Text 顯示（不需要美術 asset，跨平台 OK）
+ *  - 寵物本體優先用 Phaser.GameObjects.Image 顯示立繪(species.art=true 時),
+ *    texture 載不到就 fallback 用 emoji Text(跨平台 OK)
+ *  - 單一立繪、不分 idle/asc/corrupt frame:進化用光環顏色表達、
+ *    黑化用 tint+alpha 變灰暗,跟舊版邏輯一致
  *  - 境界光環用 Graphics 畫圓
  *  - 損益標籤用兩個 Text 疊在 Container 上方
  *  - 全部塞進 Container，方便整體位移
@@ -13,10 +16,16 @@ import Phaser from 'phaser';
  *  - 在 territory（半徑 80）內隨機漫步
  *  - 速度慢（每秒 ~20 px）
  *  - 達到目標點後 0.5-3 秒停留，再選新目標
+ *  - 沒走路動畫:移動時 image setFlipX、emoji setScale 表現方向
  */
 
 export interface PetSpriteData {
   petId: string;
+  /** 用來組 sprite texture key:`pet:${speciesId}` */
+  speciesId: string;
+  /** species.art 為 true,Phaser preload 已嘗試載入立繪 */
+  hasArt: boolean;
+  /** Sprite 載不到時用 emoji 兜底 */
   emoji: string;
   stockName: string;
   pnl: number;
@@ -52,11 +61,19 @@ const TERRITORY_RADIUS = 80;
 const MOVE_SPEED = 18; // px/sec
 const RING_RADIUS = 38;
 const EMOJI_SIZE = 56;
+/** 立繪顯示邊長(原圖通常 256+,顯示 72 給 HiDPI 餘裕) */
+const SPRITE_DISPLAY_SIZE = 72;
+
+/** 組 Phaser texture key,跟 WorldScene.preload() 註冊的對應 */
+export function spriteKey(speciesId: string): string {
+  return `pet:${speciesId}`;
+}
 
 export class PetSprite {
   scene: Phaser.Scene;
   container: Phaser.GameObjects.Container;
   ring: Phaser.GameObjects.Arc;
+  image: Phaser.GameObjects.Image;
   emoji: Phaser.GameObjects.Text;
   pnlBox: Phaser.GameObjects.Container;
   pnlText: Phaser.GameObjects.Text;
@@ -89,14 +106,23 @@ export class PetSprite {
     this.ring = scene.add.circle(0, 0, RING_RADIUS, 0xffffff, 0.6);
     this.ring.setStrokeStyle(4, TIER_COLOR[data.tier]);
 
-    // emoji
+    // 立繪 + emoji 兜底:同位置疊著、按 texture 是否載入決定顯示哪個
+    const key = spriteKey(data.speciesId);
+    const hasTexture = data.hasArt && scene.textures.exists(key);
+    this.image = scene.add
+      .image(0, 4, hasTexture ? key : '__missing__')
+      .setOrigin(0.5)
+      .setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE)
+      .setVisible(hasTexture);
+
     this.emoji = scene.add
       .text(0, 4, data.emoji, {
         fontSize: `${EMOJI_SIZE}px`,
         fontFamily:
           '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setVisible(!hasTexture);
 
     // 損益標籤背景 + 文字
     this.pnlBg = scene.add.rectangle(0, -RING_RADIUS - 16, 76, 22, 0xffffff, 0.95);
@@ -122,7 +148,7 @@ export class PetSprite {
       })
       .setOrigin(0.5, 0);
 
-    this.container.add([this.ring, this.emoji, this.pnlBox, this.nameText]);
+    this.container.add([this.ring, this.image, this.emoji, this.pnlBox, this.nameText]);
 
     // 互動
     this.container.setSize(RING_RADIUS * 2, RING_RADIUS * 2);
@@ -150,10 +176,26 @@ export class PetSprite {
 
   applyData(data: PetSpriteData) {
     this.data = data;
-    this.emoji.setText(data.emoji);
     this.ring.setStrokeStyle(4, TIER_COLOR[data.tier]);
-    this.emoji.setAlpha(data.isCorrupted ? 0.55 : 1);
-    this.emoji.setTint(data.isCorrupted ? 0x444444 : 0xffffff);
+
+    // 重新評估 texture(物種可能變了 / 立繪後來才載完)
+    const key = spriteKey(data.speciesId);
+    const hasTexture = data.hasArt && this.scene.textures.exists(key);
+
+    if (hasTexture) {
+      this.image.setTexture(key);
+      this.image.setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
+      this.image.setAlpha(data.isCorrupted ? 0.55 : 1);
+      this.image.setTint(data.isCorrupted ? 0x444444 : 0xffffff);
+      this.image.setVisible(true);
+      this.emoji.setVisible(false);
+    } else {
+      this.image.setVisible(false);
+      this.emoji.setText(data.emoji);
+      this.emoji.setAlpha(data.isCorrupted ? 0.55 : 1);
+      this.emoji.setTint(data.isCorrupted ? 0x444444 : 0xffffff);
+      this.emoji.setVisible(true);
+    }
 
     const sign = data.pnl >= 0 ? '+' : '';
     this.pnlText.setText(`${sign}${formatThousands(Math.round(data.pnl))}`);
@@ -187,7 +229,8 @@ export class PetSprite {
     } else {
       this.container.x += (dx / dist) * stepDist;
       this.container.y += (dy / dist) * stepDist;
-      // 走動時左右翻轉
+      // 走動時左右翻轉 — image 用 flipX,emoji 用 scale
+      this.image.setFlipX(dx < 0);
       this.emoji.setScale(dx >= 0 ? 1 : -1, 1);
     }
   }
