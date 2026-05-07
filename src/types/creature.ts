@@ -30,16 +30,12 @@ export interface CreatureSpecies {
   id: string;
   /** 顯示名稱 */
   name: string;
-  /** 山海經分類（純語意，不影響邏輯） */
-  category:
-    | 'four-symbols' // 四象
-    | 'dragon' // 龍族
-    | 'bird' // 鳥族
-    | 'lucky' // 招財類
-    | 'beast' // 異獸
-    | 'aquatic' // 水族
-    | 'spirit' // 靈體
-    | 'cursed'; // 四凶（黑化專用）
+  /**
+   * 陣營分類(用中文 name 直接當值,方便 UI 直接顯示)。
+   * 例:'天界' / '魔界' / '自然界' / '冥界' / '佛界' 等等。
+   * 用 string 而非固定 enum,新增陣營不用改型別。
+   */
+  category: string;
   /** 簡短描述（彈窗用） */
   description: string;
   /** placeholder emoji（沒立繪 / 立繪載入失敗時顯示） */
