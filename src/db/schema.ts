@@ -7,11 +7,12 @@ import type {
   Transaction,
   AchievementProgress,
   DailySnapshot,
-  Settings
+  Settings,
+  MarketIndexBar
 } from '@/types';
 
 /**
- * 山海經股市 IndexedDB schema（v1）
+ * 神獸股市 IndexedDB schema
  *
  * 設計考量：
  *  - 表的劃分對應 src/types 一一對映，型別不會在 DB 層改寫
@@ -19,6 +20,7 @@ import type {
  *  - Holding 主鍵 = stock code（同代號同時間只會有一筆 active holding）
  *  - Pet 主鍵 = UUID；用 code 索引以便 holding 反查
  *  - 任何 schema 升級都要在這個檔案集中宣告 version().upgrade()，避免使用者資料遺失
+ *  - marketIndices(v2 加):大盤指數歷史,主鍵 [symbol+date] 複合鍵
  */
 export class StockGameDB extends Dexie {
   stocks!: Table<Stock, string>;
@@ -29,6 +31,8 @@ export class StockGameDB extends Dexie {
   achievements!: Table<AchievementProgress, string>;
   snapshots!: Table<DailySnapshot, string>;
   settings!: Table<Settings, string>;
+  /** 大盤指數歷史(只 TAIEX,日 K 收盤 + 盤中最新) */
+  marketIndices!: Table<MarketIndexBar, [string, string]>;
 
   constructor() {
     super('StockGameDB');
@@ -42,6 +46,11 @@ export class StockGameDB extends Dexie {
       achievements: 'id, unlockedAt',
       snapshots: 'date',
       settings: 'id'
+    });
+
+    // v2:加 marketIndices 表,主鍵複合 [symbol+date],date 二級索引方便排序
+    this.version(2).stores({
+      marketIndices: '[symbol+date], symbol, date'
     });
   }
 }

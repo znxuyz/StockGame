@@ -14,3 +14,12 @@ export { recordDailySnapshot } from './snapshot';
 export { checkInLoginToday } from './login';
 export { runAchievementChecks } from './achievements';
 export type { AchievementCheckResult } from './achievements';
+
+export {
+  ensureTaiexHistory,
+  updateTaiexIntraday,
+  getAllTaiex,
+  getLatestTaiex
+} from './marketIndexUpdate';
+export { getMarketCompare } from './marketCompare';
+export type { MarketCompareDataPoint, MarketCompareResult } from './marketCompare';

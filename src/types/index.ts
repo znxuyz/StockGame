@@ -1,4 +1,5 @@
 export * from './market';
+export * from './marketIndex';
 export * from './creature';
 export * from './holding';
 export * from './pet';
