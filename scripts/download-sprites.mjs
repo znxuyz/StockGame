@@ -51,6 +51,11 @@ let ok = 0;
 let skipped = 0;
 let failed = 0;
 
+/** sleep ms 毫秒(MJ CDN 對連續快速請求會 rate limit 回 403,間隔慢一點才穩) */
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 for (const row of rows) {
   const filename = `${row.id}.png`;
   const outPath = resolve(outDir, filename);
@@ -81,6 +86,8 @@ for (const row of rows) {
     console.error(`  ✗ ${filename} (${row.name}):${err.message}`);
     failed++;
   }
+  // MJ CDN rate limit 防護:每張之間隔 1 秒(一輪 20 張 = 20 秒,可接受)
+  await sleep(1000);
 }
 
 console.log('');
