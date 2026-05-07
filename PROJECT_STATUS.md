@@ -27,8 +27,10 @@
 | 價格變動視覺回饋(寵物 PnL 閃光、Modal 現價閃光) | ✅(`petSprite::flashPnL` + CSS keyframe) |
 | PWA 安裝引導(iOS Safari 教學 + Android beforeinstallprompt) | ✅(`InstallPrompt.tsx`) |
 | 寵物立繪美術(20 隻原創上古神祇) | ⚠️ 整合代碼已就緒,需本機跑 `download-sprites.mjs` 把 PNG 抓進 repo |
+| 雲端帳號(Magic Link)+ 雙向 sync + 衝突 dialog | ✅(Supabase + `cloudSync.ts` + `SyncConflictModal`) |
+| 帳號刪除(雲端 + 本地一起清) | ✅(`functions/api/auth/delete-account.ts` + 雙擊確認 UI) |
 | 大盤對比（0050 / 加權指數） | ❌ |
-| 雲端同步 / 帳號 / 社群 | ❌（依使用者決議「先單機」） |
+| 跨用戶社群 / 排行榜 | ❌（依使用者決議「先單機」） |
 | 自動產業分類（半導體 / 金融 / …） | ❌ 新代號全部歸到 `'other'`（ETF 識別 OK） |
 | 國定假日 / 颱風假處理 | ❌ 倚賴 mis API 自動回最近一個交易日 |
 
