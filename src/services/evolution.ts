@@ -1,193 +1,70 @@
 /**
- * 寵物境界進化 / 黑化 / 淨化 / 等級計算。
+ * 寵物等級 + 階級計算(精簡版,2026-05 後改版)。
  *
- * 規則回顧（已與使用者確認）：
+ * 設計改變(原本有進化/黑化/淨化機制全部刪除):
+ *  - **沒有進化事件**:寵物階級單純隨等級升降,沒有「促進化」、「黑化」、
+ *    「淨化」這類戲劇性轉變,UI 也不彈這類 toast。
+ *  - **沒有黑化路線**:寵物永遠走正向(凡獸 → 仙獸),不論報酬率多差也不會
+ *    變成凶獸。對應的 cursedX 三階仍保留在型別定義中(legacy 資料相容),
+ *    但業務邏輯不會再寫進去。
+ *  - **階級只看等級**:tier = tierFromLevel(level)。等級 1-19 是凡獸境、
+ *    20-39 靈獸、40-59 妖獸、60-79 神獸、80-94 聖獸、95-99 仙獸。
+ *  - **等級** 仍依 totalCost(累積投入)計算:每 1000 NT$ 一級,上限 99。
  *
- * 等級 (level)：
- *   - 與累積投入金額（holding.totalCost）成正比
- *   - 每 1,000 NT$ 升 1 級，最高 99 級
- *   - 等級獨立於境界，賣出/加碼不重置
- *
- * 正向境界（六階）：
- *   tier         | 累積報酬率 | 持有時間
- *   ─────────────┼──────────┼────────
- *   normal       | 起始       | -
- *   spirit       | +5%       | ≥ 30 天
- *   demon        | +15%      | ≥ 90 天
- *   god          | +30%      | ≥ 180 天
- *   saint        | +50%      | ≥ 365 天
- *   celestial    | +100%     | ≥ 730 天
- *
- *   一旦達成不會降回（maxNormalTier 記錄歷史最高）。
- *
- * 黑化（凶獸三階）：
- *   cursed1      | -10%      | ≥ 30 天
- *   cursed2      | -25%      | ≥ 90 天
- *   cursed3      | -50%      | ≥ 180 天
- *
- *   黑化是「狀態覆蓋」：tier 變成 cursedX，但 maxNormalTier 不動。
- *
- * 淨化：
- *   - 黑化狀態下累積報酬率 ≥ +5% → 立刻回到 maxNormalTier
- *   - 同時 purificationCount += 1
- *
- * 觸發點：每次價格更新 + 每次買入/加碼/賣出後。
+ * 觸發點:每次價格更新 + 每次買入/加碼/賣出後,結果通通是「靜默更新」,
+ * 沒有事件 toast。
  */
 
 import type { Pet, NormalTier, Tier } from '@/types';
-import { TIER_ORDER } from '@/types';
 
 export interface EvolutionInput {
-  /** 累積報酬率（小數，0.05 = +5%） */
+  /** 累積報酬率(舊欄位,目前不影響階級判斷,保留 API 相容) */
   returnRate: number;
-  /** 從首次購入到現在持有的天數 */
+  /** 從首次購入到現在持有的天數(同上,保留相容) */
   daysHeld: number;
 }
 
-interface Threshold {
-  tier: NormalTier;
-  minReturnRate: number;
-  minDays: number;
-}
-
-const NORMAL_THRESHOLDS: Threshold[] = [
-  { tier: 'normal', minReturnRate: -Infinity, minDays: 0 },
-  { tier: 'spirit', minReturnRate: 0.05, minDays: 30 },
-  { tier: 'demon', minReturnRate: 0.15, minDays: 90 },
-  { tier: 'god', minReturnRate: 0.30, minDays: 180 },
-  { tier: 'saint', minReturnRate: 0.50, minDays: 365 },
-  { tier: 'celestial', minReturnRate: 1.00, minDays: 730 }
-];
-
-interface CursedThreshold {
-  tier: 'cursed1' | 'cursed2' | 'cursed3';
-  maxReturnRate: number;
-  minDays: number;
-}
-
-const CURSED_THRESHOLDS: CursedThreshold[] = [
-  { tier: 'cursed1', maxReturnRate: -0.10, minDays: 30 },
-  { tier: 'cursed2', maxReturnRate: -0.25, minDays: 90 },
-  { tier: 'cursed3', maxReturnRate: -0.50, minDays: 180 }
-];
-
-const PURIFY_RETURN_RATE = 0.05;
-
-/** 該報酬率 + 持有天數 對應到的最高正向境界 */
-function bestNormalTier(input: EvolutionInput): NormalTier {
-  let result: NormalTier = 'normal';
-  for (const t of NORMAL_THRESHOLDS) {
-    if (input.returnRate >= t.minReturnRate && input.daysHeld >= t.minDays) {
-      result = t.tier;
-    }
-  }
-  return result;
-}
-
-/** 該報酬率 + 持有天數 對應到的凶獸階級（找不到就回 null） */
-function matchedCursedTier(input: EvolutionInput): CursedThreshold | null {
-  let result: CursedThreshold | null = null;
-  for (const t of CURSED_THRESHOLDS) {
-    if (input.returnRate <= t.maxReturnRate && input.daysHeld >= t.minDays) {
-      result = t; // 越往後越嚴重，所以最後賦值的是最高凶獸階
-    }
-  }
-  return result;
-}
-
-/** 計算等級：每 1,000 NT$ 投入 = 1 級，最低 1，最高 99 */
+/** 計算等級:每 1,000 NT$ 投入 = 1 級,最低 1,最高 99 */
 export function calculateLevel(totalCost: number): number {
   return Math.max(1, Math.min(99, Math.floor(totalCost / 1000) + 1));
 }
 
-/** 在 TIER_ORDER 中的索引（用來比較進化高低） */
-function normalTierIndex(tier: NormalTier): number {
-  return TIER_ORDER.indexOf(tier);
+/** 等級 → 階級的對應(純顯示用) */
+export function tierFromLevel(level: number): NormalTier {
+  if (level >= 95) return 'celestial';
+  if (level >= 80) return 'saint';
+  if (level >= 60) return 'god';
+  if (level >= 40) return 'demon';
+  if (level >= 20) return 'spirit';
+  return 'normal';
 }
 
 export interface EvolutionResult {
-  /** 新的 tier（顯示用） */
+  /** 新的 tier(顯示用) */
   tier: Tier;
-  /** 新的 maxNormalTier（達成過的最高正向境界） */
+  /** 新的 maxNormalTier — 跟 tier 等值(不再有黑化覆蓋) */
   maxNormalTier: NormalTier;
-  /** 是否本次發生了「正向晉升」（成就 / 動畫用） */
-  promoted: boolean;
-  /** 是否本次發生了「黑化加深或首次黑化」 */
-  corrupted: boolean;
-  /** 是否本次發生了「淨化」 */
-  purified: boolean;
+  /** 是否本次發生了正向晉升 — 永遠 false(無事件) */
+  promoted: false;
+  /** 是否本次發生了黑化 — 永遠 false(已取消) */
+  corrupted: false;
+  /** 是否本次發生了淨化 — 永遠 false(已取消) */
+  purified: false;
 }
 
 /**
  * 計算寵物應該處於的新狀態。
- * 這個 function 是純的（不修改 pet），呼叫端拿結果再決定如何寫回 DB。
+ * 純函式,不修改 pet。
+ *
+ * 取消進化/黑化邏輯後,這函式只做「依當前等級回傳階級」。
+ * 等級本身在外面用 calculateLevel(totalCost) 算好,這裡只看 pet.level。
  */
-export function evolvePet(pet: Pet, input: EvolutionInput): EvolutionResult {
-  const wasCursed = pet.tier === 'cursed1' || pet.tier === 'cursed2' || pet.tier === 'cursed3';
-
-  // 1. 看 normal 路線能達到的最高境界
-  const candidateNormal = bestNormalTier(input);
-  const newMaxNormal: NormalTier =
-    normalTierIndex(candidateNormal) > normalTierIndex(pet.maxNormalTier)
-      ? candidateNormal
-      : pet.maxNormalTier;
-  const promoted = newMaxNormal !== pet.maxNormalTier;
-
-  // 2. 黑化判斷
-  if (wasCursed) {
-    // 已黑化：先看是否達到淨化條件
-    if (input.returnRate >= PURIFY_RETURN_RATE) {
-      return {
-        tier: newMaxNormal,
-        maxNormalTier: newMaxNormal,
-        promoted,
-        corrupted: false,
-        purified: true
-      };
-    }
-    // 還在黑化：看凶獸階級會不會更深
-    const cursed = matchedCursedTier(input);
-    if (cursed) {
-      const order = ['cursed1', 'cursed2', 'cursed3'] as const;
-      const newIdx = order.indexOf(cursed.tier);
-      const oldIdx = order.indexOf(pet.tier as 'cursed1' | 'cursed2' | 'cursed3');
-      if (newIdx > oldIdx) {
-        return {
-          tier: cursed.tier,
-          maxNormalTier: newMaxNormal,
-          promoted,
-          corrupted: true,
-          purified: false
-        };
-      }
-    }
-    // 沒淨化、沒加深，維持原狀
-    return {
-      tier: pet.tier,
-      maxNormalTier: newMaxNormal,
-      promoted,
-      corrupted: false,
-      purified: false
-    };
-  }
-
-  // 未黑化：先看會不會黑化
-  const cursed = matchedCursedTier(input);
-  if (cursed) {
-    return {
-      tier: cursed.tier,
-      maxNormalTier: newMaxNormal,
-      promoted,
-      corrupted: true,
-      purified: false
-    };
-  }
-
-  // 未黑化、不會黑化：用 normal 路線結果
+export function evolvePet(pet: Pet, _input: EvolutionInput): EvolutionResult {
+  const tier = tierFromLevel(pet.level);
   return {
-    tier: newMaxNormal,
-    maxNormalTier: newMaxNormal,
-    promoted,
+    tier,
+    maxNormalTier: tier,
+    promoted: false,
     corrupted: false,
     purified: false
   };

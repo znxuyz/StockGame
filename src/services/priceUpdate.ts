@@ -75,7 +75,8 @@ export async function runPriceUpdate(now: number = Date.now()): Promise<PriceUpd
     await db.prices.bulkPut(result.prices);
   }
 
-  // 5. 評估每隻寵物的進化
+  // 5. 評估每隻寵物的階級(等級已在買入/加碼時算好,這裡只把 tier 同步成
+  //    tierFromLevel 的結果。進化/黑化/淨化機制已取消,所以這三個 array 永遠空)
   const priceMap = new Map(result.prices.map((p) => [p.code, p]));
   const evolved: string[] = [];
   const corrupted: string[] = [];
@@ -97,10 +98,8 @@ export async function runPriceUpdate(now: number = Date.now()): Promise<PriceUpd
       const updatedPet: Pet = {
         ...pet,
         tier: evo.tier,
-        maxNormalTier: evo.maxNormalTier,
-        evolutionCount: pet.evolutionCount + (tierChanged ? 1 : 0),
-        firstCorruptedAt: evo.corrupted && !pet.firstCorruptedAt ? now : pet.firstCorruptedAt,
-        purificationCount: evo.purified ? pet.purificationCount + 1 : pet.purificationCount
+        maxNormalTier: evo.maxNormalTier
+        // evolutionCount / firstCorruptedAt / purificationCount 不再變動
       };
       await db.pets.put(updatedPet);
       if (evo.promoted) evolved.push(pet.id);
