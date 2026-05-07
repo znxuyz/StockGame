@@ -12,6 +12,7 @@ import {
   recordDailySnapshot,
   runAchievementChecks,
   checkInLoginToday,
+  updateTaiexIntraday,
   type PortfolioSummary
 } from '@/services';
 import {
@@ -146,6 +147,8 @@ function Game() {
     try {
       const r = await runPriceUpdate();
       await recordDailySnapshot();
+      // 更新加權指數即時值(失敗 console.warn,不影響主流程)
+      await updateTaiexIntraday();
       await postAction(
         `已更新 ${r.updated.length} 檔（${r.duringMarket ? '盤中即時' : '盤後收盤'}）` +
           (r.missing.length ? `，未抓到 ${r.missing.length} 檔` : '') +
@@ -176,6 +179,8 @@ function Game() {
     try {
       const r = await runPriceUpdate();
       await recordDailySnapshot();
+      // 順手把加權指數即時值更新(獨立函式內已 try/catch console.warn,不影響主流程)
+      await updateTaiexIntraday();
       const evoCount = r.evolved.length + r.corrupted.length + r.purified.length;
       if (evoCount > 0) {
         const parts: string[] = [];
