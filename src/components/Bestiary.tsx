@@ -52,17 +52,32 @@ export default function Bestiary() {
                 return (
                   <div
                     key={c.id}
-                    className={`aspect-square rounded-lg flex flex-col items-center justify-center p-1 text-center ${
+                    className={`aspect-square rounded-lg flex flex-col items-center justify-center p-1 text-center overflow-hidden ${
                       got
                         ? corrupted
                           ? 'bg-purple-900/10 border border-purple-300'
                           : 'bg-amber-50 border border-amber-200'
                         : 'bg-gray-100 border border-gray-200'
                     }`}
-                    title={c.name + (got ? '' : '（未收集）')}
+                    title={c.name + (got ? '' : '(未收集)')}
                   >
+                    {c.art ? (
+                      <img
+                        src={`/sprites/${c.id}.png`}
+                        alt={c.name}
+                        className={`flex-1 w-full object-cover ${got ? '' : 'grayscale opacity-30'}`}
+                        onError={(e) => {
+                          // 圖檔缺漏 → fallback emoji
+                          const img = e.currentTarget as HTMLImageElement;
+                          img.style.display = 'none';
+                          const fb = img.nextElementSibling as HTMLElement | null;
+                          if (fb) fb.style.display = 'block';
+                        }}
+                      />
+                    ) : null}
                     <span
                       className={`text-2xl ${got ? '' : 'grayscale opacity-30'}`}
+                      style={{ display: c.art ? 'none' : 'block' }}
                     >
                       {c.emoji}
                     </span>

@@ -19,8 +19,8 @@ import { CREATURES } from '@/data/creatures';
  *  - 將來想加 sprite sheet 動畫時很容易接
  */
 
-export const WORLD_SIZE = 1500;
-const GRID_CELL = 220; // 每個寵物的「巢穴」格子大小
+export const WORLD_SIZE = 2000;
+const GRID_CELL = 320; // 每個寵物的「巢穴」格子大小(對應 130 邊長立繪 + 領地)
 const COLS = Math.floor(WORLD_SIZE / GRID_CELL);
 
 /** 場景底色:暖米紙色,讓寵物立繪自帶的米紙底不會跟場景出現顯著邊界 */
