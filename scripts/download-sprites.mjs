@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 // 從 docs/art-prompts.md §1 表抓每隻角色立繪 URL,下載到
-// public/sprites/<id>.png(縮成 256×256 + 圓形裁切 + 透明角)。
+// public/sprites/<id>.png(縮成 256×256)。
 //
 // 用法:
 //   node scripts/download-sprites.mjs               # 已存在的跳過
 //   node scripts/download-sprites.mjs --force       # 全部重抓
 //   node scripts/download-sprites.mjs --reprocess   # 不下載,只把 public/sprites/
-//                                                   # 既有 PNG 重新縮 + 圓形裁切
+//                                                   # 既有 PNG 重新縮成 256×256
+//   node scripts/download-sprites.mjs --remove-bg   # 對既有 PNG 做色彩閾值去背
+//                                                   # (米紙白底 → 透明,中央 ink 保留)
 //
-// 注意:cdn.midjourney.com 對非瀏覽器 IP 會 403,**只能在你本機跑**,
-//       不能在 sandbox / CI / Cloudflare Functions 等環境跑。
+// 注意:
+//  - cdn.midjourney.com 對非瀏覽器 IP 會 403,**只能在你本機跑**
+//  - --remove-bg 是 fallback,品質沒有 iPhone 內建「Lift Subject」高,
+//    淺色細節(白眼、金邊)可能被吃掉。最好的去背還是用 iOS 16+「拷貝主體」
 
 import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,32 +25,89 @@ const repoRoot = resolve(here, '..');
 const outDir = resolve(repoRoot, 'public', 'sprites');
 const force = process.argv.includes('--force');
 const reprocess = process.argv.includes('--reprocess');
+const removeBg = process.argv.includes('--remove-bg');
 
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 
-/**
- * 標準化處理:resize 256×256 + 圓形 alpha mask(透明角)
- *  - sharp composite 用 dest-in:把 SVG 圓的 alpha 套到圖片上,圓外變透明
- *  - 邊緣有 2px 微羽化,跟 Phaser 圓形光環視覺接得自然
- */
+/** 標準化:resize 256×256(不裁切、保留原始 aspect 對 MJ 1024×1024 圖無感) */
 async function normalizeImage(input) {
-  const svg = `<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="g" cx="50%" cy="50%" r="50%">
-        <stop offset="98%" stop-color="white" stop-opacity="1"/>
-        <stop offset="100%" stop-color="white" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-    <circle cx="128" cy="128" r="128" fill="url(#g)"/>
-  </svg>`;
   return sharp(input)
     .resize(256, 256, { fit: 'cover' })
-    .composite([{ input: Buffer.from(svg), blend: 'dest-in' }])
     .png({ compressionLevel: 9 })
     .toBuffer();
 }
 
-// ─── --reprocess 模式:不打網路,只重新處理 public/sprites/ 既有 PNG ───
+/**
+ * 色彩閾值去背:把接近米紙白的像素改成透明,中央 ink 保留。
+ *  - 上限閾值 ABOVE:RGB 全大於 245 視為純背景 → alpha = 0
+ *  - 下限閾值 BELOW:RGB 全小於 215 視為純前景 → alpha 不動
+ *  - 中間:漸進透明度,讓邊緣自然過渡(避免硬切像剪貼)
+ *
+ * 適合 MJ 水墨風(深 ink 主體 + 淺米紙底)。對淺色主體不友善
+ * (例如金邊、白眼可能被吃掉)。建議跑完用瀏覽器肉眼檢查。
+ */
+async function removeBackground(input) {
+  const { data, info } = await sharp(input)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { width, height, channels } = info;
+  const ABOVE = 245;
+  const BELOW = 215;
+  for (let i = 0; i < data.length; i += channels) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const minRgb = Math.min(r, g, b);
+    if (minRgb >= ABOVE) {
+      // 純背景 → 完全透明
+      data[i + 3] = 0;
+    } else if (minRgb >= BELOW) {
+      // 邊緣過渡 → 線性插值
+      const fade = (minRgb - BELOW) / (ABOVE - BELOW);
+      data[i + 3] = Math.round(255 * (1 - fade));
+    }
+    // else: 主體保持 alpha 255
+  }
+
+  return sharp(data, { raw: { width, height, channels } })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+// ─── --remove-bg 模式:不打網路,只對既有 PNG 做色彩閾值去背 ───
+if (removeBg) {
+  const files = readdirSync(outDir).filter((f) => f.endsWith('.png'));
+  if (files.length === 0) {
+    console.error('[download-sprites] public/sprites/ 沒有 PNG 可處理');
+    process.exit(1);
+  }
+  console.log(`[download-sprites] --remove-bg 模式:對 ${files.length} 個 PNG 做色彩閾值去背`);
+  console.log('  ⚠ 跑完肉眼檢查每張,看細節有沒有被吃掉。建議備份 git 在 commit 前先用 dev 看效果。');
+  console.log('');
+  let okCount = 0;
+  let failCount = 0;
+  for (const f of files) {
+    const path = resolve(outDir, f);
+    try {
+      const original = readFileSync(path);
+      const processed = await removeBackground(await normalizeImage(original));
+      writeFileSync(path, processed);
+      const kb = (processed.length / 1024).toFixed(0);
+      console.log(`  ✓ ${f} (${kb} KB)`);
+      okCount++;
+    } catch (err) {
+      console.error(`  ✗ ${f}:${err.message}`);
+      failCount++;
+    }
+  }
+  console.log('');
+  console.log(`完成:${okCount} 處理成功 / ${failCount} 失敗`);
+  process.exit(failCount > 0 ? 1 : 0);
+}
+
+// ─── --reprocess 模式:不打網路,只重新縮 256×256 ───
 if (reprocess) {
   const files = readdirSync(outDir).filter((f) => f.endsWith('.png'));
   if (files.length === 0) {

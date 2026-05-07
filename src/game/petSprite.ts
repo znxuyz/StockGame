@@ -57,12 +57,14 @@ const TIER_COLOR: Record<PetTier, number> = {
   cursed3: 0x111111
 };
 
-const TERRITORY_RADIUS = 80;
+const TERRITORY_RADIUS = 50; // px;放大後每隻領地縮小,避免重疊太多
 const MOVE_SPEED = 18; // px/sec
-const RING_RADIUS = 38;
-const EMOJI_SIZE = 56;
-/** 立繪顯示邊長(原圖通常 256+,顯示 72 給 HiDPI 餘裕) */
-const SPRITE_DISPLAY_SIZE = 72;
+const RING_RADIUS = 70; // 約 2x(原 38);跟 SPRITE_DISPLAY_SIZE 同步
+const EMOJI_SIZE = 100;
+/** 立繪顯示邊長(原圖 256,顯示 130 給 HiDPI 餘裕,約 2x 原 72) */
+const SPRITE_DISPLAY_SIZE = 130;
+/** 點擊判定半徑 — 比 ring 略大方便點擊 */
+const HIT_RADIUS = RING_RADIUS + 8;
 
 /** 組 Phaser texture key,跟 WorldScene.preload() 註冊的對應 */
 export function spriteKey(speciesId: string): string {
@@ -150,10 +152,10 @@ export class PetSprite {
 
     this.container.add([this.ring, this.image, this.emoji, this.pnlBox, this.nameText]);
 
-    // 互動
-    this.container.setSize(RING_RADIUS * 2, RING_RADIUS * 2);
+    // 互動 — 用 HIT_RADIUS 比 ring 略大,手指點觸更容易命中
+    this.container.setSize(HIT_RADIUS * 2, HIT_RADIUS * 2);
     this.container.setInteractive(
-      new Phaser.Geom.Circle(0, 0, RING_RADIUS + 4),
+      new Phaser.Geom.Circle(0, 0, HIT_RADIUS),
       Phaser.Geom.Circle.Contains
     );
     this.container.on('pointerover', () => {
