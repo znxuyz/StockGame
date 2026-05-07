@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
 import {
@@ -14,6 +14,15 @@ import {
   checkInLoginToday,
   type PortfolioSummary
 } from '@/services';
+import {
+  pullNow,
+  pushNow,
+  pushDebounced,
+  cancelPendingPush,
+  fetchRemoteMeta,
+  localHasUserData
+} from '@/services/cloudSync';
+import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
 import BottomBar from '@/components/BottomBar';
@@ -26,9 +35,12 @@ const RecordsModal = lazy(() => import('@/components/RecordsModal'));
 import SettingsModal from '@/components/SettingsModal';
 import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
+import InstallPrompt from '@/components/InstallPrompt';
+import SignInModal from '@/components/SignInModal';
+import SyncConflictModal from '@/components/SyncConflictModal';
 import type { Pet, Stock } from '@/types';
 
-type ModalKind = 'buy' | 'feed' | 'sell' | 'records' | 'settings' | 'pet' | null;
+type ModalKind = 'buy' | 'feed' | 'sell' | 'records' | 'settings' | 'pet' | 'signin' | null;
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -72,6 +84,19 @@ function Game() {
   const [toast, setToast] = useState<{ message: string; variant: 'info' | 'error' } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
+  /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
+  const refreshingRef = useRef(false);
+
+  // 雲端同步狀態
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+  /** 衝突 dialog:雲端 + 本地都有資料、登入時跳出 */
+  const [syncConflict, setSyncConflict] = useState<{ remoteUpdatedAt?: number } | null>(null);
+  const [syncBusy, setSyncBusy] = useState(false);
+  /** 同一 user 的初始 pull/push 只跑一次,避免 React strict mode / re-render 重觸發 */
+  const initialSyncDoneForUserRef = useRef<string | null>(null);
+  /** 阻擋初始 sync 完成前的 push(避免空本地把雲端清掉) */
+  const allowAutoPushRef = useRef(false);
 
   // 更新盤中狀態（每分鐘）
   useEffect(() => {
@@ -84,6 +109,11 @@ function Game() {
   const holdings = useLiveQuery(() => db.holdings.toArray(), []);
   const prices = useLiveQuery(() => db.prices.toArray(), []);
   const achievements = useLiveQuery(() => db.achievements.toArray(), []);
+  // 為了 push trigger,訂閱另外幾張表(只計 length 用,讓 useEffect 偵測到變動)
+  const pets = useLiveQuery(() => db.pets.toArray(), []);
+  const transactions = useLiveQuery(() => db.transactions.toArray(), []);
+  const snapshots = useLiveQuery(() => db.snapshots.toArray(), []);
+  const stocks = useLiveQuery(() => db.stocks.toArray(), []);
 
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   useEffect(() => {
@@ -110,7 +140,8 @@ function Game() {
   }
 
   async function handleRefresh() {
-    if (refreshing) return;
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
     setRefreshing(true);
     try {
       const r = await runPriceUpdate();
@@ -126,7 +157,171 @@ function Game() {
       const msg = e instanceof ApiError ? describeApiError(e) : e instanceof Error ? e.message : String(e);
       setToast({ message: `⚠️ 更新失敗：${msg}`, variant: 'error' });
     } finally {
+      refreshingRef.current = false;
       setRefreshing(false);
+    }
+  }
+
+  /**
+   * 盤中靜默自動更新:
+   *  - 跟手動更新走同一條 runPriceUpdate(會跑進化評估 + 寫 lastPriceUpdateAt)
+   *  - 成功不彈成功 toast(避免每 30s 打擾),只有「進化/黑化/淨化」才彈
+   *  - 失敗不彈錯誤 toast(同樣避免騷擾),只 console.warn
+   *  - 透過 refreshingRef 鎖併發、避免跟手動同時抓
+   */
+  const silentRefresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    try {
+      const r = await runPriceUpdate();
+      await recordDailySnapshot();
+      const evoCount = r.evolved.length + r.corrupted.length + r.purified.length;
+      if (evoCount > 0) {
+        const parts: string[] = [];
+        if (r.evolved.length) parts.push(`⭐ 進化 ${r.evolved.length}`);
+        if (r.corrupted.length) parts.push(`⚫ 黑化 ${r.corrupted.length}`);
+        if (r.purified.length) parts.push(`✨ 淨化 ${r.purified.length}`);
+        await postAction(parts.join('，'));
+      } else {
+        await runAchievementChecks();
+      }
+    } catch (e) {
+      console.warn('[silentRefresh] 自動更新失敗(不彈 toast):', e);
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  }, []);
+
+  /**
+   * 盤中自動 polling:每 30 秒 + 從背景回前景時補一次。
+   * 條件:有持倉 + 盤中 + 頁面 visible。
+   * isMarketOpen 在 setInterval callback 內呼叫(確保跨整點切換能即時生效)。
+   */
+  const hasHoldings = (holdings ?? []).length > 0;
+  useEffect(() => {
+    if (!hasHoldings) return;
+
+    const tick = () => {
+      if (isMarketOpen() && document.visibilityState === 'visible') {
+        silentRefresh();
+      }
+    };
+    const id = setInterval(tick, 30_000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && isMarketOpen()) {
+        silentRefresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [hasHoldings, silentRefresh]);
+
+  // ─── 雲端同步:登入後初始 pull/push/conflict ───
+  useEffect(() => {
+    if (!userId) {
+      // 登出 → 重置初始 sync 狀態,取消未跑完的 push
+      initialSyncDoneForUserRef.current = null;
+      allowAutoPushRef.current = false;
+      cancelPendingPush();
+      return;
+    }
+    if (initialSyncDoneForUserRef.current === userId) return; // 已跑過
+
+    (async () => {
+      try {
+        const [remote, hasLocal] = await Promise.all([
+          fetchRemoteMeta(userId),
+          localHasUserData()
+        ]);
+
+        if (remote.error) {
+          setToast({ message: `⚠️ 雲端連線失敗:${remote.error}`, variant: 'error' });
+          return;
+        }
+
+        if (remote.exists && hasLocal) {
+          // 兩邊都有 → 開衝突 dialog 讓 user 選
+          setSyncConflict({ remoteUpdatedAt: remote.updatedAt });
+          // 不在這裡 markdone,等 user 選完再 mark
+        } else if (remote.exists) {
+          // 只雲端有 → pull
+          const r = await pullNow(userId);
+          if (!r.ok) {
+            setToast({ message: `⚠️ 雲端資料拉取失敗:${r.error}`, variant: 'error' });
+          } else {
+            setToast({ message: '☁ 已從雲端載入資料', variant: 'info' });
+          }
+          initialSyncDoneForUserRef.current = userId;
+          allowAutoPushRef.current = true;
+        } else if (hasLocal) {
+          // 只本地有 → push
+          const r = await pushNow(userId);
+          if (!r.ok) {
+            setToast({ message: `⚠️ 雲端推送失敗:${r.error}`, variant: 'error' });
+          } else {
+            setToast({ message: '☁ 已備份到雲端', variant: 'info' });
+          }
+          initialSyncDoneForUserRef.current = userId;
+          allowAutoPushRef.current = true;
+        } else {
+          // 兩邊都空 → 直接開放後續 auto push
+          initialSyncDoneForUserRef.current = userId;
+          allowAutoPushRef.current = true;
+        }
+      } catch (e) {
+        console.warn('[cloud] initial sync error:', e);
+      }
+    })();
+  }, [userId]);
+
+  // ─── 雲端同步:本地 DB 變動 → debounced push ───
+  useEffect(() => {
+    if (!userId) return;
+    if (!allowAutoPushRef.current) return; // 初始 sync 還沒完成,不能 push 把雲端清掉
+    pushDebounced(userId);
+  }, [userId, holdings, pets, transactions, snapshots, stocks, achievements, settings]);
+
+  // 衝突 dialog 處理
+  async function handleConflictUseCloud() {
+    if (!userId || syncBusy) return;
+    setSyncBusy(true);
+    try {
+      const r = await pullNow(userId);
+      if (!r.ok) {
+        setToast({ message: `⚠️ 雲端資料拉取失敗:${r.error}`, variant: 'error' });
+      } else {
+        setToast({ message: '☁ 已用雲端資料覆蓋本機', variant: 'info' });
+      }
+      initialSyncDoneForUserRef.current = userId;
+      allowAutoPushRef.current = true;
+      setSyncConflict(null);
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handleConflictUseLocal() {
+    if (!userId || syncBusy) return;
+    setSyncBusy(true);
+    try {
+      const r = await pushNow(userId);
+      if (!r.ok) {
+        setToast({ message: `⚠️ 雲端推送失敗:${r.error}`, variant: 'error' });
+      } else {
+        setToast({ message: '☁ 已用本機資料覆蓋雲端', variant: 'info' });
+      }
+      initialSyncDoneForUserRef.current = userId;
+      allowAutoPushRef.current = true;
+      setSyncConflict(null);
+    } finally {
+      setSyncBusy(false);
     }
   }
 
@@ -144,8 +339,6 @@ function Game() {
     return null;
   }
 
-  const hasHoldings = (holdings ?? []).length > 0;
-
   return (
     <div className="w-full h-full flex flex-col bg-sand-100 no-select">
       <TopBar
@@ -154,6 +347,9 @@ function Game() {
         consecutiveDays={settings.consecutiveDays}
         unlockedAchievements={unlockedCount}
         totalAchievements={ACHIEVEMENTS.length}
+        lastPriceUpdateAt={settings.lastPriceUpdateAt}
+        refreshing={refreshing}
+        cloudSignedIn={!!userId}
       />
 
       <PhaserMap
@@ -200,6 +396,18 @@ function Game() {
         onClose={() => setModal(null)}
         settings={settings}
         onActionComplete={postAction}
+        onOpenSignIn={() => setModal('signin')}
+      />
+      <SignInModal
+        open={modal === 'signin'}
+        onClose={() => setModal(null)}
+      />
+      <SyncConflictModal
+        open={syncConflict !== null}
+        remoteUpdatedAt={syncConflict?.remoteUpdatedAt}
+        onUseCloud={handleConflictUseCloud}
+        onUseLocal={handleConflictUseLocal}
+        busy={syncBusy}
       />
       <PetInfoModal
         open={modal === 'pet'}
@@ -213,6 +421,10 @@ function Game() {
         variant={toast?.variant}
         onDismiss={() => setToast(null)}
       />
+
+      {/* PWA 安裝提示(iOS Safari 顯示加入主畫面說明、Android 顯示安裝鈕;
+          已裝桌面或 7 天內被關掉就不顯示) */}
+      <InstallPrompt />
     </div>
   );
 }

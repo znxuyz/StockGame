@@ -1,27 +1,30 @@
 import Phaser from 'phaser';
 
 /**
- * 一隻寵物的視覺單位(寵物圖 + 境界光環 + 損益標籤 + 名稱)。
+ * 一隻寵物的視覺單位（立繪 / emoji + 境界光環 + 損益標籤 + 名稱）。
  *
- * 設計:
- *  - 寵物本體優先用 Phaser.GameObjects.Image 顯示對應 frame 的水墨圖
- *    (idle / ascended / corrupted),圖載不到時 fallback 用 emoji Text
- *    (跨平台 OK,確保總有東西可看)
+ * 設計：
+ *  - 寵物本體優先用 Phaser.GameObjects.Image 顯示立繪(species.art=true 時),
+ *    texture 載不到就 fallback 用 emoji Text(跨平台 OK)
+ *  - 單一立繪、不分 idle/asc/corrupt frame:進化用光環顏色表達、
+ *    黑化用 tint+alpha 變灰暗,跟舊版邏輯一致
  *  - 境界光環用 Graphics 畫圓
  *  - 損益標籤用兩個 Text 疊在 Container 上方
- *  - 全部塞進 Container,方便整體位移
+ *  - 全部塞進 Container，方便整體位移
  *
- * 動作:
- *  - 在 territory(半徑 80)內隨機漫步
- *  - 速度慢(每秒 ~20 px)
- *  - 達到目標點後 0.5-3 秒停留,再選新目標
- *  - MVP 不做走路動畫(沒美術 walk frame),用 idle/asc/corrupt 同一張
+ * 動作：
+ *  - 在 territory（半徑 80）內隨機漫步
+ *  - 速度慢（每秒 ~20 px）
+ *  - 達到目標點後 0.5-3 秒停留，再選新目標
+ *  - 沒走路動畫:移動時 image setFlipX、emoji setScale 表現方向
  */
 
 export interface PetSpriteData {
   petId: string;
-  /** 用來組 sprite texture key:`pet:${speciesId}:${frame}` */
+  /** 用來組 sprite texture key:`pet:${speciesId}` */
   speciesId: string;
+  /** species.art 為 true,Phaser preload 已嘗試載入立繪 */
+  hasArt: boolean;
   /** Sprite 載不到時用 emoji 兜底 */
   emoji: string;
   stockName: string;
@@ -57,22 +60,13 @@ const TIER_COLOR: Record<PetTier, number> = {
 const TERRITORY_RADIUS = 80;
 const MOVE_SPEED = 18; // px/sec
 const RING_RADIUS = 38;
-const SPRITE_DISPLAY_SIZE = 72; // image 顯示邊長(原圖 256,顯示 72 給 HiDPI 餘裕)
 const EMOJI_SIZE = 56;
-
-/** 寵物圖的三種 frame */
-export type PetFrame = 'idle' | 'ascended' | 'corrupted';
-
-/** 依 tier + isCorrupted 決定要顯示哪個 frame */
-export function selectFrame(tier: PetTier, isCorrupted: boolean): PetFrame {
-  if (isCorrupted) return 'corrupted';
-  if (tier === 'god' || tier === 'saint' || tier === 'celestial') return 'ascended';
-  return 'idle';
-}
+/** 立繪顯示邊長(原圖通常 256+,顯示 72 給 HiDPI 餘裕) */
+const SPRITE_DISPLAY_SIZE = 72;
 
 /** 組 Phaser texture key,跟 WorldScene.preload() 註冊的對應 */
-export function spriteKey(speciesId: string, frame: PetFrame): string {
-  return `pet:${speciesId}:${frame}`;
+export function spriteKey(speciesId: string): string {
+  return `pet:${speciesId}`;
 }
 
 export class PetSprite {
@@ -89,10 +83,10 @@ export class PetSprite {
   /** 領地中心 */
   homeX: number;
   homeY: number;
-  /** 當前移動目標點(世界座標) */
+  /** 當前移動目標點（世界座標） */
   targetX: number;
   targetY: number;
-  /** 抵達目標後的停留時間(ms) */
+  /** 抵達目標後的停留時間（ms） */
   pauseUntil = 0;
 
   data: PetSpriteData;
@@ -105,18 +99,18 @@ export class PetSprite {
     this.targetY = y;
     this.data = data;
 
-    // 容器(整體位移用)
+    // 容器（整體位移用）
     this.container = scene.add.container(x, y);
 
     // 光環
     this.ring = scene.add.circle(0, 0, RING_RADIUS, 0xffffff, 0.6);
     this.ring.setStrokeStyle(4, TIER_COLOR[data.tier]);
 
-    // 寵物圖(image 跟 emoji 同位置疊著,按 texture 是否載入到顯示其中之一)
-    const initialKey = spriteKey(data.speciesId, selectFrame(data.tier, data.isCorrupted));
-    const hasTexture = scene.textures.exists(initialKey);
+    // 立繪 + emoji 兜底:同位置疊著、按 texture 是否載入決定顯示哪個
+    const key = spriteKey(data.speciesId);
+    const hasTexture = data.hasArt && scene.textures.exists(key);
     this.image = scene.add
-      .image(0, 4, hasTexture ? initialKey : '__missing__')
+      .image(0, 4, hasTexture ? key : '__missing__')
       .setOrigin(0.5)
       .setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE)
       .setVisible(hasTexture);
@@ -143,7 +137,7 @@ export class PetSprite {
       .setOrigin(0.5);
     this.pnlBox = scene.add.container(0, 0, [this.pnlBg, this.pnlText]);
 
-    // 股票名稱(在腳邊)
+    // 股票名稱（在腳邊）
     this.nameText = scene.add
       .text(0, RING_RADIUS + 6, `${data.stockName}`, {
         fontSize: '13px',
@@ -175,26 +169,28 @@ export class PetSprite {
     this.pickNewTarget(0);
   }
 
-  /** 把玩家點擊轉發出去,讓 React 知道哪隻寵物被點 */
+  /** 把玩家點擊轉發出去，讓 React 知道哪隻寵物被點 */
   onPointerDown(handler: (petId: string) => void) {
     this.container.on('pointerdown', () => handler(this.data.petId));
   }
 
   applyData(data: PetSpriteData) {
+    const prevPnl = this.data?.pnl;
     this.data = data;
     this.ring.setStrokeStyle(4, TIER_COLOR[data.tier]);
 
-    const key = spriteKey(data.speciesId, selectFrame(data.tier, data.isCorrupted));
-    const hasTexture = this.scene.textures.exists(key);
+    // 重新評估 texture(物種可能變了 / 立繪後來才載完)
+    const key = spriteKey(data.speciesId);
+    const hasTexture = data.hasArt && this.scene.textures.exists(key);
 
     if (hasTexture) {
       this.image.setTexture(key);
       this.image.setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
+      this.image.setAlpha(data.isCorrupted ? 0.55 : 1);
+      this.image.setTint(data.isCorrupted ? 0x444444 : 0xffffff);
       this.image.setVisible(true);
       this.emoji.setVisible(false);
     } else {
-      // Sprite 還沒下載到本地或 preload 失敗 → 用 emoji 兜底,
-      // 並用舊版的 alpha+tint 表達黑化
       this.image.setVisible(false);
       this.emoji.setText(data.emoji);
       this.emoji.setAlpha(data.isCorrupted ? 0.55 : 1);
@@ -206,6 +202,20 @@ export class PetSprite {
     this.pnlText.setText(`${sign}${formatThousands(Math.round(data.pnl))}`);
     this.pnlText.setColor(data.pnl >= 0 ? '#e23b3b' : '#1f9e4a');
     this.nameText.setText(`${data.stockName} · Lv.${data.level}`);
+
+    // 損益變動時閃光:漲淡黃、跌淡紅
+    // 第一次 applyData(prevPnl undefined)不閃,避免初始化跳一次
+    if (prevPnl !== undefined && prevPnl !== data.pnl) {
+      this.flashPnL(data.pnl > prevPnl ? 0xfde68a : 0xfecaca);
+    }
+  }
+
+  /** PnL 標籤閃光 500ms 後恢復白底 */
+  flashPnL(color: number) {
+    this.pnlBg.setFillStyle(color, 0.95);
+    this.scene.time.delayedCall(500, () => {
+      this.pnlBg.setFillStyle(0xffffff, 0.95);
+    });
   }
 
   /** 在 territory 內隨機選新目標 */
@@ -218,7 +228,7 @@ export class PetSprite {
     this.pauseUntil = now + 500 + Math.random() * 2500;
   }
 
-  /** 每 tick 呼叫;delta 為自上次的毫秒 */
+  /** 每 tick 呼叫；delta 為自上次的毫秒 */
   step(now: number, delta: number) {
     if (now < this.pauseUntil) return;
 

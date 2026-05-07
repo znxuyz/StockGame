@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
 import { getCreature } from '@/data/creatures';
 import { getHoldingDetail, type HoldingDetail } from '@/services';
 import { formatInt, formatPrice, formatSigned, formatPercent, daysBetween } from '@/utils';
 import type { Pet, Stock } from '@/types';
 import { isCorrupted } from '@/types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/db';
 
 interface PetInfoModalProps {
   open: boolean;
@@ -39,17 +41,47 @@ const TIER_BADGE: Record<string, { label: string; bg: string; text: string }> = 
 
 export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModalProps) {
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
+  const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
+  const prevPriceRef = useRef<number | null>(null);
+
+  // 訂閱該檔的即時價(背景 silentRefresh 寫入 db.prices 後 modal 會自動重抓 detail)
+  const livePrice = useLiveQuery(
+    () => (pet ? db.prices.get(pet.code) : undefined),
+    [pet?.code]
+  );
 
   useEffect(() => {
     if (!open || !pet) return;
     getHoldingDetail(pet.code).then(setDetail);
-  }, [open, pet]);
+    // livePrice 變動就再抓 detail(holding 也可能因加碼/賣出變)
+  }, [open, pet, livePrice?.currentPrice, livePrice?.updatedAt]);
+
+  // 現價變動時觸發閃光,500ms 後移除
+  useEffect(() => {
+    const newPrice = detail?.price?.currentPrice;
+    const prevPrice = prevPriceRef.current;
+    if (newPrice != null && prevPrice != null && newPrice !== prevPrice) {
+      setPriceFlash(newPrice > prevPrice ? 'up' : 'down');
+      const t = setTimeout(() => setPriceFlash(null), 500);
+      return () => clearTimeout(t);
+    }
+    if (newPrice != null) prevPriceRef.current = newPrice;
+  }, [detail?.price?.currentPrice]);
+
+  // modal 關閉時重置閃光基準,下次開啟不會誤觸發
+  useEffect(() => {
+    if (!open) {
+      prevPriceRef.current = null;
+      setPriceFlash(null);
+    }
+  }, [open]);
 
   if (!pet || !stock) return null;
   const species = getCreature(pet.speciesId);
   const corrupted = isCorrupted(pet);
   const badge = TIER_BADGE[pet.tier];
   const daysHeld = detail ? daysBetween(detail.holding.firstPurchasedAt, Date.now()) : 0;
+  const flashClass = priceFlash === 'up' ? 'flash-up' : priceFlash === 'down' ? 'flash-down' : '';
 
   return (
     <Modal open={open} onClose={onClose} variant="center" title={species?.name ?? '神獸資訊'}>
@@ -72,7 +104,7 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
         </div>
 
         {/* 對應股票資訊 */}
-        <div className="bg-sand-50 rounded-lg p-3">
+        <div className={`bg-sand-50 rounded-lg p-3 ${flashClass}`}>
           <div className="flex items-baseline justify-between">
             <div>
               <span className="text-xs text-gray-500">{stock.code}</span>

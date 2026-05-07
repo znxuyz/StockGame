@@ -5,7 +5,8 @@ export {
   formatSigned,
   formatPrice,
   formatPercent,
-  daysBetween
+  daysBetween,
+  relativeTime
 } from './format';
 export {
   computeXIRR,

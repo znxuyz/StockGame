@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PetSprite, spriteKey, type PetSpriteData, type PetFrame } from './petSprite';
+import { PetSprite, spriteKey, type PetSpriteData } from './petSprite';
 import { CREATURES } from '@/data/creatures';
 
 /**
@@ -9,9 +9,9 @@ import { CREATURES } from '@/data/creatures';
  *  - 世界範圍 1500x1500，攝影機可拖曳
  *  - 寵物以「id 雜湊 → 領地中心」決定位置，避免重疊
  *  - 點擊寵物 emit 'pet-click'（React 端訂閱開個股資訊）
- *  - 沙漠裝飾：仙人掌、石頭，靜態裝飾不互動
- *  - preload 載入所有寵物 sprite(idle/asc/corrupt 三 frame),
- *    public/sprites/ 缺檔的話 PetSprite 會 fallback 用 emoji
+ *  - 場景裝飾：松、石、雲、月,靜態裝飾不互動(水墨意象,emoji 占位)
+ *  - preload 嘗試載入有 art:true 的物種立繪;沒檔的物種完全不 load
+ *    (避免 console 一堆 404 錯誤),PetSprite 看 texture exist 自動切 fallback
  *
  * 為什麼用 Phaser：
  *  - 寵物動畫 / 位移用 Phaser scene loop 比 React rerender 順
@@ -22,9 +22,8 @@ import { CREATURES } from '@/data/creatures';
 export const WORLD_SIZE = 1500;
 const GRID_CELL = 220; // 每個寵物的「巢穴」格子大小
 const COLS = Math.floor(WORLD_SIZE / GRID_CELL);
-const PET_FRAMES: PetFrame[] = ['idle', 'ascended', 'corrupted'];
 
-/** 場景底色:暖米紙色,讓寵物 sprite 自帶的米紙底不會跟場景出現顯著邊界 */
+/** 場景底色:暖米紙色,讓寵物立繪自帶的米紙底不會跟場景出現顯著邊界 */
 const RICE_PAPER_BG = '#efe6cf';
 
 export class WorldScene extends Phaser.Scene {
@@ -41,19 +40,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   preload() {
-    // 對 10 隻神獸 × 3 frame 全部嘗試載入。檔案不在會 emit error event,
-    // PetSprite 會偵測 textures.exists 為 false 時自動 fallback 用 emoji,
-    // 所以這邊讓錯誤靜默(只 console.warn),避免整個 scene 卡住。
+    // 只對 art:true 的物種嘗試載入立繪 — 其他物種一定 fallback emoji,
+    // 不必讓 Phaser 噴一堆 404 進 console。
+    const artSpecies = CREATURES.filter((c) => c.art === true);
+    if (artSpecies.length === 0) return;
+
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
       console.warn(`[WorldScene] sprite 載入失敗,fallback emoji:${file.key}`);
     });
 
-    for (const c of CREATURES) {
-      for (const frame of PET_FRAMES) {
-        const key = spriteKey(c.id, frame);
-        const path = `${import.meta.env.BASE_URL ?? '/'}sprites/${c.id}__${frame}.png`;
-        this.load.image(key, path);
-      }
+    const base = import.meta.env.BASE_URL ?? '/';
+    for (const c of artSpecies) {
+      this.load.image(spriteKey(c.id), `${base}sprites/${c.id}.png`);
     }
   }
 
@@ -69,11 +67,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 沙漠裝飾：簡單的仙人掌 / 沙丘 emoji 散佈。
-   * 用 deterministic 偽亂數，避免每次 reload 位置變動。
+   * 場景裝飾:水墨意象 emoji(松、石、雲、月)散佈。
+   * 用 deterministic 偽亂數,避免每次 reload 位置變動。
+   * 之後若有正式美術 asset(水墨松/石/雲圖檔)再替換。
    */
   private drawDecorations() {
-    const decoEmojis = ['🌵', '🪨', '🌾'];
+    const decoEmojis = ['🌲', '🪨', '☁️', '🌙'];
     for (let i = 0; i < 60; i++) {
       const x = pseudoRand(i * 31) * WORLD_SIZE;
       const y = pseudoRand(i * 17 + 5) * WORLD_SIZE;

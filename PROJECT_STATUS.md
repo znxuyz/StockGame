@@ -22,10 +22,13 @@
 | Phaser 沙漠地圖、寵物隨機漫步、可拖曳鏡頭 | ✅ |
 | PWA（可加桌面變 App）、本機儲存 | ✅ |
 | Cloudflare Pages 部署（含 mis API 反向代理 Function） | ✅ 已上線 `stockgame-692.pages.dev` |
-| 自動排程更新股價 | ❌ 目前只有手動 🔄 按鈕 |
+| 盤中自動更新股價(每 30s + 背景回前景補抓) | ✅(`silentRefresh` in `App.tsx`) |
+| 「上次更新時間」相對時間提示 + stale 警示 | ✅(`TopBar` + `relativeTime`) |
+| 價格變動視覺回饋(寵物 PnL 閃光、Modal 現價閃光) | ✅(`petSprite::flashPnL` + CSS keyframe) |
+| PWA 安裝引導(iOS Safari 教學 + Android beforeinstallprompt) | ✅(`InstallPrompt.tsx`) |
+| 寵物立繪美術(20 隻原創上古神祇) | ⚠️ 整合代碼已就緒,需本機跑 `download-sprites.mjs` 把 PNG 抓進 repo |
 | 大盤對比（0050 / 加權指數） | ❌ |
 | 雲端同步 / 帳號 / 社群 | ❌（依使用者決議「先單機」） |
-| 寵物 sprite sheet 美術 | ❌ 用 emoji 占位 |
 | 自動產業分類（半導體 / 金融 / …） | ❌ 新代號全部歸到 `'other'`（ETF 識別 OK） |
 | 國定假日 / 颱風假處理 | ❌ 倚賴 mis API 自動回最近一個交易日 |
 
@@ -305,22 +308,38 @@ cursed3     0x111111
 
 ---
 
-## 七、神獸清單（40 隻）
+## 七、神獸清單（20 隻原創上古神祇）
 
-定義於 `src/data/creatures.ts`。**黑化採方案甲（原寵物變色）**，所以沒有獨立的四凶種類。
+定義於 `src/data/creatures.ts`。從原山海經 40 隻路線轉成 **20 隻原創上古神祇** 主題(MJ 立繪 + 道家宇宙觀命名)。**黑化採方案甲（原寵物變色）**,所以沒有獨立的凶獸種類。
 
-| 分類 | 數量 | 名單 |
-|---|---|---|
-| four-symbols 四象 | 4 | 青龍、白虎、朱雀、玄武 |
-| dragon 龍族 | 5 | 應龍、燭龍、蛟、虺、夔 |
-| bird 鳥族 | 6 | 鳳凰、鸞鳥、青鳥、畢方、重明鳥、三足烏 |
-| lucky 招財 | 5 | 麒麟、貔貅、白澤、辟邪、天祿 |
-| beast 異獸 | 11 | 九尾狐、諦聽、開明獸、騶虞、駁、陸吾、英招、蓐收、飛廉、角端、朱厭 |
-| aquatic 水族 | 6 | 鯤、橫公魚、文鰩魚、何羅魚、鯥、巴蛇 |
-| spirit 靈體 | 3 | 帝江、鵸鵌、彘 |
-| **合計** | **40** | |
+| # | id | 中文 | category | 兜底 emoji |
+|---|---|---|---|---|
+| 1 | `tai-chu-yan-jun` | 太初炎君 | spirit | 🔥 |
+| 2 | `tai-su-xuan-lu` | 太素玄鹿 | beast | 🦌 |
+| 3 | `wu-shi-zhi-die` | 無始之蝶 | spirit | 🦋 |
+| 4 | `wu-ji-jin-zun` | 無極金尊 | lucky | 🪙 |
+| 5 | `ji-zhi-ming` | 寂之鳴 | spirit | 🔔 |
+| 6 | `tai-xuan-zhi-zhu` | 太玄之主 | spirit | 🌑 |
+| 7 | `yuan-shi-lei-ting` | 原始雷霆 | spirit | ⚡ |
+| 8 | `wu-zi-zhi-long` | 無字之龍 | dragon | 🐉 |
+| 9 | `heng-chun-zhi-gui` | 恆春之龜 | aquatic | 🐢 |
+| 10 | `wu-xiang-zhi-hu` | 無相之狐 | beast | 🦊 |
+| 11 | `hong-meng-xue-huang` | 鴻濛血皇 | spirit | 🩸 |
+| 12 | `tai-bai-jian-xian` | 太白劍仙 | spirit | ⚔️ |
+| 13 | `xuan-huang-di-mu` | 玄黃地母 | spirit | 🌍 |
+| 14 | `cang-ming-hai-zun` | 滄溟海尊 | aquatic | 🌊 |
+| 15 | `huang-quan-meng-po` | 黃泉孟婆 | spirit | 🍵 |
+| 16 | `zi-wei-tian-shu` | 紫微天樞 | spirit | ⭐ |
+| 17 | `hong-meng-qin-zun` | 鴻蒙琴尊 | spirit | 🎵 |
+| 18 | `ye-huo-luo-cha` | 業火羅剎 | spirit | 👹 |
+| 19 | `tai-xu-jing-jun` | 太虛鏡君 | spirit | 🪞 |
+| 20 | `hong-jun-dao-zu` | 鴻鈞道祖 | spirit | ☯️ |
 
-`pickRandomCreature()` 從這 40 隻平均抽取，新檔買入時呼叫。
+全 20 隻都有對應 MJ 立繪(`docs/art-prompts.md` §1 表),`art: true`,Phaser 自動載 `public/sprites/<id>.png`,載不到 fallback 用上表 emoji。
+
+`pickRandomCreature()` 從這 20 隻平均抽取,新檔買入時呼叫。
+
+**「天罡四極」成就**(原「四象齊聚」,id 不變保留 `four-symbols`):同時擁有 鴻鈞道祖、玄黃地母、滄溟海尊、紫微天樞 即解鎖。`src/services/achievements.ts:96` 寫死這 4 個 ID。
 
 ---
 
@@ -355,11 +374,18 @@ cursed3     0x111111
 
 ### B. 體驗優化（1-2 週）
 
-- [ ] **自動排程更新股價**：盤中每 5 分鐘 tick；用 Page Visibility API 在背景關掉，回前台再啟動
-- [ ] 進化判定改成 buy/feed 後立即跑（用最新 `prices` cache，可能有點舊但 UX 較好）
-- [ ] 把「孵化動畫」/「進化光效」做成 Phaser Tween（目前生成寵物無視覺反饋）
-- [ ] 設定頁加「測試手續費試算機」（輸入金額看結果）
-- [ ] 螢幕方向鎖到 portrait（PWA manifest 已設 portrait，但網頁版橫屏仍會壞）
+- [x] ~~**自動排程更新股價**:盤中每 5 分鐘 tick;用 Page Visibility API 在背景關掉,回前台再啟動~~
+      → **已完成**(`App.tsx::silentRefresh`,實際間隔 30s)
+- [x] ~~上次抓價時間提示(「N 秒前 / N 分前」,超過 10 分鐘標紅)~~
+      → **已完成**(`TopBar` + `utils/format::relativeTime`)
+- [x] ~~價格變動視覺回饋(寵物 PnL 標籤閃光 + Modal 現價閃光)~~
+      → **已完成**(`petSprite::flashPnL` + `index.css::flash-up/down`)
+- [x] ~~PWA 安裝引導 banner(iOS Safari 教學 + Android beforeinstallprompt)~~
+      → **已完成**(`InstallPrompt.tsx`,啟動 30s 後浮出)
+- [ ] 進化判定改成 buy/feed 後立即跑(用最新 `prices` cache,可能有點舊但 UX 較好)
+- [ ] 把「孵化動畫」/「進化光效」做成 Phaser Tween(目前生成寵物無視覺反饋)
+- [ ] 設定頁加「測試手續費試算機」(輸入金額看結果)
+- [ ] 螢幕方向鎖到 portrait(PWA manifest 已設 portrait,但網頁版橫屏仍會壞)
 
 ### C. 數據準確性（1-2 週）
 
@@ -368,16 +394,26 @@ cursed3     0x111111
 - [ ] XIRR 在大筆現金注入日的修正：現金注入不算「新增本金」就好，再評估
 - [ ] 國定假日表 `src/data/holidays.json` + 假日不嘗試抓盤中
 
-### D. 美術 / 動畫（**下一步重點**）
+### D. 美術 / 動畫
 
-目前所有寵物用 emoji 占位、地圖只有 emoji 裝飾物。導入正式美術後，遊戲質感會跳級。
+從原計畫的「山海經 40 隻 × 4 frame」(走/站/進化/黑化)改成 **「20 隻原創上古神祇 × 單一立繪」** 簡化版。立繪 + 整合架構已完成。
 
-- [ ] 神獸 sprite sheet（40 隻 × 走 / 站 / 進化動畫；可考慮 AI 生成 + 後製成像素風）
-- [ ] 沙漠地圖背景圖（替換目前 emoji decoration、可分區域：沙丘 / 綠洲 / 廢墟）
-- [ ] 進化「渡劫」全螢幕動畫（雷光、光柱、變身光效）
-- [ ] 黑化動畫（黑霧、紅眼、震動）
+**已完成:**
+- [x] 20 隻原創上古神祇命名 + emoji 兜底 + 簡介(`creatures.ts`)
+- [x] 立繪 PNG 整合(`PetSprite` 載 `public/sprites/<id>.png`,沒檔自動 fallback emoji)
+- [x] PWA app icon(朱紅印章 + 「獸」字 SVG → 烘 192/512/maskable PNG)
+- [x] 場景米紙底色(`#efe6cf`,跟立繪米紙底融合)
+- [x] 「天罡四極」成就(取代「四象齊聚」)
+- [x] 下載腳本(`scripts/download-sprites.mjs`,從 `art-prompts.md` §1 表自動讀)
+
+**待辦(部分需本機操作):**
+- [ ] **本機跑 `node scripts/download-sprites.mjs` 把 20 張 PNG 抓進 `public/sprites/`** —
+      sandbox 連 MJ CDN 會 403,只能在玩家自己電腦跑,跑完 commit
+- [ ] 進化「渡劫」全螢幕動畫(雷光、光柱、變身光效)
+- [ ] 黑化動畫(黑霧、紅眼、震動)
+- [ ] 沙漠地圖背景圖(替換目前 emoji decoration、可分區域:沙丘 / 綠洲 / 廢墟)
 - [ ] 圖鑑 modal 的格子改成卡片翻面 / 收集進度動畫
-- [ ] 真正的 PWA app icon（取代現在的 `favicon.svg` 占位）
+- [ ] 走路動畫(目前移動時 sprite 不變,只有方向 flipX)— MVP 不做,日後可補
 
 ### E. 雲端 / 社群（長期，依使用者「先單機」決議延後）
 

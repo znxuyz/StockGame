@@ -16,7 +16,7 @@ interface PhaserMapProps {
 }
 
 /**
- * Phaser 沙漠地圖容器。
+ * Phaser 世界地圖容器(米紙水墨風)。
  *
  *  - 在 useEffect 建立 Phaser.Game，unmount 時 destroy
  *  - 視窗 resize 時讓 Phaser 重新調整 canvas 大小
@@ -66,7 +66,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
     const game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: containerRef.current,
-      backgroundColor: '#f5deb3',
+      // 米紙底色,跟 scene RICE_PAPER_BG + manifest theme 一致
+      backgroundColor: '#efe6cf',
       scale: {
         mode: Phaser.Scale.RESIZE,
         width: '100%',
@@ -120,6 +121,7 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         return {
           petId: pet.id,
           speciesId: pet.speciesId,
+          hasArt: species?.art === true,
           emoji: species?.emoji ?? '❓',
           stockName: stock.name,
           pnl,
@@ -165,8 +167,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
       {isEmpty && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center text-gray-700 max-w-xs px-4 bg-white/80 rounded-2xl py-4 shadow">
-            <p className="text-5xl mb-2">🏜️</p>
-            <p className="text-sm">這片沙漠還很安靜⋯</p>
+            <p className="text-5xl mb-2">☁️</p>
+            <p className="text-sm">這片山水還很清靜⋯</p>
             <p className="text-xs text-gray-500 mt-1">
               點擊下方「買入神獸」召喚第一隻吧
             </p>

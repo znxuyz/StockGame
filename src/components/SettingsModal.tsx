@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { db } from '@/db';
 import type { Settings } from '@/types';
+import { isCloudConfigured } from '@/lib/supabase';
+import { useAuth, signOut } from '@/lib/auth';
 
 interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
   settings: Settings;
   onActionComplete: (message: string) => void;
+  /** 登入鈕被按下,App 端開 SignInModal */
+  onOpenSignIn: () => void;
 }
 
 /**
@@ -18,12 +22,20 @@ export default function SettingsModal({
   open,
   onClose,
   settings,
-  onActionComplete
+  onActionComplete,
+  onOpenSignIn
 }: SettingsModalProps) {
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
   const [playerName, setPlayerName] = useState('');
   const [busy, setBusy] = useState(false);
+  const { session } = useAuth();
+  const userEmail = session?.user?.email ?? null;
+
+  async function handleSignOut() {
+    await signOut();
+    onActionComplete('已登出雲端');
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -117,6 +129,42 @@ export default function SettingsModal({
         >
           儲存設定
         </button>
+
+        {isCloudConfigured && (
+          <>
+            <hr className="my-4" />
+            <div>
+              <div className="text-xs text-gray-500 mb-2">☁ 雲端同步</div>
+              {userEmail ? (
+                <div className="space-y-2">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs">
+                    <span className="text-emerald-700">已登入</span>
+                    <span className="ml-2 text-gray-700 break-all">{userEmail}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={busy}
+                    className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg text-sm border border-gray-200 disabled:opacity-50"
+                  >
+                    登出
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenSignIn();
+                  }}
+                  className="w-full py-2 bg-amber-500 text-white rounded-lg text-sm font-bold"
+                >
+                  登入以同步資料
+                </button>
+              )}
+            </div>
+          </>
+        )}
 
         <hr className="my-4" />
 

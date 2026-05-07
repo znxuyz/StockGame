@@ -6,24 +6,34 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
-    includeAssets: ['favicon.svg'],
+    includeAssets: ['icon.svg', 'icons/*.png'],
     manifest: {
       name: '山海經股票養成',
       short_name: '神獸股市',
       description: '把你的台股投資組合變成山海經神獸動物園',
-      theme_color: '#f5deb3',
-      background_color: '#f5deb3',
+      // 米紙底色,跟 Phaser 場景 + sprite 米紙底融合
+      theme_color: '#efe6cf',
+      background_color: '#efe6cf',
       display: 'standalone',
       orientation: 'portrait',
       lang: 'zh-Hant',
-      // 用 SVG（any 尺寸 + maskable），原本指向的 icon-192.png / icon-512.png
-      // 不在 repo 裡會 404；換成既有的 favicon.svg 才不會壞 manifest。
+      categories: ['finance', 'games'],
       icons: [
+        // SVG(任意尺寸縮放,Android 12+ 支援)
+        { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        // PNG fallback
+        { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        // Maskable(Android 自動裁圓 / 圓角時保證主視覺不被切到)
+        { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+      ],
+      shortcuts: [
         {
-          src: 'favicon.svg',
-          sizes: 'any',
-          type: 'image/svg+xml',
-          purpose: 'any maskable'
+          name: '買入神獸',
+          short_name: '買入',
+          description: '直接開啟買入彈窗',
+          url: '/?action=buy',
+          icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }]
         }
       ]
     },
