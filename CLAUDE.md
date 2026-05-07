@@ -122,7 +122,7 @@ node scripts/gen-art-prompts.mjs  # (歷史包袱,目前不用)
 | Refactor | 山海經 → 20 隻原創上古神祇 | ✓ |
 | B | Supabase auth + Magic Link signin | ✓ |
 | C | 雙向 sync + 衝突 dialog + 雲端 icon | ✓ |
-| D | 帳號刪除(Cloudflare Function + admin.deleteUser) | 待做 |
+| D | 帳號刪除(Cloudflare Function + admin.deleteUser) | ✓ |
 | 待辦 | 本機跑 download-sprites.mjs commit 立繪 PNG | user 待跑 |
 
 ---

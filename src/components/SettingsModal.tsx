@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { db } from '@/db';
 import type { Settings } from '@/types';
-import { isCloudConfigured } from '@/lib/supabase';
+import { isCloudConfigured, supabase } from '@/lib/supabase';
 import { useAuth, signOut } from '@/lib/auth';
+import { cancelPendingPush } from '@/services/cloudSync';
 
 interface SettingsModalProps {
   open: boolean;
@@ -32,9 +33,60 @@ export default function SettingsModal({
   const { session } = useAuth();
   const userEmail = session?.user?.email ?? null;
 
+  /** 雙擊確認刪帳號:第一擊 → confirmingDelete = true 並 5 秒後自動 reset */
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  useEffect(() => {
+    if (!confirmingDelete) return;
+    const id = setTimeout(() => setConfirmingDelete(false), 5000);
+    return () => clearTimeout(id);
+  }, [confirmingDelete]);
+
+  // modal 關掉時重置確認狀態,避免下次打開仍是 confirming 狀態
+  useEffect(() => {
+    if (!open) {
+      setConfirmingDelete(false);
+      setDeletingAccount(false);
+    }
+  }, [open]);
+
   async function handleSignOut() {
+    cancelPendingPush();
     await signOut();
     onActionComplete('已登出雲端');
+  }
+
+  async function handleDeleteAccount() {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    // 第二擊 → 真的刪
+    setConfirmingDelete(false);
+    setDeletingAccount(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('當前未登入,無法刪除');
+
+      const res = await fetch('/api/auth/delete-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errBody.error ?? `HTTP ${res.status}`);
+      }
+
+      // 成功 → 取消任何未跑的 push、清本機 IndexedDB、登出、reload
+      cancelPendingPush();
+      await db.delete();
+      await signOut().catch(() => {});
+      window.location.reload();
+    } catch (e) {
+      setDeletingAccount(false);
+      onActionComplete(`⚠️ 刪除帳號失敗:${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   useEffect(() => {
@@ -144,11 +196,33 @@ export default function SettingsModal({
                   <button
                     type="button"
                     onClick={handleSignOut}
-                    disabled={busy}
+                    disabled={busy || deletingAccount}
                     className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg text-sm border border-gray-200 disabled:opacity-50"
                   >
                     登出
                   </button>
+                  {/* 雙擊確認的刪帳號鈕(只在已登入時顯示) */}
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={busy || deletingAccount}
+                    className={`w-full py-2 rounded-lg text-sm font-bold border disabled:opacity-50 transition-colors ${
+                      confirmingDelete
+                        ? 'bg-red-600 text-white border-red-700 animate-pulse'
+                        : 'bg-red-100 text-red-700 border-red-200'
+                    }`}
+                  >
+                    {deletingAccount
+                      ? '刪除中⋯'
+                      : confirmingDelete
+                        ? '⚠️ 再點一次永久刪除帳號 + 雲端資料'
+                        : '🗑️ 刪除帳號 + 雲端資料'}
+                  </button>
+                  {confirmingDelete && (
+                    <p className="text-[11px] text-red-700 leading-relaxed">
+                      此操作不可逆。雲端 + 本機資料都會永久消失。5 秒內不點就取消。
+                    </p>
+                  )}
                 </div>
               ) : (
                 <button
