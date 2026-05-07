@@ -23,11 +23,30 @@ interface BuyModalProps {
  *
  * 同代號已有 holding 時，service 會自動走加碼路徑（仍以本彈窗購入第一筆 OK）。
  */
+/** 取得今天的 YYYY-MM-DD 字串(台北時區),給 input[type=date] 用 */
+function todayYMD(): string {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return fmt.format(new Date());
+}
+
+/** 把 YYYY-MM-DD 字串(假設台北時區)轉成 unix ms,固定當日 09:30 GMT+8(台股開盤) */
+function parsePurchaseDate(ymd: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return NaN;
+  // 09:30 +0800 = 01:30 UTC
+  return new Date(`${ymd}T01:30:00Z`).getTime();
+}
+
 export default function BuyModal({ open, onClose, settings, onActionComplete }: BuyModalProps) {
   const [code, setCode] = useState('');
   const [stock, setStock] = useState<Stock | null>(null);
   const [shares, setShares] = useState('');
   const [price, setPrice] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState(todayYMD());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +55,7 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
     setStock(null);
     setShares('');
     setPrice('');
+    setPurchaseDate(todayYMD());
     setError(null);
   }
 
@@ -72,6 +92,18 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
       setError('價格要大於 0');
       return;
     }
+    // 把 purchaseDate(YYYY-MM-DD)解析成 unix ms,固定在台北時區當天 09:30(開盤時間)
+    // 沒指定日期就用現在時間
+    const purchaseMs = parsePurchaseDate(purchaseDate);
+    if (!Number.isFinite(purchaseMs)) {
+      setError('買入日期格式不對');
+      return;
+    }
+    // 不允許未來日期
+    if (purchaseMs > Date.now() + 86_400_000) {
+      setError('買入日期不能是未來');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -84,7 +116,7 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
         shares: sharesNum,
         price: priceNum,
         feeConfig,
-        now: Date.now()
+        now: purchaseMs
       });
       onActionComplete(
         result.transaction.type === 'buy'
@@ -122,8 +154,10 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
           <div className="flex gap-2">
             <input
               type="text"
-              inputMode="numeric"
-              placeholder="例：2330 / 0050 / 5269"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="例：2330 / 0050 / 00981A"
               value={code}
               onChange={(e) => {
                 setCode(e.target.value);
@@ -153,6 +187,22 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
               </span>
             </p>
           )}
+        </div>
+
+        {/* 買入日期(預設今天,可改回過去日期補登歷史持倉) */}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">買入日期</label>
+          <input
+            type="date"
+            value={purchaseDate}
+            onChange={(e) => setPurchaseDate(e.target.value)}
+            max={todayYMD()}
+            className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+            disabled={busy}
+          />
+          <p className="text-[11px] text-gray-500 mt-1">
+            預設今天。補登過去持倉就改實際買入日,讓持有天數正確。
+          </p>
         </div>
 
         {/* 股數 + 價格 */}
