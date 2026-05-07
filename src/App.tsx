@@ -40,7 +40,6 @@ import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
 import InstallPrompt from '@/components/InstallPrompt';
 import SignInModal from '@/components/SignInModal';
-import SyncConflictModal from '@/components/SyncConflictModal';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind = 'buy' | 'feed' | 'sell' | 'records' | 'settings' | 'pet' | 'signin' | null;
@@ -93,9 +92,6 @@ function Game() {
   // 雲端同步狀態
   const { session } = useAuth();
   const userId = session?.user?.id;
-  /** 衝突 dialog:雲端 + 本地都有資料、登入時跳出 */
-  const [syncConflict, setSyncConflict] = useState<{ remoteUpdatedAt?: number } | null>(null);
-  const [syncBusy, setSyncBusy] = useState(false);
   /** 同一 user 的初始 pull/push 只跑一次,避免 React strict mode / re-render 重觸發 */
   const initialSyncDoneForUserRef = useRef<string | null>(null);
   /** 阻擋初始 sync 完成前的 push(避免空本地把雲端清掉) */
@@ -243,47 +239,52 @@ function Game() {
 
     (async () => {
       try {
-        const [remote, hasLocal] = await Promise.all([
-          fetchRemoteMeta(userId),
-          localHasUserData()
-        ]);
+        const remote = await fetchRemoteMeta(userId);
 
         if (remote.error) {
-          setToast({ message: `⚠️ 雲端連線失敗:${remote.error}`, variant: 'error' });
-          return;
+          // 網路 / RLS 錯誤 → 提示請連網路再試,不 fallback 本地
+          setToast({
+            message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
+            variant: 'error'
+          });
+          return; // 不 mark done,下次 mount / network resume 再試
         }
 
-        if (remote.exists && hasLocal) {
-          // 兩邊都有 → 開衝突 dialog 讓 user 選
-          setSyncConflict({ remoteUpdatedAt: remote.updatedAt });
-          // 不在這裡 markdone,等 user 選完再 mark
-        } else if (remote.exists) {
-          // 只雲端有 → pull
+        if (remote.exists) {
+          // 雲端有資料 → 一律拉,覆蓋本機(不問,不留本機優先選項)
           const r = await pullNow(userId);
           if (!r.ok) {
-            setToast({ message: `⚠️ 雲端資料拉取失敗:${r.error}`, variant: 'error' });
-          } else {
-            setToast({ message: '☁ 已從雲端載入資料', variant: 'info' });
+            setToast({
+              message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
+              variant: 'error'
+            });
+            return;
           }
-          initialSyncDoneForUserRef.current = userId;
-          allowAutoPushRef.current = true;
-        } else if (hasLocal) {
-          // 只本地有 → push
-          const r = await pushNow(userId);
-          if (!r.ok) {
-            setToast({ message: `⚠️ 雲端推送失敗:${r.error}`, variant: 'error' });
-          } else {
+          setToast({ message: '☁ 已從雲端載入資料', variant: 'info' });
+        } else {
+          // 雲端是空的(全新帳號)→ 第一次把本機資料推上去當初始備份
+          const hasLocal = await localHasUserData();
+          if (hasLocal) {
+            const r = await pushNow(userId);
+            if (!r.ok) {
+              setToast({
+                message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
+                variant: 'error'
+              });
+              return;
+            }
             setToast({ message: '☁ 已備份到雲端', variant: 'info' });
           }
-          initialSyncDoneForUserRef.current = userId;
-          allowAutoPushRef.current = true;
-        } else {
-          // 兩邊都空 → 直接開放後續 auto push
-          initialSyncDoneForUserRef.current = userId;
-          allowAutoPushRef.current = true;
         }
+
+        initialSyncDoneForUserRef.current = userId;
+        allowAutoPushRef.current = true;
       } catch (e) {
         console.warn('[cloud] initial sync error:', e);
+        setToast({
+          message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
+          variant: 'error'
+        });
       }
     })();
   }, [userId]);
@@ -294,43 +295,6 @@ function Game() {
     if (!allowAutoPushRef.current) return; // 初始 sync 還沒完成,不能 push 把雲端清掉
     pushDebounced(userId);
   }, [userId, holdings, pets, transactions, snapshots, stocks, achievements, settings]);
-
-  // 衝突 dialog 處理
-  async function handleConflictUseCloud() {
-    if (!userId || syncBusy) return;
-    setSyncBusy(true);
-    try {
-      const r = await pullNow(userId);
-      if (!r.ok) {
-        setToast({ message: `⚠️ 雲端資料拉取失敗:${r.error}`, variant: 'error' });
-      } else {
-        setToast({ message: '☁ 已用雲端資料覆蓋本機', variant: 'info' });
-      }
-      initialSyncDoneForUserRef.current = userId;
-      allowAutoPushRef.current = true;
-      setSyncConflict(null);
-    } finally {
-      setSyncBusy(false);
-    }
-  }
-
-  async function handleConflictUseLocal() {
-    if (!userId || syncBusy) return;
-    setSyncBusy(true);
-    try {
-      const r = await pushNow(userId);
-      if (!r.ok) {
-        setToast({ message: `⚠️ 雲端推送失敗:${r.error}`, variant: 'error' });
-      } else {
-        setToast({ message: '☁ 已用本機資料覆蓋雲端', variant: 'info' });
-      }
-      initialSyncDoneForUserRef.current = userId;
-      allowAutoPushRef.current = true;
-      setSyncConflict(null);
-    } finally {
-      setSyncBusy(false);
-    }
-  }
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
   async function handlePetClickById(petId: string) {
@@ -408,13 +372,6 @@ function Game() {
       <SignInModal
         open={modal === 'signin'}
         onClose={() => setModal(null)}
-      />
-      <SyncConflictModal
-        open={syncConflict !== null}
-        remoteUpdatedAt={syncConflict?.remoteUpdatedAt}
-        onUseCloud={handleConflictUseCloud}
-        onUseLocal={handleConflictUseLocal}
-        busy={syncBusy}
       />
       <PetInfoModal
         open={modal === 'pet'}

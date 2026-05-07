@@ -86,16 +86,16 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
   return (
     <Modal open={open} onClose={onClose} variant="center" title={species?.name ?? '神獸資訊'}>
       <div className="p-4 space-y-3">
-        {/* 神獸頭像 + 境界 */}
+        {/* 神獸頭像 + 境界 — 立繪去背版,不再加圓形背景 */}
         <div className="flex items-center gap-4">
           <div
-            className={`w-24 h-24 rounded-full flex items-center justify-center text-5xl overflow-hidden ${badge.bg} ${corrupted ? 'grayscale brightness-50' : ''}`}
+            className={`w-28 h-28 flex items-center justify-center shrink-0 ${corrupted ? 'grayscale brightness-50' : ''}`}
           >
             {species?.art ? (
               <img
                 src={`/sprites/${species.id}.png`}
                 alt={species.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 onError={(e) => {
                   // 圖檔缺漏 → 改顯示 emoji 兜底
                   (e.currentTarget as HTMLImageElement).style.display = 'none';
@@ -105,7 +105,7 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
               />
             ) : null}
             <span
-              className="w-full h-full items-center justify-center"
+              className="w-full h-full items-center justify-center text-6xl"
               style={{ display: species?.art ? 'none' : 'flex' }}
             >
               {species?.emoji ?? '❓'}
