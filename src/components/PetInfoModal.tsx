@@ -111,8 +111,8 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
               {species?.emoji ?? '❓'}
             </span>
           </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-bold break-words">
               {species?.name}
               {corrupted && <span className="text-red-700 text-sm ml-1">·黑化</span>}
             </h3>

@@ -155,16 +155,6 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         {refreshing ? '⏳' : '🔄'}
       </button>
 
-      {/* 重置視角 */}
-      <button
-        type="button"
-        onClick={() => sceneRef.current?.centerCamera()}
-        className="absolute top-3 right-[68px] z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-xl active:scale-90 transition-transform"
-        aria-label="重置視角"
-      >
-        🎯
-      </button>
-
       {/* Zoom 按鈕(縮放畫面;手機可用雙指 pinch、桌機可用滾輪) */}
       <button
         type="button"

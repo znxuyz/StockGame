@@ -49,8 +49,8 @@ export default function HoldingPicker({ value, onChange, emptyMessage }: Holding
               selected ? 'bg-emerald-50' : 'bg-white hover:bg-gray-50'
             }`}
           >
-            <span className="text-2xl">{species?.emoji ?? '❓'}</span>
-            <div className="flex-1 text-sm">
+            <span className="text-2xl shrink-0">{species?.emoji ?? '❓'}</span>
+            <div className="flex-1 min-w-0 text-sm">
               <div className="font-bold">
                 {stock?.name ?? h.code}
                 <span className="text-xs text-gray-500 ml-1">{h.code}</span>

@@ -167,14 +167,14 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleLookup();
               }}
-              className="flex-1 px-3 py-2 rounded border border-gray-300 text-base"
+              className="flex-1 min-w-0 px-3 py-2 rounded border border-gray-300 text-base"
               disabled={busy}
             />
             <button
               type="button"
               onClick={handleLookup}
               disabled={busy || !code.trim()}
-              className="px-3 py-2 bg-sand-300 text-white rounded text-sm font-bold disabled:opacity-50"
+              className="shrink-0 px-4 py-2 bg-sand-300 text-white rounded text-sm font-bold disabled:opacity-50 whitespace-nowrap"
             >
               查詢
             </button>
