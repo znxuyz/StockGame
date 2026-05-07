@@ -27,9 +27,10 @@ import SettingsModal from '@/components/SettingsModal';
 import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
 import InstallPrompt from '@/components/InstallPrompt';
+import SignInModal from '@/components/SignInModal';
 import type { Pet, Stock } from '@/types';
 
-type ModalKind = 'buy' | 'feed' | 'sell' | 'records' | 'settings' | 'pet' | null;
+type ModalKind = 'buy' | 'feed' | 'sell' | 'records' | 'settings' | 'pet' | 'signin' | null;
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -266,6 +267,11 @@ function Game() {
         onClose={() => setModal(null)}
         settings={settings}
         onActionComplete={postAction}
+        onOpenSignIn={() => setModal('signin')}
+      />
+      <SignInModal
+        open={modal === 'signin'}
+        onClose={() => setModal(null)}
       />
       <PetInfoModal
         open={modal === 'pet'}
