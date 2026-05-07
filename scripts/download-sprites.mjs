@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 // 從 docs/art-prompts.md §1 表抓每隻角色立繪 URL,下載到
-// public/sprites/<id>.png(縮成 256×256)。
+// public/sprites/<id>.png(縮成 256×256 + 圓形裁切 + 透明角)。
 //
 // 用法:
-//   node scripts/download-sprites.mjs            # 已存在的跳過
-//   node scripts/download-sprites.mjs --force    # 全部重抓
+//   node scripts/download-sprites.mjs               # 已存在的跳過
+//   node scripts/download-sprites.mjs --force       # 全部重抓
+//   node scripts/download-sprites.mjs --reprocess   # 不下載,只把 public/sprites/
+//                                                   # 既有 PNG 重新縮 + 圓形裁切
 //
 // 注意:cdn.midjourney.com 對非瀏覽器 IP 會 403,**只能在你本機跑**,
 //       不能在 sandbox / CI / Cloudflare Functions 等環境跑。
 
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import sharp from 'sharp';
@@ -18,8 +20,61 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 const outDir = resolve(repoRoot, 'public', 'sprites');
 const force = process.argv.includes('--force');
+const reprocess = process.argv.includes('--reprocess');
 
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+
+/**
+ * 標準化處理:resize 256×256 + 圓形 alpha mask(透明角)
+ *  - sharp composite 用 dest-in:把 SVG 圓的 alpha 套到圖片上,圓外變透明
+ *  - 邊緣有 2px 微羽化,跟 Phaser 圓形光環視覺接得自然
+ */
+async function normalizeImage(input) {
+  const svg = `<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="g" cx="50%" cy="50%" r="50%">
+        <stop offset="98%" stop-color="white" stop-opacity="1"/>
+        <stop offset="100%" stop-color="white" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="128" cy="128" r="128" fill="url(#g)"/>
+  </svg>`;
+  return sharp(input)
+    .resize(256, 256, { fit: 'cover' })
+    .composite([{ input: Buffer.from(svg), blend: 'dest-in' }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+// ─── --reprocess 模式:不打網路,只重新處理 public/sprites/ 既有 PNG ───
+if (reprocess) {
+  const files = readdirSync(outDir).filter((f) => f.endsWith('.png'));
+  if (files.length === 0) {
+    console.error('[download-sprites] public/sprites/ 沒有 PNG 可處理');
+    process.exit(1);
+  }
+  console.log(`[download-sprites] --reprocess 模式:處理 ${files.length} 個 PNG`);
+  console.log('');
+  let okCount = 0;
+  let failCount = 0;
+  for (const f of files) {
+    const path = resolve(outDir, f);
+    try {
+      const original = readFileSync(path);
+      const processed = await normalizeImage(original);
+      writeFileSync(path, processed);
+      const kb = (processed.length / 1024).toFixed(0);
+      console.log(`  ✓ ${f} (${kb} KB)`);
+      okCount++;
+    } catch (err) {
+      console.error(`  ✗ ${f}:${err.message}`);
+      failCount++;
+    }
+  }
+  console.log('');
+  console.log(`完成:${okCount} 處理成功 / ${failCount} 失敗`);
+  process.exit(failCount > 0 ? 1 : 0);
+}
 
 const md = readFileSync(resolve(repoRoot, 'docs', 'art-prompts.md'), 'utf8');
 
@@ -74,10 +129,7 @@ for (const row of rows) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const buf = Buffer.from(await res.arrayBuffer());
-    const optimized = await sharp(buf)
-      .resize(256, 256, { fit: 'cover' })
-      .png({ compressionLevel: 9 })
-      .toBuffer();
+    const optimized = await normalizeImage(buf);
     writeFileSync(outPath, optimized);
     const kb = (optimized.length / 1024).toFixed(0);
     console.log(`  ✓ ${filename} (${row.name},${kb} KB)`);
