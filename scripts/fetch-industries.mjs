@@ -22,6 +22,60 @@ const outPath = resolve(repoRoot, 'src', 'data', 'industries.json');
 const TWSE_URL = 'https://openapi.twse.com.tw/v1/opendata/t187ap03_L';
 const TPEX_URL = 'https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O';
 
+/**
+ * TWSE 產業類別代號 → 中文名稱對照。
+ *
+ * 來源:公開資訊觀測站「產業別」分類碼。TWSE / TPEx 共用同一套(數字略有
+ * 出入,有的代號只 TPEx 用);沒在這表的代號保留原始代號當值,日後再補。
+ *
+ * 維護備忘:TWSE 偶爾會新增產業類別(例如近年加的 33 農業科技、34 電子商務、
+ * 35 綠能環保 等)。沒加進這表會在前端顯示成數字,不會壞,但分類會有誤導。
+ * 不確定哪些新代號要補,可以從 src/data/industries.json 拿剩餘原始代號去
+ * Google「產業類別碼 XX 上市」。
+ */
+const INDUSTRY_NAMES = {
+  '01': '水泥工業',
+  '02': '食品工業',
+  '03': '塑膠工業',
+  '04': '紡織纖維',
+  '05': '電機機械',
+  '06': '電器電纜',
+  '07': '化學工業',
+  '08': '玻璃陶瓷',
+  '09': '造紙工業',
+  '10': '鋼鐵工業',
+  '11': '橡膠工業',
+  '12': '汽車工業',
+  '13': '電子工業',
+  '14': '建材營造',
+  '15': '航運業',
+  '16': '觀光餐旅',
+  '17': '金融保險業',
+  '18': '貿易百貨',
+  '19': '綜合',
+  '20': '其他',
+  '21': '化學工業',
+  '22': '生技醫療業',
+  '23': '油電燃氣業',
+  '24': '半導體業',
+  '25': '電腦及週邊設備業',
+  '26': '光電業',
+  '27': '通信網路業',
+  '28': '電子零組件業',
+  '29': '電子通路業',
+  '30': '資訊服務業',
+  '31': '其他電子業',
+  '32': '文化創意業',
+  '33': '農業科技業',
+  '34': '電子商務',
+  '35': '綠能環保',
+  '36': '數位雲端',
+  '37': '運動休閒',
+  '38': '居家生活',
+  '80': '管理股票',
+  '91': '存託憑證'
+};
+
 /** TWSE / TPEx 回傳格式都類似,欄位名為 zh-TW */
 async function fetchJson(url) {
   const res = await fetch(url, {
@@ -76,16 +130,28 @@ async function main() {
 
   /** @type {Record<string, string>} */
   const industries = {};
+  let unmappedCodes = new Set();
   for (const row of [...twse, ...tpex]) {
     const code = pickCode(row);
     const ind = pickIndustry(row);
-    if (code && ind) {
-      industries[String(code).trim()] = String(ind).trim();
-    }
+    if (!code || !ind) continue;
+    const trimmed = String(ind).trim();
+    // 若是純數字代號,翻成中文;查不到就保留原值並記下來方便日後補表
+    const name = /^\d+$/.test(trimmed)
+      ? INDUSTRY_NAMES[trimmed.padStart(2, '0')] ??
+        (unmappedCodes.add(trimmed), trimmed)
+      : trimmed;
+    industries[String(code).trim()] = name;
   }
 
   const count = Object.keys(industries).length;
   console.log(`[fetch-industries] 合計 ${count} 個代號有產業分類`);
+  if (unmappedCodes.size > 0) {
+    console.warn(
+      `[fetch-industries] 有 ${unmappedCodes.size} 個產業代號沒在 INDUSTRY_NAMES 表內(顯示原代號):`,
+      [...unmappedCodes].sort().join(', ')
+    );
+  }
 
   const output = {
     fetchedAt: new Date().toISOString(),
