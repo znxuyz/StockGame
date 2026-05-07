@@ -45,26 +45,26 @@ export type PetTier =
   | 'cursed2'
   | 'cursed3';
 
-const TIER_COLOR: Record<PetTier, number> = {
-  normal: 0xd1d5db, // gray-300
-  spirit: 0x22c55e,
-  demon: 0xa855f7,
-  god: 0xeab308,
-  saint: 0xf97316,
-  celestial: 0xec4899,
-  cursed1: 0x6b21a8,
-  cursed2: 0x991b1b,
-  cursed3: 0x111111
-};
-
 const TERRITORY_RADIUS = 50; // px;放大後每隻領地縮小,避免重疊太多
 const MOVE_SPEED = 18; // px/sec
-const RING_RADIUS = 70; // 約 2x(原 38);跟 SPRITE_DISPLAY_SIZE 同步
+/** 視覺/點擊判定用半徑(沒有實體 ring 渲染了,但保留半徑常數做 hit area) */
+const HIT_RADIUS = 78;
 const EMOJI_SIZE = 100;
-/** 立繪顯示邊長(原圖 256,顯示 130 給 HiDPI 餘裕,約 2x 原 72) */
+/** 立繪顯示邊長 */
 const SPRITE_DISPLAY_SIZE = 130;
-/** 點擊判定半徑 — 比 ring 略大方便點擊 */
-const HIT_RADIUS = RING_RADIUS + 8;
+
+/** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
+const TIER_EMOJI: Record<PetTier, string> = {
+  normal: '⚪',
+  spirit: '🟢',
+  demon: '🟣',
+  god: '🟡',
+  saint: '🟠',
+  celestial: '🌈',
+  cursed1: '⬛',
+  cursed2: '🟥',
+  cursed3: '☠️'
+};
 
 /** 組 Phaser texture key,跟 WorldScene.preload() 註冊的對應 */
 export function spriteKey(speciesId: string): string {
@@ -74,7 +74,6 @@ export function spriteKey(speciesId: string): string {
 export class PetSprite {
   scene: Phaser.Scene;
   container: Phaser.GameObjects.Container;
-  ring: Phaser.GameObjects.Arc;
   image: Phaser.GameObjects.Image;
   emoji: Phaser.GameObjects.Text;
   pnlBox: Phaser.GameObjects.Container;
@@ -104,11 +103,8 @@ export class PetSprite {
     // 容器（整體位移用）
     this.container = scene.add.container(x, y);
 
-    // 光環
-    this.ring = scene.add.circle(0, 0, RING_RADIUS, 0xffffff, 0.6);
-    this.ring.setStrokeStyle(4, TIER_COLOR[data.tier]);
-
     // 立繪 + emoji 兜底:同位置疊著、按 texture 是否載入決定顯示哪個
+    // 不再渲染 ring 圓圈;tier 改用 nameText 前綴 emoji 表示
     const key = spriteKey(data.speciesId);
     const hasTexture = data.hasArt && scene.textures.exists(key);
     this.image = scene.add
@@ -126,11 +122,14 @@ export class PetSprite {
       .setOrigin(0.5)
       .setVisible(!hasTexture);
 
+    // 損益標籤 + 名牌位置以立繪一半邊長為基準(沒 ring 後)
+    const half = SPRITE_DISPLAY_SIZE / 2;
+
     // 損益標籤背景 + 文字
-    this.pnlBg = scene.add.rectangle(0, -RING_RADIUS - 16, 76, 22, 0xffffff, 0.95);
+    this.pnlBg = scene.add.rectangle(0, -half - 16, 76, 22, 0xffffff, 0.95);
     this.pnlBg.setStrokeStyle(1, 0xe5e7eb);
     this.pnlText = scene.add
-      .text(0, -RING_RADIUS - 16, '+0', {
+      .text(0, -half - 16, '+0', {
         fontSize: '14px',
         fontFamily: '"Noto Sans TC",sans-serif',
         fontStyle: 'bold',
@@ -139,9 +138,9 @@ export class PetSprite {
       .setOrigin(0.5);
     this.pnlBox = scene.add.container(0, 0, [this.pnlBg, this.pnlText]);
 
-    // 股票名稱（在腳邊）
+    // 股票名稱（在腳邊）— 開頭加 tier emoji
     this.nameText = scene.add
-      .text(0, RING_RADIUS + 6, `${data.stockName}`, {
+      .text(0, half + 6, `${TIER_EMOJI[data.tier]} ${data.stockName}`, {
         fontSize: '13px',
         fontFamily: '"Noto Sans TC",sans-serif',
         color: '#1f2937',
@@ -150,9 +149,9 @@ export class PetSprite {
       })
       .setOrigin(0.5, 0);
 
-    this.container.add([this.ring, this.image, this.emoji, this.pnlBox, this.nameText]);
+    this.container.add([this.image, this.emoji, this.pnlBox, this.nameText]);
 
-    // 互動 — 用 HIT_RADIUS 比 ring 略大,手指點觸更容易命中
+    // 互動 — 用 HIT_RADIUS 圓形 hit area,手指點觸容易命中
     this.container.setSize(HIT_RADIUS * 2, HIT_RADIUS * 2);
     this.container.setInteractive(
       new Phaser.Geom.Circle(0, 0, HIT_RADIUS),
@@ -160,11 +159,13 @@ export class PetSprite {
     );
     this.container.on('pointerover', () => {
       this.scene.input.setDefaultCursor('pointer');
-      this.ring.setFillStyle(0xfff7d6, 0.9);
+      this.image.setScale(this.image.scaleX * 1.05, this.image.scaleY * 1.05);
     });
     this.container.on('pointerout', () => {
       this.scene.input.setDefaultCursor('default');
-      this.ring.setFillStyle(0xffffff, 0.6);
+      // 還原成 displaySize 比例
+      this.image.setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
+      this.image.setFlipX(this.container.x > this.targetX); // 保留方向 flip
     });
 
     this.applyData(data);
@@ -179,7 +180,7 @@ export class PetSprite {
   applyData(data: PetSpriteData) {
     const prevPnl = this.data?.pnl;
     this.data = data;
-    this.ring.setStrokeStyle(4, TIER_COLOR[data.tier]);
+    // 沒有 ring 渲染了,tier 直接寫進 nameText emoji 前綴
 
     // 重新評估 texture(物種可能變了 / 立繪後來才載完)
     const key = spriteKey(data.speciesId);
@@ -203,7 +204,7 @@ export class PetSprite {
     const sign = data.pnl >= 0 ? '+' : '';
     this.pnlText.setText(`${sign}${formatThousands(Math.round(data.pnl))}`);
     this.pnlText.setColor(data.pnl >= 0 ? '#e23b3b' : '#1f9e4a');
-    this.nameText.setText(`${data.stockName} · Lv.${data.level}`);
+    this.nameText.setText(`${TIER_EMOJI[data.tier]} ${data.stockName} · Lv.${data.level}`);
 
     // 損益變動時閃光:漲淡黃、跌淡紅
     // 第一次 applyData(prevPnl undefined)不閃,避免初始化跳一次
