@@ -49,17 +49,26 @@ async function main() {
       console.log(`[fetch-holidays] 抓 ${year} ...`);
       const data = await fetchYear(year);
       let yearCount = 0;
+      let skippedWeekends = 0;
       for (const day of data) {
         if (!day.isHoliday) continue;
+        // ruyut 把週末也標 isHoliday=true,我們的 isWeekday 已經處理週末,
+        // 不需要把週末加進 holidays(只會讓 list 多 ~50% 雜訊)。
+        // 真要過濾的是「週一到週五的假日」+「補上班日」(後者 isHoliday=false
+        // 自動排除,不用特別處理)。
+        if (day.week === '六' || day.week === '日') {
+          skippedWeekends++;
+          continue;
+        }
         const iso = toIsoDate(String(day.date));
         if (!iso) continue;
         holidays.add(iso);
         yearCount++;
       }
-      console.log(`  → ${yearCount} 個假日`);
+      console.log(`  → ${yearCount} 個工作日假日(過濾掉 ${skippedWeekends} 個週末)`);
       fetched.push(year);
     } catch (e) {
-      // 明年資料還沒上架(常見於上半年)→ 不算錯
+      // 某年資料還沒上架(常見:上半年抓下一年會掛)→ 不算錯,只 warn
       console.warn(`  ⚠ ${year} 抓取失敗(可能還沒上架):${e.message}`);
     }
   }
