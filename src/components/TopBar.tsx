@@ -3,10 +3,11 @@ import { formatInt, formatSigned, formatPercent, relativeTime } from '@/utils';
 import type { PortfolioSummary } from '@/services';
 import { subscribeSyncStatus, type SyncStatus } from '@/services/cloudSync';
 import { isCloudConfigured } from '@/lib/supabase';
+import type { MarketStatus } from '@/api';
 
 interface TopBarProps {
   summary: PortfolioSummary | null;
-  marketOpen: boolean;
+  marketStatus: MarketStatus;
   consecutiveDays: number;
   unlockedAchievements: number;
   totalAchievements: number;
@@ -16,6 +17,21 @@ interface TopBarProps {
   refreshing: boolean;
   /** 是否登入雲端(沒登入就不顯示雲端 icon) */
   cloudSignedIn: boolean;
+}
+
+/** 市場狀態 → icon + 標籤 */
+function marketStatusDisplay(status: MarketStatus): { icon: string; label: string } {
+  switch (status) {
+    case 'open':
+      return { icon: '🟢', label: '盤中即時' };
+    case 'holiday':
+      return { icon: '🏮', label: '國定假日' };
+    case 'weekend':
+      return { icon: '⚪', label: '週末' };
+    case 'after-hours':
+    default:
+      return { icon: '⚪', label: '盤外收盤' };
+  }
 }
 
 /** 超過幾毫秒視為「資料太舊」要標紅 */
@@ -41,7 +57,7 @@ function syncDisplay(status: SyncStatus): { icon: string; label: string; cls: st
 
 export default function TopBar({
   summary,
-  marketOpen,
+  marketStatus,
   consecutiveDays,
   unlockedAchievements,
   totalAchievements,
@@ -49,6 +65,7 @@ export default function TopBar({
   refreshing,
   cloudSignedIn
 }: TopBarProps) {
+  const market = marketStatusDisplay(marketStatus);
   // 每 15 秒重算「N 秒前」字串(reactive 顯示)
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -113,7 +130,7 @@ export default function TopBar({
       </div>
       <div className="flex items-center justify-between mt-1 text-[11px] text-gray-500">
         <span>
-          {marketOpen ? '🟢 盤中即時' : '⚪ 盤外收盤'}
+          {market.icon} {market.label}
           <span className={`ml-1 ${stale ? 'text-red-600' : ''}`}>· {updateLabel}</span>
           <span className={`ml-2 ${summary.todayPnL >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
             今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})

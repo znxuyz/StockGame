@@ -3,8 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
 import {
   isMarketOpen,
+  getMarketStatus,
   ApiError,
-  describeApiError
+  describeApiError,
+  type MarketStatus
 } from '@/api';
 import {
   runPriceUpdate,
@@ -84,7 +86,7 @@ function Game() {
 
   const [toast, setToast] = useState<{ message: string; variant: 'info' | 'error' } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [marketOpen, setMarketOpen] = useState(isMarketOpen());
+  const [marketStatus, setMarketStatus] = useState<MarketStatus>(getMarketStatus());
   /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
   const refreshingRef = useRef(false);
 
@@ -99,9 +101,9 @@ function Game() {
   /** 阻擋初始 sync 完成前的 push(避免空本地把雲端清掉) */
   const allowAutoPushRef = useRef(false);
 
-  // 更新盤中狀態（每分鐘）
+  // 每分鐘更新 market status(open / after-hours / weekend / holiday)
   useEffect(() => {
-    const t = setInterval(() => setMarketOpen(isMarketOpen()), 60_000);
+    const t = setInterval(() => setMarketStatus(getMarketStatus()), 60_000);
     return () => clearInterval(t);
   }, []);
 
@@ -348,7 +350,7 @@ function Game() {
     <div className="w-full h-full flex flex-col bg-sand-100 no-select">
       <TopBar
         summary={summary}
-        marketOpen={marketOpen}
+        marketStatus={marketStatus}
         consecutiveDays={settings.consecutiveDays}
         unlockedAchievements={unlockedCount}
         totalAchievements={ACHIEVEMENTS.length}

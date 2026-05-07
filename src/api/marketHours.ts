@@ -7,11 +7,13 @@
  *  - 13:30 收盤後直接用最新收盤價
  *  - 週末 / 國定假日 / 颱風假 用最新收盤價
  *
- * 國定假日：
- *  - MVP 階段不主動維護假日清單，假日時 API 會回最後一個交易日的資料
- *    (這是 mis.twse.com.tw 的實際行為，剛好符合「假日用最新收盤價」)
- *  - 若 API 行為改變，未來再加 holidays.ts
+ * 國定假日:
+ *  - 對照 src/data/holidays.json(GitHub Actions 月跑從 TaiwanCalendar 抓)
+ *  - 假日跟工作日同樣會被 isMarketOpen 判 false,跳過自動 polling
+ *  - getMarketStatus 提供細分四態給 UI:open / after-hours / weekend / holiday
  */
+
+import { isHolidayDate } from '@/data/holidays';
 
 const TPE_TIMEZONE = 'Asia/Taipei';
 
@@ -71,15 +73,38 @@ export function isWeekday(now: Date = new Date()): boolean {
   return weekday >= 1 && weekday <= 5;
 }
 
+/** 是否為台灣國定假日 / 補假 / 颱風假(對照 src/data/holidays.json) */
+export function isTaiwanHoliday(now: Date = new Date()): boolean {
+  return isHolidayDate(getTaipeiDateString(now));
+}
+
 /**
  * 是否處於「盤中可抓即時價」時段。
- * 9:05 - 13:30，週一到週五。
+ * 9:05 - 13:30,週一到週五,且非國定假日。
  */
 export function isMarketOpen(now: Date = new Date()): boolean {
   if (!isWeekday(now)) return false;
+  if (isTaiwanHoliday(now)) return false;
   const { hour, minute } = getTaipeiNow(now);
   const minutesOfDay = hour * 60 + minute;
   return minutesOfDay >= FIRST_FETCH_MINUTES && minutesOfDay <= MARKET_CLOSE_MINUTES;
+}
+
+/** UI 顯示用的市場狀態四態 */
+export type MarketStatus = 'open' | 'after-hours' | 'weekend' | 'holiday';
+
+/**
+ * 取得當前市場狀態(細分四態)。
+ *  - open       盤中可抓即時價
+ *  - holiday    國定假日(週一~週五但今天放假)
+ *  - weekend    週六/週日
+ *  - after-hours 工作日的盤前 / 盤後
+ */
+export function getMarketStatus(now: Date = new Date()): MarketStatus {
+  if (!isWeekday(now)) return 'weekend';
+  if (isTaiwanHoliday(now)) return 'holiday';
+  if (isMarketOpen(now)) return 'open';
+  return 'after-hours';
 }
 
 /**
