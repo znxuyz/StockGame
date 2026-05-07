@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { formatInt, formatSigned, formatPercent, relativeTime } from '@/utils';
 import type { PortfolioSummary } from '@/services';
+import { subscribeSyncStatus, type SyncStatus } from '@/services/cloudSync';
+import { isCloudConfigured } from '@/lib/supabase';
 
 interface TopBarProps {
   summary: PortfolioSummary | null;
@@ -12,6 +14,8 @@ interface TopBarProps {
   lastPriceUpdateAt: number | undefined;
   /** 是否正在抓價(顯示「更新中⋯」) */
   refreshing: boolean;
+  /** 是否登入雲端(沒登入就不顯示雲端 icon) */
+  cloudSignedIn: boolean;
 }
 
 /** 超過幾毫秒視為「資料太舊」要標紅 */
@@ -20,6 +24,21 @@ const STALE_THRESHOLD_MS = 10 * 60_000;
 /**
  * 螢幕頂部資產列：5 個關鍵數字 + 盤中狀態 + 連登 + 成就計數。
  */
+/** 同步狀態 → icon + tooltip */
+function syncDisplay(status: SyncStatus): { icon: string; label: string; cls: string } {
+  switch (status) {
+    case 'syncing':
+      return { icon: '☁ ⟳', label: '同步中', cls: 'text-amber-600' };
+    case 'error':
+      return { icon: '☁ ✗', label: '同步失敗', cls: 'text-red-600' };
+    case 'offline':
+      return { icon: '☁ ⊘', label: '離線', cls: 'text-gray-400' };
+    case 'idle':
+    default:
+      return { icon: '☁ ✓', label: '已同步', cls: 'text-emerald-600' };
+  }
+}
+
 export default function TopBar({
   summary,
   marketOpen,
@@ -27,7 +46,8 @@ export default function TopBar({
   unlockedAchievements,
   totalAchievements,
   lastPriceUpdateAt,
-  refreshing
+  refreshing,
+  cloudSignedIn
 }: TopBarProps) {
   // 每 15 秒重算「N 秒前」字串(reactive 顯示)
   const [now, setNow] = useState(Date.now());
@@ -35,6 +55,18 @@ export default function TopBar({
     const id = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(id);
   }, []);
+
+  // 訂閱雲端同步狀態
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncErr, setSyncErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isCloudConfigured) return;
+    return subscribeSyncStatus((s, e) => {
+      setSyncStatus(s);
+      setSyncErr(e);
+    });
+  }, []);
+  const sync = syncDisplay(syncStatus);
 
   if (!summary) {
     return (
@@ -87,8 +119,15 @@ export default function TopBar({
             今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
           </span>
         </span>
-        <span>
-          🏆 {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
+        <span className="flex items-center gap-2">
+          {cloudSignedIn && (
+            <span className={sync.cls} title={syncErr ?? sync.label}>
+              {sync.icon}
+            </span>
+          )}
+          <span>
+            🏆 {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
+          </span>
         </span>
       </div>
     </div>
