@@ -10,6 +10,7 @@ import MonthlyPnL from './charts/MonthlyPnL';
 import TopHoldings from './charts/TopHoldings';
 import HoldTimeDistribution from './charts/HoldTimeDistribution';
 import AdvancedMetrics from './charts/AdvancedMetrics';
+import MarketCompareChart from './charts/MarketCompareChart';
 import Bestiary from './Bestiary';
 
 interface RecordsModalProps {
@@ -17,10 +18,11 @@ interface RecordsModalProps {
   onClose: () => void;
 }
 
-type Tab = 'overview' | 'achievements' | 'bestiary' | 'transactions';
+type Tab = 'overview' | 'compare' | 'achievements' | 'bestiary' | 'transactions';
 
 const TAB_LABEL: Record<Tab, string> = {
   overview: '圖表',
+  compare: '對比',
   achievements: '成就',
   bestiary: '圖鑑',
   transactions: '交易'
@@ -37,7 +39,7 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
     <Modal open={open} onClose={onClose} title="紀錄">
       <div className="flex flex-col">
         {/* Tabs */}
-        <div className="grid grid-cols-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+        <div className="grid grid-cols-5 border-b border-gray-200 sticky top-0 bg-white z-10">
           {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
             <button
               key={t}
@@ -65,6 +67,7 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
               <HoldTimeDistribution />
             </>
           )}
+          {tab === 'compare' && <MarketCompareChart />}
           {tab === 'achievements' && <AchievementsList />}
           {tab === 'bestiary' && <Bestiary />}
           {tab === 'transactions' && <TransactionsList />}
