@@ -1,0 +1,40 @@
+name: Update holidays
+
+on:
+  schedule:
+    # 每月 1 號 01:30 UTC = 09:30 Asia/Taipei(跟 industries 錯開 30 分鐘避免擠 runner)
+    - cron: '30 1 1 * *'
+  # 允許在 Actions 頁面手動觸發
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      # 為了 commit 回 main(若有變動)
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch holidays from TaiwanCalendar
+        run: node scripts/fetch-holidays.mjs
+
+      - name: Commit & push if changed
+        run: |
+          if git diff --quiet src/data/holidays.json; then
+            echo "holidays.json 無變動,結束"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/holidays.json
+          git commit -m "chore(holidays): monthly auto-update [skip ci]"
+          git push
