@@ -149,10 +149,7 @@ function Game() {
       await updateTaiexIntraday();
       await postAction(
         `已更新 ${r.updated.length} 檔（${r.duringMarket ? '盤中即時' : '盤後收盤'}）` +
-          (r.missing.length ? `，未抓到 ${r.missing.length} 檔` : '') +
-          (r.evolved.length ? `，⭐ 進化 ${r.evolved.length}` : '') +
-          (r.corrupted.length ? `，⚫ 黑化 ${r.corrupted.length}` : '') +
-          (r.purified.length ? `，✨ 淨化 ${r.purified.length}` : '')
+          (r.missing.length ? `，未抓到 ${r.missing.length} 檔` : '')
       );
     } catch (e) {
       const msg = e instanceof ApiError ? describeApiError(e) : e instanceof Error ? e.message : String(e);
@@ -175,20 +172,12 @@ function Game() {
     refreshingRef.current = true;
     setRefreshing(true);
     try {
-      const r = await runPriceUpdate();
+      await runPriceUpdate();
       await recordDailySnapshot();
       // 順手把加權指數即時值更新(獨立函式內已 try/catch console.warn,不影響主流程)
       await updateTaiexIntraday();
-      const evoCount = r.evolved.length + r.corrupted.length + r.purified.length;
-      if (evoCount > 0) {
-        const parts: string[] = [];
-        if (r.evolved.length) parts.push(`⭐ 進化 ${r.evolved.length}`);
-        if (r.corrupted.length) parts.push(`⚫ 黑化 ${r.corrupted.length}`);
-        if (r.purified.length) parts.push(`✨ 淨化 ${r.purified.length}`);
-        await postAction(parts.join('，'));
-      } else {
-        await runAchievementChecks();
-      }
+      // 進化/黑化機制已取消,自動更新單純跑成就檢查就好
+      await runAchievementChecks();
     } catch (e) {
       console.warn('[silentRefresh] 自動更新失敗(不彈 toast):', e);
     } finally {

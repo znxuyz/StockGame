@@ -19,9 +19,12 @@ import { CREATURES } from '@/data/creatures';
  *  - 將來想加 sprite sheet 動畫時很容易接
  */
 
-export const WORLD_SIZE = 2000;
-const GRID_CELL = 320; // 每個寵物的「巢穴」格子大小(對應 130 邊長立繪 + 領地)
+export const WORLD_SIZE = 1400;
+const GRID_CELL = 280; // 每個寵物的初始位置格子大小(寵物會自由漫步,只決定起手位置)
 const COLS = Math.floor(WORLD_SIZE / GRID_CELL);
+/** 攝影機 zoom 範圍 */
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.0;
 
 /** 場景底色:暖米紙色,讓寵物立繪自帶的米紙底不會跟場景出現顯著邊界 */
 const RICE_PAPER_BG = '#efe6cf';
@@ -64,6 +67,49 @@ export class WorldScene extends Phaser.Scene {
 
     this.drawDecorations();
     this.setupCameraDrag();
+    this.setupZoom();
+  }
+
+  /** 攝影機縮放:wheel(桌機)+ pinch(手機 2 指) */
+  private pinchInitialDistance = 0;
+  private pinchInitialZoom = 1;
+  private setupZoom() {
+    // 桌機:滾輪縮放
+    this.input.on(
+      'wheel',
+      (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) => {
+        const cam = this.cameras.main;
+        const factor = dy > 0 ? 0.9 : 1.1;
+        cam.setZoom(Phaser.Math.Clamp(cam.zoom * factor, ZOOM_MIN, ZOOM_MAX));
+      }
+    );
+
+    // 手機 / 觸控:雙指 pinch
+    this.input.on('pointermove', () => {
+      const p1 = this.input.pointer1;
+      const p2 = this.input.pointer2;
+      if (!p1.isDown || !p2.isDown) {
+        this.pinchInitialDistance = 0;
+        return;
+      }
+      const distance = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+      if (this.pinchInitialDistance === 0) {
+        this.pinchInitialDistance = distance;
+        this.pinchInitialZoom = this.cameras.main.zoom;
+      }
+      const zoom = this.pinchInitialZoom * (distance / this.pinchInitialDistance);
+      this.cameras.main.setZoom(Phaser.Math.Clamp(zoom, ZOOM_MIN, ZOOM_MAX));
+    });
+
+    this.input.on('pointerup', () => {
+      this.pinchInitialDistance = 0;
+    });
+  }
+
+  /** 給 React UI 提供的 zoom in/out 鈕 */
+  zoomBy(factor: number) {
+    const cam = this.cameras.main;
+    cam.setZoom(Phaser.Math.Clamp(cam.zoom * factor, ZOOM_MIN, ZOOM_MAX));
   }
 
   /**
@@ -95,14 +141,18 @@ export class WorldScene extends Phaser.Scene {
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (!pointer.isDown || !this.dragStart || !this.cameraStart) return;
+      // 雙指按下時是 pinch zoom,不要當 drag 處理
+      if (this.input.pointer1.isDown && this.input.pointer2.isDown) return;
       const dx = pointer.x - this.dragStart.x;
       const dy = pointer.y - this.dragStart.y;
       if (!this.didDrag && Math.hypot(dx, dy) > this.dragThreshold) {
         this.didDrag = true;
       }
       if (this.didDrag) {
-        this.cameras.main.scrollX = this.cameraStart.x - dx;
-        this.cameras.main.scrollY = this.cameraStart.y - dy;
+        // 拖曳速度跟隨 zoom 反比例,zoom 越大移動 1px scroll 也 1px(視覺一致)
+        const z = this.cameras.main.zoom || 1;
+        this.cameras.main.scrollX = this.cameraStart.x - dx / z;
+        this.cameras.main.scrollY = this.cameraStart.y - dy / z;
       }
     });
     this.input.on('pointerup', () => {

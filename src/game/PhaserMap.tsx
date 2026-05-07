@@ -75,6 +75,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
       },
       // 不需要物理引擎，純座標移動
       physics: { default: undefined },
+      // 打開 multi-touch(預設只追單指)讓雙指 pinch zoom 能用
+      input: { activePointers: 3 },
       scene
     });
     gameRef.current = game;
@@ -161,6 +163,24 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         aria-label="重置視角"
       >
         🎯
+      </button>
+
+      {/* Zoom 按鈕(縮放畫面;手機可用雙指 pinch、桌機可用滾輪) */}
+      <button
+        type="button"
+        onClick={() => sceneRef.current?.zoomBy(1.25)}
+        className="absolute top-[68px] right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
+        aria-label="放大"
+      >
+        ＋
+      </button>
+      <button
+        type="button"
+        onClick={() => sceneRef.current?.zoomBy(0.8)}
+        className="absolute top-[124px] right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
+        aria-label="縮小"
+      >
+        －
       </button>
 
       {/* 空狀態提示 */}

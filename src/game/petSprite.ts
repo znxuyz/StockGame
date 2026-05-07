@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { WORLD_SIZE } from './scene';
 
 /**
  * 一隻寵物的視覺單位（立繪 / emoji + 境界光環 + 損益標籤 + 名稱）。
@@ -45,13 +46,15 @@ export type PetTier =
   | 'cursed2'
   | 'cursed3';
 
-const TERRITORY_RADIUS = 50; // px;放大後每隻領地縮小,避免重疊太多
-const MOVE_SPEED = 18; // px/sec
-/** 視覺/點擊判定用半徑(沒有實體 ring 渲染了,但保留半徑常數做 hit area) */
-const HIT_RADIUS = 78;
+/** 寵物移動速度(px/sec)— 整圖漫步要快一點才不會永遠在角落 */
+const MOVE_SPEED = 35;
+/** 點擊判定半徑 — 比 sprite 大很多,手指好戳 */
+const HIT_RADIUS = 95;
 const EMOJI_SIZE = 100;
 /** 立繪顯示邊長 */
 const SPRITE_DISPLAY_SIZE = 130;
+/** 邊距 — pickNewTarget 不會選太靠近世界邊界的點 */
+const WORLD_MARGIN = 80;
 
 /** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
 const TIER_EMOJI: Record<PetTier, string> = {
@@ -151,11 +154,13 @@ export class PetSprite {
 
     this.container.add([this.image, this.emoji, this.pnlBox, this.nameText]);
 
-    // 互動 — 用 HIT_RADIUS 圓形 hit area,手指點觸容易命中
-    this.container.setSize(HIT_RADIUS * 2, HIT_RADIUS * 2);
+    // 互動 — 用矩形 hit area 涵蓋整個 sprite + name + pnl 區域,手指好戳
+    const hitW = HIT_RADIUS * 2;
+    const hitH = HIT_RADIUS * 2 + 32; // 包到 PnL 標籤跟名牌
+    this.container.setSize(hitW, hitH);
     this.container.setInteractive(
-      new Phaser.Geom.Circle(0, 0, HIT_RADIUS),
-      Phaser.Geom.Circle.Contains
+      new Phaser.Geom.Rectangle(-HIT_RADIUS, -HIT_RADIUS - 16, hitW, hitH),
+      Phaser.Geom.Rectangle.Contains
     );
     this.container.on('pointerover', () => {
       this.scene.input.setDefaultCursor('pointer');
@@ -221,14 +226,12 @@ export class PetSprite {
     });
   }
 
-  /** 在 territory 內隨機選新目標 */
+  /** 隨機選新目標 — 全圖漫步,不再限制在 home 周圍小範圍 */
   pickNewTarget(now: number) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Math.random() * TERRITORY_RADIUS;
-    this.targetX = this.homeX + Math.cos(angle) * dist;
-    this.targetY = this.homeY + Math.sin(angle) * dist;
-    // 抵達後在原點停留 0.5-3 秒
-    this.pauseUntil = now + 500 + Math.random() * 2500;
+    this.targetX = WORLD_MARGIN + Math.random() * (WORLD_SIZE - WORLD_MARGIN * 2);
+    this.targetY = WORLD_MARGIN + Math.random() * (WORLD_SIZE - WORLD_MARGIN * 2);
+    // 抵達後停留 1-4 秒
+    this.pauseUntil = now + 1000 + Math.random() * 3000;
   }
 
   /** 每 tick 呼叫；delta 為自上次的毫秒 */
