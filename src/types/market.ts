@@ -6,23 +6,16 @@
  */
 export type Market = 'TWSE' | 'TPEX' | 'ETF';
 
-/** 產業分類（Option A 隨機池模式下，industry 暫不影響神獸抽取，但保留供後續使用） */
-export type Industry =
-  | 'semiconductor'
-  | 'electronics'
-  | 'finance'
-  | 'food'
-  | 'textile'
-  | 'plastic'
-  | 'steel'
-  | 'shipping'
-  | 'tourism'
-  | 'biotech'
-  | 'construction'
-  | 'telecom'
-  | 'traditional'
-  | 'etf'
-  | 'other';
+/**
+ * 產業分類。
+ *
+ * 從 src/data/industries.json(TWSE/TPEx OpenAPI 月更)抓的字串會直接落這欄,
+ * 例如「半導體業」、「電腦及週邊設備業」、「金融業」等繁中原始名稱。
+ * 特例:
+ *  - 'etf'   ETF 全部歸這
+ *  - 'other' 找不到產業 / 新代號的兜底
+ */
+export type Industry = string;
 
 /** 台股股票主檔 */
 export interface Stock {

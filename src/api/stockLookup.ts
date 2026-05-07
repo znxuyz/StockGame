@@ -14,6 +14,7 @@ import { db } from '@/db';
 import { fetchMisQuotes } from './twseMis';
 import { ApiError } from './errors';
 import { withRetry } from './retry';
+import { lookupIndustry } from '@/data/industries';
 
 /**
  * 依照代號查股票資訊。
@@ -51,7 +52,9 @@ export async function lookupStock(code: string): Promise<Stock> {
     code: trimmed,
     name: meta.name,
     market: meta.market,
-    industry: meta.market === 'ETF' ? 'etf' : 'other', // 沒有可靠的免費產業 API，先給 other / etf
+    // ETF 直接 'etf';其他用 src/data/industries.json 查 TWSE/TPEx 表
+    // (該 JSON 由 .github/workflows/update-industries.yml 每月自動更新)
+    industry: meta.market === 'ETF' ? 'etf' : lookupIndustry(trimmed),
     isActive: true
   };
 
