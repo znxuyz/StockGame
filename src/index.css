@@ -4,12 +4,9 @@
 
 @layer components {
   /**
-   * 神話卡框 9-slice 邊框(Modal 用)。
-   *  - frame_card.png 經 white-flood + trim,4 角金綠雲紋裝飾完整
-   *  - slice 100 對應 PNG 雲紋邊緣 100px(改小會把雲紋切到延展區變形)
-   *  - border-width 28 px:render 比例 100→28 ≈ 3.5x 縮小,角落仍清楚
-   *  - background-clip: padding-box → 不讓元素的米色 bg 漏到透明的 border 區
-   *  - HUD 已改用 .hud 玻璃擬態,不再用此 frame
+   * [已棄用] 神話卡框 9-slice 邊框。
+   * 全 app 改玻璃擬態後不再引用,但 frame_card.png 檔案保留 public/assets/ui/
+   * 以備未來特殊用途。CSS 暫留作為 dead code,確保 rollback 可用。
    */
   .ornate-frame {
     border-style: solid;
@@ -67,17 +64,82 @@
   }
 
   /**
-   * Modal 內容半透明底(配合 .ornate-frame 金邊框):
-   *  - 外華麗(金邊框)+ 內輕盈(半透明米白)的層次
-   *  - alpha 0.7 比 HUD 的 0.35 厚,因為 modal 後方是黑色 dim overlay,
-   *    若太透字會吃到 overlay 變灰
-   *  - blur 12px 比 HUD 弱,modal 內容 (表單/數字) 可讀性優先
-   *  - 子層 .bg-white 卡片仍實心,形成「金邊→半透明→白卡」三段層次
+   * 玻璃彈窗(Modal 用):
+   *  - alpha 0.35 跟 HUD / BottomBar 對齊,整 app 統一玻璃語言
+   *  - 不再用金邊框 PNG,改 1px 細金線 + 圓角 20px
+   *  - 雙重陰影:外柔和投射 + 內 1px 白高光模擬玻璃折射
+   *  - blur 24px 強過 HUD,因為彈窗開啟時要把後方遊戲畫面糊掉聚焦
    */
-  .popup-content {
-    background: rgba(255, 252, 240, 0.7);
-    backdrop-filter: blur(12px) saturate(120%);
-    -webkit-backdrop-filter: blur(12px) saturate(120%);
+  .glass-popup {
+    background: rgba(250, 246, 232, 0.35);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    border-radius: 20px;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  }
+
+  /**
+   * 彈窗背後 dim+blur 遮罩:
+   *  - 0.25 黑底淡淡擋住遊戲畫面,提示「現在不能操作下方」
+   *  - blur 8px 進一步糊化遊戲畫面,玩家視覺焦點集中在彈窗
+   */
+  .modal-backdrop {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /**
+   * 圓形玻璃 close 按鈕(× 鈕),跟左上 HUD badge 視覺呼應。
+   *  - 純白 alpha 0.35 對齊整體語言
+   *  - 1px 金色邊圈定形,blur 8px 微質感
+   */
+  .glass-close-btn {
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+
+  /**
+   * 彈窗內項目卡(列表 item / stat 卡):
+   *  - 純白底 alpha 0.35 跟 popup 同透明度但底色略亮,卡片從 popup 中微浮起
+   *  - 若實機看卡跟 popup 太融合可調 alpha 0.55(暫不調,先看實機)
+   */
+  .item-card {
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 12px;
+  }
+
+  /**
+   * 彈窗標題列文字:18px / 600 / 深綠墨,呼應原本金邊雲紋的綠色。
+   */
+  .popup-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2A4A3A;
+    letter-spacing: 0.05em;
+  }
+
+  /**
+   * 彈窗標題下方金線分隔(漸層):
+   * 中間 60% 金色實線,兩端漸隱,比直接 border-bottom 雅致。
+   */
+  .popup-title-divider {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(212, 175, 55, 0.5) 20%,
+      rgba(212, 175, 55, 0.5) 80%,
+      transparent
+    );
   }
 }
 
