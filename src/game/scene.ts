@@ -6,8 +6,9 @@ import { CREATURES } from '@/data/creatures';
  * 水墨世界場景。
  *
  * 設計：
- *  - 世界範圍 1500x1500，攝影機可拖曳
- *  - 寵物以「id 雜湊 → 領地中心」決定位置，避免重疊
+ *  - 世界範圍 2400x1600（橫向 3:2，類公主連結家園探索感）
+ *  - playableArea = world-relative：神獸散布整個 world，玩家拖曳 camera 才能看到所有神獸
+ *  - 寵物以「網格 + jitter」分散，避免重疊
  *  - 點擊寵物 emit 'pet-click'（React 端訂閱開個股資訊）
  *  - 場景裝飾：松、石、雲、月,靜態裝飾不互動(水墨意象,emoji 占位)
  *  - preload 嘗試載入有 art:true 的物種立繪;沒檔的物種完全不 load
@@ -19,7 +20,9 @@ import { CREATURES } from '@/data/creatures';
  *  - 將來想加 sprite sheet 動畫時很容易接
  */
 
-export const WORLD_SIZE = 1400;
+/** 世界邏輯尺寸(world coords)。橫向 3:2 對應 bg/main.JPG 1344×896 也是 3:2,scale=1.79x cover */
+export const WORLD_WIDTH = 2400;
+export const WORLD_HEIGHT = 1600;
 /** 攝影機 zoom 範圍 */
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
@@ -28,11 +31,12 @@ const ZOOM_MAX = 2.0;
 const RICE_PAPER_BG = '#efe6cf';
 
 /**
- * 神獸活動區域(playableArea)邊界保留:
- *  - HUD 在 viewport 上方 ~90px,神獸不該跑到那帶 + 30px buffer
- *  - BottomBar 在 viewport 下方 ~110px,神獸不該跑到那帶 + 30px buffer
- *  - 兩側 40px 留白讓神獸不貼牆
- *  - 數字跟 .hud / .hud-bottom 的 padding/box-shadow 範圍對齊
+ * 神獸活動區域(playableArea)邊界保留(world-relative,不再依 viewport):
+ *  - HUD 在 viewport 上方 ~90px(不浮在 Phaser camera 上,但 camera 拖到 world top 時
+ *    最上面 90px 仍會被 HUD 蓋住),所以從世界頂保留 HUD 高度 + buffer
+ *  - BottomBar 在 viewport 下方 ~110px,從世界底保留同樣空間
+ *  - 兩側 40px 留白讓神獸不貼邊
+ *  - 註:zoom out (0.5x) 時邊緣神獸可能被 UI 蓋一點點,zoom in 觀察則無影響
  */
 const HUD_HEIGHT = 90;
 const BOTTOM_BAR_HEIGHT = 110;
@@ -87,10 +91,10 @@ export class WorldScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(RICE_PAPER_BG);
-    this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
-    // 起始置中
-    this.cameras.main.scrollX = (WORLD_SIZE - this.cameras.main.width) / 2;
-    this.cameras.main.scrollY = (WORLD_SIZE - this.cameras.main.height) / 2;
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    // 起始置中(viewport 中心對齊 world 中心)
+    this.cameras.main.scrollX = (WORLD_WIDTH - this.cameras.main.width) / 2;
+    this.cameras.main.scrollY = (WORLD_HEIGHT - this.cameras.main.height) / 2;
 
     // 點擊只觸發最上層 sprite,避免「點 A 跳 B 資訊」(depth 由 step() 寫成 y 座標)
     this.input.topOnly = true;
@@ -107,20 +111,16 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 神獸活動區域 = viewport 內,扣掉上方 HUD + 下方 BottomBar + 四週 buffer。
-   * 用 default-centered camera 換算成 world 座標(camera 移動後 area 不再變,
-   * 所以神獸鎖定在這個 world 矩形內,玩家拖 camera 看背景時神獸跟著移動,
-   * 但 home 永遠在這塊 viewport-sized 區域裡)。
+   * 神獸活動區域 = world 座標,固定矩形(從 world 邊緣保留 UI 高度 + buffer)。
+   * 不再隨 viewport / camera 變動 — 神獸永遠在 (40, 120) 到 (2360, 1460) 這塊
+   * world rectangle 裡漫遊,玩家拖 camera 才能看到不同位置的神獸。
    */
   private computePlayableArea() {
-    const cam = this.cameras.main;
-    const scrollX = (WORLD_SIZE - cam.width) / 2;
-    const scrollY = (WORLD_SIZE - cam.height) / 2;
     this.playableArea = {
-      top: scrollY + HUD_HEIGHT + PET_VERTICAL_PADDING,
-      bottom: scrollY + cam.height - BOTTOM_BAR_HEIGHT - PET_VERTICAL_PADDING,
-      left: scrollX + PET_SIDE_PADDING,
-      right: scrollX + cam.width - PET_SIDE_PADDING
+      top: HUD_HEIGHT + PET_VERTICAL_PADDING,
+      bottom: WORLD_HEIGHT - BOTTOM_BAR_HEIGHT - PET_VERTICAL_PADDING,
+      left: PET_SIDE_PADDING,
+      right: WORLD_WIDTH - PET_SIDE_PADDING
     };
   }
 
@@ -248,13 +248,13 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 鋪滿世界的主背景圖(bg/main.JPG 太極櫻花庭院)。
-   * 用 cover-fit 縮放,水平剛好填滿,垂直略超出但被 camera bounds 裁掉。
+   * 鋪滿世界的主背景圖(bg/main.JPG 粉紅雲紋庭院)。
+   * cover-fit 縮放:bg 1344×896 與 world 2400×1600 同 3:2 比例,scale ≈ 1.79x 完全覆蓋無裁切。
    */
   private drawBackground() {
     if (!this.textures.exists('world-bg')) return;
-    const bg = this.add.image(WORLD_SIZE / 2, WORLD_SIZE / 2, 'world-bg');
-    const scale = Math.max(WORLD_SIZE / bg.width, WORLD_SIZE / bg.height);
+    const bg = this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 'world-bg');
+    const scale = Math.max(WORLD_WIDTH / bg.width, WORLD_HEIGHT / bg.height);
     bg.setScale(scale).setDepth(-100);
   }
 
@@ -289,8 +289,8 @@ export class WorldScene extends Phaser.Scene {
   private spawnSparks() {
     if (!this.textures.exists('spark')) return;
     const emitter = this.add.particles(0, 0, 'spark', {
-      x: { min: 0, max: WORLD_SIZE },
-      y: { min: 0, max: WORLD_SIZE },
+      x: { min: 0, max: WORLD_WIDTH },
+      y: { min: 0, max: WORLD_HEIGHT },
       scale: { start: 0.05, end: 0.18 },
       alpha: { start: 0.55, end: 0 },
       lifespan: 2200,
@@ -451,8 +451,8 @@ export class WorldScene extends Phaser.Scene {
 
   /** 攝影機回到中心（給「重置視角」按鈕用） */
   centerCamera() {
-    this.cameras.main.scrollX = (WORLD_SIZE - this.cameras.main.width) / 2;
-    this.cameras.main.scrollY = (WORLD_SIZE - this.cameras.main.height) / 2;
+    this.cameras.main.scrollX = (WORLD_WIDTH - this.cameras.main.width) / 2;
+    this.cameras.main.scrollY = (WORLD_HEIGHT - this.cameras.main.height) / 2;
   }
 
   destroy() {
