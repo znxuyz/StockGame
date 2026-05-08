@@ -388,42 +388,63 @@ export class WorldScene extends Phaser.Scene {
     for (const sprite of this.sprites.values()) {
       sprite.step();
     }
-    // 軟性互推作為後備:停留期間生效,tween 進行中會被 tween 覆蓋
-    this.applyPairwiseRepulsion();
+    // 多圓形碰撞 — 圖案實體輪廓相交才彈,玩家視覺所見即邏輯
+    this.applyBodyCollision();
   }
 
   /**
-   * 兩兩比對所有 sprite,距離 < REPULSION_RADIUS 就互推開:
-   *  - 推力 = 重疊量 × 0.2(dampening 避免抖動)
-   *  - 完全重疊(dist≈0)時隨機方向小推 5px 解套
-   *  - nudge() 內部 clamp 到 playableArea,不會被推出邊界
+   * 多圓形碰撞檢查(per-pixel 90% 效果, 1% 成本):
+   *  - 每隻神獸用 3 個圓覆蓋立繪輪廓(petSprite BODY_SHAPES)
+   *  - 兩兩配對,任一對圓相交就視為碰撞
+   *  - 50 隻 × 9 = 450 配對距離檢查/frame,完全 OK
+   *  - 碰撞時兩邊都 bounceTo 反方向,各跳 60px,200ms cubic.easeOut tween
+   *  - bouncing flag 期間跳過,避免 ping-pong
+   *  - 完全重疊(中心距 < 0.5)時隨機方向脫離,避免除零
    */
-  private applyPairwiseRepulsion() {
+  private applyBodyCollision() {
     const sprites = [...this.sprites.values()];
-    const PUSH_R = 95; // 對齊 petSprite 的 REPULSION_RADIUS
+    const BOUNCE_FORCE = 60; // 反彈距離(每邊),總分離 ~120 ≈ 一個立繪寬度
     for (let i = 0; i < sprites.length; i++) {
+      const a = sprites[i];
+      if (a.isBouncing()) continue;
+      const shapesA = a.getBodyShapesWorld();
       for (let j = i + 1; j < sprites.length; j++) {
-        const a = sprites[i];
         const b = sprites[j];
+        if (b.isBouncing()) continue;
+        const shapesB = b.getBodyShapesWorld();
+
+        // 任一對 (a 的圓, b 的圓) 相交就判為碰撞
+        let collided = false;
+        outer: for (const sa of shapesA) {
+          for (const sb of shapesB) {
+            const dx = sb.x - sa.x;
+            const dy = sb.y - sa.y;
+            const minDist = sa.radius + sb.radius;
+            if (dx * dx + dy * dy < minDist * minDist) {
+              collided = true;
+              break outer;
+            }
+          }
+        }
+        if (!collided) continue;
+
+        // 彈開方向 = 從 b 中心指向 a 中心(a 退,b 推進反向)
         const pa = a.getPosition();
         const pb = b.getPosition();
-        const dx = pa.x - pb.x;
-        const dy = pa.y - pb.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist >= PUSH_R) continue;
+        let dx = pa.x - pb.x;
+        let dy = pa.y - pb.y;
+        let dist = Math.hypot(dx, dy);
         if (dist < 0.5) {
           // 完全重疊,隨機方向脫離
           const angle = Math.random() * Math.PI * 2;
-          a.nudge(Math.cos(angle) * 5, Math.sin(angle) * 5);
-          b.nudge(-Math.cos(angle) * 5, -Math.sin(angle) * 5);
-          continue;
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+        } else {
+          dx /= dist;
+          dy /= dist;
         }
-        const overlap = PUSH_R - dist;
-        const nx = dx / dist;
-        const ny = dy / dist;
-        const half = overlap * 0.2; // 0.2 dampening 防抖
-        a.nudge(nx * half, ny * half);
-        b.nudge(-nx * half, -ny * half);
+        a.bounceTo(pa.x + dx * BOUNCE_FORCE, pa.y + dy * BOUNCE_FORCE);
+        b.bounceTo(pb.x - dx * BOUNCE_FORCE, pb.y - dy * BOUNCE_FORCE);
       }
     }
   }

@@ -63,8 +63,29 @@ const PIXEL_PERFECT_THRESHOLD = 1;
 const EMOJI_SIZE = 100;
 /** 立繪顯示邊長 */
 const SPRITE_DISPLAY_SIZE = 130;
-/** 重疊推開半徑 — scene update 跑軟排斥用 */
-export const REPULSION_RADIUS = 95;
+
+/**
+ * 多圓形 body shape — 用 3 個圓覆蓋立繪實體輪廓(per-pixel 90% 效果, 1% 成本)。
+ *  - 上圓 ≈ 頭 / 身體上半,下圓 ≈ 腳 / 尾
+ *  - offset 用 container 局部座標(原點 = 立繪中心)
+ *  - 50 隻 × 3×3 配對 = 450 距離檢查/frame,完全 OK
+ *  - 半徑可視覺微調:目前覆蓋 130×130 立繪約 80% 不透明區
+ */
+export interface BodyShape {
+  offsetX: number;
+  offsetY: number;
+  radius: number;
+}
+const BODY_SHAPES: BodyShape[] = [
+  { offsetX: 0, offsetY: -25, radius: 30 }, // 上(頭)
+  { offsetX: 0, offsetY: 15, radius: 40 }, // 中(身)
+  { offsetX: 0, offsetY: 50, radius: 25 } // 下(腳)
+];
+
+/** 碰撞反彈 tween 時長 */
+const BOUNCE_DURATION = 200;
+/** 反彈後到下一次 wander 的恢復時間(神獸短暫呆著) */
+const BOUNCE_RECOVERY = 600;
 
 /** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
 const TIER_EMOJI: Record<PetTier, string> = {
@@ -316,21 +337,68 @@ export class PetSprite {
     });
   }
 
-  /** scene update 用:讓 pairwise repulsion 拿位置算距離 */
+  /** scene update 用:讓 collision 檢查拿位置算距離 */
   getPosition(): { x: number; y: number } {
     return { x: this.container.x, y: this.container.y };
   }
 
   /**
-   * scene update 用:被別隻推開的位移(已 clamp 到 playableArea)。
-   * 注意:tween 進行中時 nudge 會被 tween 下一 tick 覆蓋,
-   * 軟排斥主要在「停留 1-5s」期間生效。停留 + grid spawn + 距離過濾
-   * 已大幅降低重疊機率,軟排斥當最後保險。
+   * 回傳這隻神獸的 3 個 body 圓(已換成世界座標)讓 scene 做圓-圓相交檢查。
+   * 局部 offset 已加 container.x/y,scene 直接用。
    */
-  nudge(dx: number, dy: number) {
+  getBodyShapesWorld(): Array<{ x: number; y: number; radius: number }> {
+    return BODY_SHAPES.map((s) => ({
+      x: this.container.x + s.offsetX,
+      y: this.container.y + s.offsetY,
+      radius: s.radius
+    }));
+  }
+
+  /** 反彈中:scene 在 bounce tween + 恢復期間都跳過此 sprite 的碰撞檢查 */
+  isBouncing(): boolean {
+    return this.bouncing;
+  }
+  private bouncing = false;
+
+  /**
+   * scene 偵測到 body 圓相交時呼叫:
+   *  - 取消當前 wander tween 與 pendingTimer
+   *  - 200ms cubic.easeOut tween 到 (targetX, targetY)
+   *  - 600ms 恢復期(站在原地呆著,不被再次彈)
+   *  - 然後 wanderNext() 重新挑目標
+   *
+   *  bouncing flag 整個流程都 true,scene 不會 ping-pong 反彈
+   */
+  bounceTo(targetX: number, targetY: number) {
+    this.scene.tweens.killTweensOf(this.container);
+    if (this.pendingTimer) {
+      this.pendingTimer.remove();
+      this.pendingTimer = null;
+    }
+    this.bouncing = true;
+
     const a = (this.scene as WorldScene).getPlayableArea();
-    this.container.x = clamp(this.container.x + dx, a.left, a.right);
-    this.container.y = clamp(this.container.y + dy, a.top, a.bottom);
+    const bx = clamp(targetX, a.left, a.right);
+    const by = clamp(targetY, a.top, a.bottom);
+
+    // 翻面跟反彈方向一致
+    this.facingLeft = bx < this.container.x;
+    this.image.setFlipX(this.facingLeft);
+    this.emoji.setScale(this.facingLeft ? -1 : 1, 1);
+
+    this.scene.tweens.add({
+      targets: this.container,
+      x: bx,
+      y: by,
+      duration: BOUNCE_DURATION,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        this.pendingTimer = this.scene.time.delayedCall(BOUNCE_RECOVERY, () => {
+          this.bouncing = false;
+          this.wanderNext();
+        });
+      }
+    });
   }
 
   /** 每 tick 呼叫:只剩 depth 排序(走動由 tween 處理) */
