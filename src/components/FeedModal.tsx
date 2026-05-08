@@ -112,7 +112,7 @@ export default function FeedModal({ open, onClose, settings, onActionComplete }:
                   placeholder="1000"
                   value={shares}
                   onChange={(e) => setShares(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+                  className="input-field"
                   disabled={busy}
                 />
               </div>
@@ -125,7 +125,7 @@ export default function FeedModal({ open, onClose, settings, onActionComplete }:
                   placeholder="100.00"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+                  className="input-field"
                   disabled={busy}
                 />
               </div>

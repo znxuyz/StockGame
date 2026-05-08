@@ -149,7 +149,7 @@ export default function SellModal({ open, onClose, settings, onActionComplete }:
                   placeholder={`最多 ${holding.shares}`}
                   value={shares}
                   onChange={(e) => setShares(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+                  className="input-field"
                   disabled={busy}
                 />
               </div>
@@ -173,7 +173,7 @@ export default function SellModal({ open, onClose, settings, onActionComplete }:
                   placeholder={livePrice?.currentPrice.toFixed(2) ?? '100.00'}
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+                  className="input-field"
                   disabled={busy}
                 />
               </div>

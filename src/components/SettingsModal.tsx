@@ -140,7 +140,7 @@ export default function SettingsModal({
             placeholder="無名小卒"
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
-            className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+            className="input-field"
           />
         </div>
 
@@ -156,7 +156,7 @@ export default function SettingsModal({
             max="10"
             value={discountTenths}
             onChange={(e) => setDiscountTenths(e.target.value)}
-            className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+            className="input-field"
           />
           <p className="text-xs text-gray-500 mt-1">
             台新證券預設 10 折（無折扣）。電子下單 6.5 折請填 6.5、5 折填 5、28 折填 2.8。
@@ -171,7 +171,7 @@ export default function SettingsModal({
             min="0"
             value={minFee}
             onChange={(e) => setMinFee(e.target.value)}
-            className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+            className="input-field"
           />
           <p className="text-xs text-gray-500 mt-1">台新預設 NT$20。</p>
         </div>

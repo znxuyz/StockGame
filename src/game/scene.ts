@@ -20,14 +20,33 @@ import { CREATURES } from '@/data/creatures';
  */
 
 export const WORLD_SIZE = 1400;
-const GRID_CELL = 280; // 每個寵物的初始位置格子大小(寵物會自由漫步,只決定起手位置)
-const COLS = Math.floor(WORLD_SIZE / GRID_CELL);
 /** 攝影機 zoom 範圍 */
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
 
 /** 場景底色:暖米紙色,讓寵物立繪自帶的米紙底不會跟場景出現顯著邊界 */
 const RICE_PAPER_BG = '#efe6cf';
+
+/**
+ * 神獸活動區域(playableArea)邊界保留:
+ *  - HUD 在 viewport 上方 ~90px,神獸 home 不該在那帶 + 30px buffer
+ *  - BottomBar 在 viewport 下方 ~110px,神獸 home 不該在那帶 + 30px buffer
+ *  - 兩側 40px 留白讓神獸不貼牆
+ *  - 數字跟 .hud / .hud-bottom 的 padding/box-shadow 範圍對齊
+ */
+const HUD_HEIGHT = 90;
+const BOTTOM_BAR_HEIGHT = 110;
+const PET_VERTICAL_PADDING = 30;
+const PET_SIDE_PADDING = 40;
+/** 神獸 home 之間最小距離(避免初始重疊) */
+const MIN_PET_SPACING = 80;
+
+export interface PlayableArea {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
 
 export class WorldScene extends Phaser.Scene {
   private sprites: Map<string, PetSprite> = new Map();
@@ -65,6 +84,9 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** 神獸活動區域(world coords),create() 跟 resize 時重算 */
+  private playableArea: PlayableArea = { top: 0, bottom: 0, left: 0, right: 0 };
+
   create() {
     this.cameras.main.setBackgroundColor(RICE_PAPER_BG);
     this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
@@ -72,11 +94,71 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.scrollX = (WORLD_SIZE - this.cameras.main.width) / 2;
     this.cameras.main.scrollY = (WORLD_SIZE - this.cameras.main.height) / 2;
 
+    this.computePlayableArea();
+    // viewport resize(轉向、瀏覽器 resize)→ 重算 + 把超出範圍的神獸 tween 回有效區
+    this.scale.on('resize', () => this.handleResize());
+
     this.drawBackground();
     this.spawnPetalRain();
     this.spawnSparks();
     this.setupCameraDrag();
     this.setupZoom();
+  }
+
+  /**
+   * 神獸活動區域 = viewport 內,扣掉上方 HUD + 下方 BottomBar + 四週 buffer。
+   * 用 default-centered camera 換算成 world 座標(camera 移動後 area 不再變,
+   * 所以神獸鎖定在這個 world 矩形內,玩家拖 camera 看背景時神獸跟著移動,
+   * 但 home 永遠在這塊 viewport-sized 區域裡)。
+   */
+  private computePlayableArea() {
+    const cam = this.cameras.main;
+    const scrollX = (WORLD_SIZE - cam.width) / 2;
+    const scrollY = (WORLD_SIZE - cam.height) / 2;
+    this.playableArea = {
+      top: scrollY + HUD_HEIGHT + PET_VERTICAL_PADDING,
+      bottom: scrollY + cam.height - BOTTOM_BAR_HEIGHT - PET_VERTICAL_PADDING,
+      left: scrollX + PET_SIDE_PADDING,
+      right: scrollX + cam.width - PET_SIDE_PADDING
+    };
+  }
+
+  /** 給 PetSprite.pickNewTarget 用,wandering 限制在這個區域內 */
+  getPlayableArea(): PlayableArea {
+    return this.playableArea;
+  }
+
+  /**
+   * 在 playableArea 內挑一個跟既有 home 距離 >= MIN_PET_SPACING 的隨機點。
+   * 試 50 次找不到就 fallback 純隨機(密度太高時無法保證間距)。
+   */
+  private pickRandomHome(existing: Array<{ x: number; y: number }>): { x: number; y: number } {
+    const a = this.playableArea;
+    const w = Math.max(1, a.right - a.left);
+    const h = Math.max(1, a.bottom - a.top);
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const x = a.left + Math.random() * w;
+      const y = a.top + Math.random() * h;
+      const ok = existing.every((p) => Math.hypot(p.x - x, p.y - y) > MIN_PET_SPACING);
+      if (ok) return { x, y };
+    }
+    return { x: a.left + Math.random() * w, y: a.top + Math.random() * h };
+  }
+
+  /** viewport resize → 把跑出新 area 邊界的神獸 tween 回最近的有效位置 */
+  private handleResize() {
+    this.computePlayableArea();
+    const a = this.playableArea;
+    for (const sprite of this.sprites.values()) {
+      const home = sprite.getHome();
+      const outOfBounds =
+        home.x < a.left || home.x > a.right || home.y < a.top || home.y > a.bottom;
+      if (outOfBounds) {
+        const newX = Phaser.Math.Clamp(home.x, a.left, a.right);
+        const newY = Phaser.Math.Clamp(home.y, a.top, a.bottom);
+        sprite.setHome(newX, newY);
+      }
+    }
   }
 
   /** 攝影機縮放:wheel(桌機)+ pinch(手機 2 指) */
@@ -218,18 +300,19 @@ export class WorldScene extends Phaser.Scene {
   /**
    * 同步寵物清單到場景：
    *  - 不存在的 sprite 移除
-   *  - 新出現的建立
+   *  - 新出現的建立 — home 位置在 playableArea 隨機散佈,跟既有寵物距離 >= 80px
    *  - 已存在的更新 emoji / tier / 損益
    */
   syncPets(pets: PetSpriteData[]) {
     const seen = new Set<string>();
-    pets.forEach((p, idx) => {
+    pets.forEach((p) => {
       seen.add(p.petId);
       const existing = this.sprites.get(p.petId);
       if (existing) {
         existing.applyData(p);
       } else {
-        const { x, y } = layoutFor(idx, p.petId);
+        const existingPositions = [...this.sprites.values()].map((s) => s.getHome());
+        const { x, y } = this.pickRandomHome(existingPositions);
         const sprite = new PetSprite(this, x, y, p);
         // pointerdown 只記下「按到哪一隻」,真正 fire click 在 setupCameraDrag 的 pointerup
         // (那邊會 check didDrag,順便讓多隻重疊時改在 pointerup 拿 top-most)
@@ -268,22 +351,4 @@ export class WorldScene extends Phaser.Scene {
   }
 }
 
-/** 依 index 給寵物一個固定的「領地中心」，避免重疊 */
-function layoutFor(idx: number, petId: string): { x: number; y: number } {
-  const col = idx % COLS;
-  const row = Math.floor(idx / COLS);
-  // 在格子內以 petId 雜湊偏移，避免完全格狀
-  const seed = petId.charCodeAt(0) + petId.charCodeAt(petId.length - 1);
-  const offsetX = (pseudoRand(seed) - 0.5) * 60;
-  const offsetY = (pseudoRand(seed + 1) - 0.5) * 60;
-  return {
-    x: GRID_CELL / 2 + col * GRID_CELL + offsetX,
-    y: GRID_CELL / 2 + row * GRID_CELL + offsetY
-  };
-}
-
-/** 確定性偽亂數（0-1） */
-function pseudoRand(seed: number): number {
-  const x = Math.sin(seed * 9301 + 49297) * 233280;
-  return x - Math.floor(x);
-}
+// (舊 layoutFor / pseudoRand 已移除,改用 WorldScene.pickRandomHome 在 playableArea 內隨機散佈)

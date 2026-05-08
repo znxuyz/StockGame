@@ -167,14 +167,14 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleLookup();
               }}
-              className="flex-1 min-w-0 px-3 py-2 rounded border border-gray-300 text-base"
+              className="input-field flex-1 min-w-0"
               disabled={busy}
             />
             <button
               type="button"
               onClick={handleLookup}
               disabled={busy || !code.trim()}
-              className="shrink-0 px-4 py-2 bg-sand-300 text-white rounded text-sm font-bold disabled:opacity-50 whitespace-nowrap"
+              className="shrink-0 h-12 px-5 bg-sand-300 text-white rounded-xl text-sm font-bold disabled:opacity-50 whitespace-nowrap active:scale-95 transition-transform"
             >
               查詢
             </button>
@@ -197,7 +197,7 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
             value={purchaseDate}
             onChange={(e) => setPurchaseDate(e.target.value)}
             max={todayYMD()}
-            className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+            className="input-field"
             disabled={busy}
           />
           <p className="text-[11px] text-gray-500 mt-1">
@@ -215,7 +215,7 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
               placeholder="1000"
               value={shares}
               onChange={(e) => setShares(e.target.value)}
-              className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+              className="input-field"
               disabled={busy}
             />
           </div>
@@ -228,7 +228,7 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
               placeholder="100.00"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="w-full px-3 py-2 rounded border border-gray-300 text-base"
+              className="input-field"
               disabled={busy}
             />
           </div>

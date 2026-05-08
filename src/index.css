@@ -223,6 +223,41 @@
   }
 
   /**
+   * 統一輸入框樣式(BuyModal / FeedModal / SellModal / SettingsModal 共用)
+   *  - height 48 padding 0 16 跟玻璃語言對齊
+   *  - 半透明白底 + 金邊細線
+   *  - appearance: none 拿掉 iOS Safari 的 date picker 系統灰底
+   *  - focus 加金光圈讓玩家知道在哪個欄位
+   */
+  .input-field {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 12px;
+    font-size: 16px;
+    color: #1a1a1a;
+    font-family: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+    transition:
+      border-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+  .input-field::placeholder {
+    color: rgba(0, 0, 0, 0.35);
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: rgba(212, 175, 55, 0.65);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+  }
+  .input-field:disabled {
+    opacity: 0.5;
+  }
+
+  /**
    * 三色小指標卡(MarketCompareChart 的「你的累積/加權指數/Alpha」):
    *  - 各自顏色 alpha 0.18 半透明
    *  - 比純色 bg-rose-50 等更輕盈,呼應整體玻璃語言

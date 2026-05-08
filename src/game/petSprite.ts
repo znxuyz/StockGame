@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { WORLD_SIZE } from './scene';
+import type { WorldScene } from './scene';
 
 /**
  * 一隻寵物的視覺單位（立繪 / emoji + 境界光環 + 損益標籤 + 名稱）。
@@ -53,8 +53,6 @@ const HIT_RADIUS = 95;
 const EMOJI_SIZE = 100;
 /** 立繪顯示邊長 */
 const SPRITE_DISPLAY_SIZE = 130;
-/** 邊距 — pickNewTarget 不會選太靠近世界邊界的點 */
-const WORLD_MARGIN = 80;
 /** 領地半徑:寵物從 home 出發,在這個半徑內漫步,不會跑到別人領地撞牆 */
 const TERRITORY_RADIUS = 110;
 
@@ -228,22 +226,38 @@ export class PetSprite {
     });
   }
 
-  /** 隨機選新目標 — 限制在 home 領地半徑內,不會撞到別人 */
+  /** 隨機選新目標 — 限制在 home 領地半徑內 + scene playableArea 內(避開 HUD/BottomBar) */
   pickNewTarget(now: number) {
     const angle = Math.random() * Math.PI * 2;
     const dist = Math.random() * TERRITORY_RADIUS;
-    this.targetX = clamp(
-      this.homeX + Math.cos(angle) * dist,
-      WORLD_MARGIN,
-      WORLD_SIZE - WORLD_MARGIN
-    );
-    this.targetY = clamp(
-      this.homeY + Math.sin(angle) * dist,
-      WORLD_MARGIN,
-      WORLD_SIZE - WORLD_MARGIN
-    );
+    // scene 永遠是 WorldScene(由 ctor 傳入),曝露 getPlayableArea() 限制活動區
+    const a = (this.scene as WorldScene).getPlayableArea();
+    this.targetX = clamp(this.homeX + Math.cos(angle) * dist, a.left, a.right);
+    this.targetY = clamp(this.homeY + Math.sin(angle) * dist, a.top, a.bottom);
     // 抵達後停留 1-4 秒
     this.pauseUntil = now + 1000 + Math.random() * 3000;
+  }
+
+  /** scene 用:resize 時把超出 playableArea 的神獸 tween 回新邊界 */
+  getHome(): { x: number; y: number } {
+    return { x: this.homeX, y: this.homeY };
+  }
+
+  setHome(x: number, y: number) {
+    this.homeX = x;
+    this.homeY = y;
+    // tween 0.6s 平滑移到新 home,而不是瞬移
+    this.scene.tweens.add({
+      targets: this.container,
+      x,
+      y,
+      duration: 600,
+      ease: 'Cubic.easeOut'
+    });
+    // 重設目標,下一個 pickNewTarget 從新 home 開始
+    this.targetX = x;
+    this.targetY = y;
+    this.pauseUntil = this.scene.time.now + 800;
   }
 
   /** 每 tick 呼叫;delta 為自上次的毫秒 */
