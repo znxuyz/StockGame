@@ -9,12 +9,14 @@ interface BottomBarProps {
 }
 
 /**
- * 底部 4 大按鈕（+ 設定齒輪）。
- * 顏色語意：
- *  - 買入：綠（看到綠色就是進場、希望）
- *  - 加碼：橘黃（餵食的暖色）
- *  - 賣出：紅（出場、警戒）
- *  - 紀錄：藏青（資料、回顧）
+ * 底部 4 顆神話按鈕(+ 設定齒輪)。
+ * 每顆按鈕本身就是 256×256 去背 PNG,鎖框由 PNG 的金色邊框提供。
+ *
+ * 對應素材:
+ *  - buy.png      綠玉蛋    → 買入神獸
+ *  - feed.png     烤肉      → 餵食加碼
+ *  - sell.png     寶箱      → 售出神獸
+ *  - records.png  卷軸      → 紀錄
  */
 export default function BottomBar({
   onBuy,
@@ -25,29 +27,35 @@ export default function BottomBar({
   hasHoldings
 }: BottomBarProps) {
   return (
-    <div className="bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
-      <div className="grid grid-cols-4 gap-1 p-2">
-        <ActionButton color="bg-emerald-500" onClick={onBuy} icon="🥚" label="買入神獸" />
+    <div className="bg-mythic-paper-100 border-t-2 border-mythic-gold-300/70 shadow-[0_-4px_12px_rgba(33,78,61,0.12)]">
+      <div className="grid grid-cols-4 gap-1 px-2 pt-2 pb-1">
         <ActionButton
-          color="bg-amber-500"
+          src="/assets/btn/buy.png"
+          onClick={onBuy}
+          label="買入神獸"
+        />
+        <ActionButton
+          src="/assets/btn/feed.png"
           onClick={onFeed}
-          icon="🍖"
           label="餵食加碼"
           disabled={!hasHoldings}
         />
         <ActionButton
-          color="bg-rose-500"
+          src="/assets/btn/sell.png"
           onClick={onSell}
-          icon="📦"
           label="售出神獸"
           disabled={!hasHoldings}
         />
-        <ActionButton color="bg-slate-600" onClick={onRecords} icon="📜" label="紀錄" />
+        <ActionButton
+          src="/assets/btn/records.png"
+          onClick={onRecords}
+          label="紀錄"
+        />
       </div>
       <button
         type="button"
         onClick={onSettings}
-        className="w-full text-xs text-gray-400 py-1 hover:bg-gray-50"
+        className="w-full text-[11px] text-mythic-jade-400 py-1 hover:text-mythic-jade-500 font-zh"
       >
         ⚙ 設定
       </button>
@@ -56,23 +64,34 @@ export default function BottomBar({
 }
 
 interface ActionButtonProps {
-  color: string;
+  src: string;
   onClick: () => void;
-  icon: string;
   label: string;
   disabled?: boolean;
 }
 
-function ActionButton({ color, onClick, icon, label, disabled }: ActionButtonProps) {
+function ActionButton({ src, onClick, label, disabled }: ActionButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`${color} ${disabled ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'} text-white rounded-lg py-2.5 flex flex-col items-center justify-center gap-0.5 shadow transition-transform`}
+      className={`flex flex-col items-center justify-end gap-0.5 py-0.5 ${
+        disabled
+          ? 'opacity-40 grayscale cursor-not-allowed'
+          : 'active:scale-95 transition-transform'
+      }`}
     >
-      <span className="text-2xl leading-none">{icon}</span>
-      <span className="text-xs font-bold tracking-wider">{label}</span>
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className="w-full max-w-[80px] aspect-square object-contain select-none drop-shadow-[0_2px_6px_rgba(33,78,61,0.35)]"
+      />
+      <span className="text-[11px] font-bold tracking-wider text-mythic-ink-200 font-zh">
+        {label}
+      </span>
     </button>
   );
 }
