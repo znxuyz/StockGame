@@ -94,6 +94,9 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.scrollX = (WORLD_SIZE - this.cameras.main.width) / 2;
     this.cameras.main.scrollY = (WORLD_SIZE - this.cameras.main.height) / 2;
 
+    // 點擊只觸發最上層 sprite,避免「點 A 跳 B 資訊」(depth 由 step() 寫成 y 座標)
+    this.input.topOnly = true;
+
     this.computePlayableArea();
     // viewport resize(轉向、瀏覽器 resize)→ 重算 + 把超出範圍的神獸 tween 回有效區
     this.scale.on('resize', () => this.handleResize());
@@ -334,6 +337,45 @@ export class WorldScene extends Phaser.Scene {
   update(time: number, delta: number) {
     for (const sprite of this.sprites.values()) {
       sprite.step(time, delta);
+    }
+    // 軟性互推:重疊的兩隻每 frame 各分一半位移分離,
+    // 跟 Phaser Arcade Physics 比起來不會 bouncy,但能保證不會疊在一起
+    this.applyPairwiseRepulsion();
+  }
+
+  /**
+   * 兩兩比對所有 sprite,距離 < REPULSION_RADIUS 就互推開:
+   *  - 推力 = 重疊量 × 0.2(dampening 避免抖動)
+   *  - 完全重疊(dist≈0)時隨機方向小推 5px 解套
+   *  - nudge() 內部 clamp 到 playableArea,不會被推出邊界
+   */
+  private applyPairwiseRepulsion() {
+    const sprites = [...this.sprites.values()];
+    const PUSH_R = 95; // 對齊 petSprite 的 REPULSION_RADIUS
+    for (let i = 0; i < sprites.length; i++) {
+      for (let j = i + 1; j < sprites.length; j++) {
+        const a = sprites[i];
+        const b = sprites[j];
+        const pa = a.getPosition();
+        const pb = b.getPosition();
+        const dx = pa.x - pb.x;
+        const dy = pa.y - pb.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist >= PUSH_R) continue;
+        if (dist < 0.5) {
+          // 完全重疊,隨機方向脫離
+          const angle = Math.random() * Math.PI * 2;
+          a.nudge(Math.cos(angle) * 5, Math.sin(angle) * 5);
+          b.nudge(-Math.cos(angle) * 5, -Math.sin(angle) * 5);
+          continue;
+        }
+        const overlap = PUSH_R - dist;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const half = overlap * 0.2; // 0.2 dampening 防抖
+        a.nudge(nx * half, ny * half);
+        b.nudge(-nx * half, -ny * half);
+      }
     }
   }
 

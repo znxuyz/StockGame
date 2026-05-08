@@ -48,13 +48,17 @@ export type PetTier =
 
 /** 寵物移動速度(px/sec)— 領地內漫步,不必快 */
 const MOVE_SPEED = 22;
-/** 點擊判定半徑 — 比 sprite 大很多,手指好戳 */
-const HIT_RADIUS = 95;
+/** 點擊判定半徑 — 圓形 hit area,比 sprite 略大手指好戳但不至於誤觸到隔壁 */
+const HIT_RADIUS = 75;
+/** 重疊推開半徑 — 兩隻距離小於這個值就互相推開(scene update 跑) */
+const REPULSION_RADIUS = 95;
 const EMOJI_SIZE = 100;
 /** 立繪顯示邊長 */
 const SPRITE_DISPLAY_SIZE = 130;
 /** 領地半徑:寵物從 home 出發,在這個半徑內漫步,不會跑到別人領地撞牆 */
 const TERRITORY_RADIUS = 110;
+
+export { REPULSION_RADIUS };
 
 /** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
 const TIER_EMOJI: Record<PetTier, string> = {
@@ -154,23 +158,44 @@ export class PetSprite {
 
     this.container.add([this.image, this.emoji, this.pnlBox, this.nameText]);
 
-    // 互動 — 用矩形 hit area 涵蓋整個 sprite + name + pnl 區域,手指好戳
-    const hitW = HIT_RADIUS * 2;
-    const hitH = HIT_RADIUS * 2 + 32; // 包到 PnL 標籤跟名牌
-    this.container.setSize(hitW, hitH);
+    // 互動 — 圓形 hit area(取代舊矩形),局部座標 (0,0) = container 中心
+    //  - 比 sprite 略大,手指誤差也戳得到(+20% 慷慨)
+    //  - 比舊矩形 95×95 收緊,點空白處不會誤觸隔壁神獸
+    this.container.setSize(HIT_RADIUS * 2, HIT_RADIUS * 2);
     this.container.setInteractive(
-      new Phaser.Geom.Rectangle(-HIT_RADIUS, -HIT_RADIUS - 16, hitW, hitH),
-      Phaser.Geom.Rectangle.Contains
+      new Phaser.Geom.Circle(0, 0, HIT_RADIUS),
+      Phaser.Geom.Circle.Contains
     );
+
+    // hover:tint 微亮 + 立繪放大 5%
     this.container.on('pointerover', () => {
       this.scene.input.setDefaultCursor('pointer');
+      this.image.setTint(0xfff8dc); // 米白光暈
       this.image.setScale(this.image.scaleX * 1.05, this.image.scaleY * 1.05);
     });
     this.container.on('pointerout', () => {
       this.scene.input.setDefaultCursor('default');
+      this.image.clearTint();
       // 還原成 displaySize 比例
       this.image.setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
       this.image.setFlipX(this.container.x > this.targetX); // 保留方向 flip
+    });
+
+    // pointerdown 視覺回饋 + iOS 觸覺(scene 用 onPointerDown 接 pet id 開 modal)
+    this.container.on('pointerdown', () => {
+      // 縮 92% yoyo 做「按下感」
+      this.scene.tweens.add({
+        targets: this.container,
+        scaleX: 0.92,
+        scaleY: 0.92,
+        duration: 80,
+        yoyo: true,
+        ease: 'Sine.easeOut'
+      });
+      // iOS / Android 短震 10ms 觸覺反饋(支援的瀏覽器才會發)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(10);
+      }
     });
 
     this.applyData(data);
@@ -241,6 +266,18 @@ export class PetSprite {
   /** scene 用:resize 時把超出 playableArea 的神獸 tween 回新邊界 */
   getHome(): { x: number; y: number } {
     return { x: this.homeX, y: this.homeY };
+  }
+
+  /** scene update 用:讓 pairwise repulsion 拿位置算距離 */
+  getPosition(): { x: number; y: number } {
+    return { x: this.container.x, y: this.container.y };
+  }
+
+  /** scene update 用:被別隻推開的位移(已 clamp 到 playableArea) */
+  nudge(dx: number, dy: number) {
+    const a = (this.scene as WorldScene).getPlayableArea();
+    this.container.x = clamp(this.container.x + dx, a.left, a.right);
+    this.container.y = clamp(this.container.y + dy, a.top, a.bottom);
   }
 
   setHome(x: number, y: number) {
