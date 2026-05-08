@@ -53,11 +53,11 @@ function syncDisplay(status: SyncStatus): { icon: string; label: string; cls: st
 }
 
 /**
- * 單一 .ornate-frame 9-slice 邊框包住整個 HUD:
- *  - 主資料區(badge + 神獸 / 投入 / 總市值 / 報酬)
- *  - 內部金色分隔線
- *  - 狀態列(市場狀態 / 更新時間 / 今日 / 雲端 / 成就·連登)
- * 框內 bg 為半透明米白(rgba(250,246,232,0.6))讓金邊跟內容融合。
+ * 階段 1.5 — 手遊風 HUD:
+ *  - 容器 100vw,完全貼齊螢幕左右上邊緣(無 mx / my,無 max-width)
+ *  - 單一 .ornate-frame 9-slice 邊框包住整個 HUD,框內 bg 透明(不再多一層白卡)
+ *  - border-width 18px(從 28 減到 18,薄 35%),整體高度目標 ≤ 90px
+ *  - 內容:badge + 神獸/總市值/投入/報酬 2x2 + 金色分隔線 + 狀態列
  */
 export default function TopBar({
   summary,
@@ -110,20 +110,17 @@ export default function TopBar({
   const todayClass = summary.todayPnL >= 0 ? 'text-tw-up' : 'text-tw-down';
 
   return (
-    <div
-      className="ornate-frame mx-2 my-1 px-3 pt-2 pb-1.5"
-      style={{ backgroundColor: 'rgba(250, 246, 232, 0.6)' }}
-    >
+    <div className="ornate-frame w-full px-3 py-1">
       {/* 主資料區:badge + 4 格數字(2x2 grid) */}
-      <div className="flex items-center gap-3 mb-1.5">
+      <div className="flex items-center gap-2 mb-0.5">
         <img
           src="/assets/ui/badge_pet.png"
           alt=""
           aria-hidden
           draggable={false}
-          className="w-12 h-12 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
+          className="w-10 h-10 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
         />
-        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 flex-1 leading-tight">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0 flex-1 leading-tight">
           <Stat label="神獸" value={`${summary.holdingCount}`} suffix="隻" />
           <Stat label="總市值" value={formatInt(summary.totalMarketValue)} />
           <Stat label="投入" value={formatInt(summary.totalCost)} />
