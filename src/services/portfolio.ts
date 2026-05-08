@@ -97,8 +97,6 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
         level: calculateLevel(grossAmount + fee),
         evolutionCount: 0,
         purificationCount: 0,
-        position: { x: 0, y: 0 }, // 由 game scene 在生成時實際派位
-        territory: { x: 0, y: 0 },
         bornAt: params.now
       };
       holding = {

@@ -84,7 +84,7 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
   const flashClass = priceFlash === 'up' ? 'flash-up' : priceFlash === 'down' ? 'flash-down' : '';
 
   return (
-    <Modal open={open} onClose={onClose} variant="center" title={species?.name ?? '神獸資訊'}>
+    <Modal open={open} onClose={onClose} title={species?.name ?? '神獸資訊'}>
       <div className="p-4 space-y-3">
         {/* 神獸頭像 + 境界 — 立繪去背版,不再加圓形背景 */}
         <div className="flex items-center gap-4">

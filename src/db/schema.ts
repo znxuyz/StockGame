@@ -52,6 +52,26 @@ export class StockGameDB extends Dexie {
     this.version(2).stores({
       marketIndices: '[symbol+date], symbol, date'
     });
+
+    /**
+     * v3:Pet 拿掉廢棄的 position / territory 欄位。
+     *  - 改用 Phaser tween-based 漫遊後,寵物座標完全在 game scene 內管理,
+     *    DB 不再儲存(每次 spawn 在 grid cell 隨機派位)
+     *  - 用 upgrade callback 走訪每筆 pet,delete 兩欄位後寫回
+     *  - 寵物 / 持倉 / 交易 / 成就 等其他資料完全保留
+     */
+    this.version(3)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('pets')
+          .toCollection()
+          .modify((pet) => {
+            const p = pet as Record<string, unknown>;
+            delete p.position;
+            delete p.territory;
+          });
+      });
   }
 }
 
