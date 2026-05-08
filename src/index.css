@@ -24,17 +24,23 @@
 
   /**
    * 玻璃擬態 HUD(TopBar 用):
-   *  - 半透明米白底 + backdrop blur,透出底層 Phaser 背景
+   *  - position: fixed 浮在 Phaser canvas 之上,backdrop-filter 才能 blur 到後面 main.JPG
+   *  - z-index 100 蓋過 PhaserMap 浮動按鈕(按鈕已在 PhaserMap 用 var(--hud-height) 推下避讓)
+   *  - 半透明米白(alpha 0.6)+ blur 12px + saturate 120% 增強質感
    *  - 底部 1px 淡金色實線當下緣分界
    *  - 數字一律 tabular-nums 等寬,避免變動時跳格
-   *  - 不用 position: fixed(會擋住 PhaserMap 右上角的 refresh 按鈕)
    */
   .hud {
-    width: 100%;
+    position: fixed;
+    /* 避開 iOS 瀏海(env 在桌機算 0,iPhone PWA 算 44px) */
+    top: env(safe-area-inset-top);
+    left: 0;
+    right: 0;
+    z-index: 100;
     padding: 10px 14px 8px;
-    background: rgba(250, 246, 232, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(250, 246, 232, 0.6);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
     border-bottom: 1px solid rgba(212, 175, 55, 0.4);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     font-variant-numeric: tabular-nums;
@@ -42,6 +48,8 @@
 }
 
 :root {
+  /* HUD 預估高度,PhaserMap 浮動按鈕用此值往下避讓 */
+  --hud-height: 80px;
   /* 神話美學:預設襯線中文(Noto Serif TC),數字 / UI 小字另用 .font-zh class 切回無襯線 */
   font-family: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Noto Sans TC', serif;
   font-synthesis: none;
@@ -72,6 +80,17 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  /**
+   * Body 鋪 main.JPG 當 HUD blur 來源 fallback:
+   *  - 正常情況 Phaser canvas 也有畫 main.JPG,HUD blur 的是 canvas
+   *  - 但 Phaser 還沒載入時 / canvas 透明區域,body bg 接住
+   *  - background-attachment: fixed 確保滾動時 bg 不動,blur 結果穩定
+   */
+  background-image: url('/assets/bg/main.JPG');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 button {

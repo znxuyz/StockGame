@@ -144,22 +144,26 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
     <div className="relative flex-1 overflow-hidden">
       <div ref={containerRef} className="absolute inset-0" />
 
-      {/* 刷新按鈕 */}
+      {/*
+        浮動按鈕 top 用 var(--hud-height) 避讓固定 HUD,
+        12 / 68 / 124 是按鈕之間的相對 offset,加上 HUD 高度才是實際 top
+      */}
       <button
         type="button"
         onClick={onRefresh}
         disabled={refreshing}
-        className="absolute top-3 right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl active:scale-90 transition-transform disabled:opacity-50"
+        className="absolute right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl active:scale-90 transition-transform disabled:opacity-50"
+        style={{ top: 'calc(12px + var(--hud-height, 80px))' }}
         aria-label="更新股價"
       >
         {refreshing ? '⏳' : '🔄'}
       </button>
 
-      {/* Zoom 按鈕(縮放畫面;手機可用雙指 pinch、桌機可用滾輪) */}
       <button
         type="button"
         onClick={() => sceneRef.current?.zoomBy(1.25)}
-        className="absolute top-[68px] right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
+        className="absolute right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
+        style={{ top: 'calc(68px + var(--hud-height, 80px))' }}
         aria-label="放大"
       >
         ＋
@@ -167,7 +171,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
       <button
         type="button"
         onClick={() => sceneRef.current?.zoomBy(0.8)}
-        className="absolute top-[124px] right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
+        className="absolute right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
+        style={{ top: 'calc(124px + var(--hud-height, 80px))' }}
         aria-label="縮小"
       >
         －
