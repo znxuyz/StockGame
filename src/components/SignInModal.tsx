@@ -46,8 +46,8 @@ export default function SignInModal({ open, onClose }: SignInModalProps) {
   }
 
   return (
-    <Modal open={open} onClose={handleClose} variant="center" title="雲端同步登入">
-      <div className="p-4 space-y-3 text-sm">
+    <Modal open={open} onClose={handleClose} title="雲端同步登入">
+      <div className="space-y-3 text-sm">
         {sentTo ? (
           <div className="space-y-3">
             <div className="text-center py-3">

@@ -27,10 +27,6 @@ export interface Pet {
   firstCorruptedAt?: number;
   /** 已淨化次數 */
   purificationCount: number;
-  /** 在地圖上的位置 */
-  position: { x: number; y: number };
-  /** 寵物在地圖的「領地」中心；移動以此為中心做隨機漫步 */
-  territory: { x: number; y: number };
   /** 出生時間（unix millis） */
   bornAt: number;
   /** 退役時間（unix millis）— 賣光股票時設定，非 null 表示已進圖鑑 */

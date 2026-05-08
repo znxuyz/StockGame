@@ -5,8 +5,6 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  /** [legacy] sheet/center variant 已合併為「家園抽屜」單一形態,prop 保留向下相容,實際無作用 */
-  variant?: 'sheet' | 'center';
   /** 隱藏右上角關閉鈕(loading 時用) */
   hideClose?: boolean;
 }

@@ -4,22 +4,6 @@
 
 @layer components {
   /**
-   * [已棄用] 神話卡框 9-slice 邊框。
-   * 全 app 改玻璃擬態後不再引用,但 frame_card.png 檔案保留 public/assets/ui/
-   * 以備未來特殊用途。CSS 暫留作為 dead code,確保 rollback 可用。
-   */
-  .ornate-frame {
-    border-style: solid;
-    border-color: transparent;
-    border-width: 28px;
-    border-image-source: url('/assets/ui/frame_card.png');
-    border-image-slice: 100;
-    border-image-width: 28px;
-    border-image-repeat: stretch;
-    background-clip: padding-box;
-  }
-
-  /**
    * 玻璃擬態 HUD(TopBar 用):
    *  - position: fixed 浮在 Phaser canvas 之上,backdrop-filter 才能 blur 到後面 main.JPG
    *  - z-index 30 < Modal z-50,modal 開啟時 HUD 會被覆蓋(正確層級)

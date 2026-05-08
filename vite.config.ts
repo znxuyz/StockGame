@@ -6,7 +6,7 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
-    includeAssets: ['icon.svg', 'icons/*.png'],
+    includeAssets: ['icons/*.png'],
     manifest: {
       name: '山海經股票養成',
       short_name: '神獸股市',

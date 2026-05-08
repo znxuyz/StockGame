@@ -124,7 +124,7 @@ export class WorldScene extends Phaser.Scene {
     };
   }
 
-  /** 給 PetSprite.pickNewTarget 用,wandering 限制在這個區域內 */
+  /** PetSprite.wanderNext 用,自由漫遊目標必在這個區域內 */
   getPlayableArea(): PlayableArea {
     return this.playableArea;
   }
