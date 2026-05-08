@@ -24,7 +24,7 @@ export default function HoldingPicker({ value, onChange, emptyMessage }: Holding
 
   if (!holdings || holdings.length === 0) {
     return (
-      <div className="text-sm text-gray-500 bg-gray-50 px-3 py-4 rounded text-center">
+      <div className="item-card text-sm text-gray-500 px-3 py-4 text-center">
         {emptyMessage ?? '目前沒有持倉'}
       </div>
     );
@@ -34,7 +34,7 @@ export default function HoldingPicker({ value, onChange, emptyMessage }: Holding
   const petMap = new Map((pets ?? []).map((p) => [p.code, p]));
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-100 max-h-60 overflow-y-auto">
+    <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
       {holdings.map((h) => {
         const stock = stockMap.get(h.code);
         const pet = petMap.get(h.code);
@@ -45,9 +45,9 @@ export default function HoldingPicker({ value, onChange, emptyMessage }: Holding
             key={h.code}
             type="button"
             onClick={() => onChange(h.code)}
-            className={`w-full text-left px-3 py-2 flex items-center gap-3 ${
-              selected ? 'bg-emerald-50' : 'bg-white hover:bg-gray-50'
-            }`}
+            className={`item-card ${
+              selected ? 'item-card-selected' : ''
+            } w-full text-left px-3 py-2 flex items-center gap-3 transition-colors active:scale-[0.99]`}
           >
             <span className="text-2xl shrink-0">{species?.emoji ?? '❓'}</span>
             <div className="flex-1 min-w-0 text-sm">

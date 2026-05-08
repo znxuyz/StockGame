@@ -25,7 +25,7 @@ export default function ReturnCurve() {
   }));
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <h4 className="text-sm font-bold mb-2">📈 累積報酬率</h4>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
@@ -59,7 +59,7 @@ export default function ReturnCurve() {
 
 function Empty({ msg }: { msg: string }) {
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <p className="text-xs text-gray-400 text-center py-6">{msg}</p>
     </div>
   );

@@ -5,28 +5,28 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  /** 'sheet' = 從下方滑入(手機友善);'center' = 置中 */
+  /** [legacy] sheet/center variant 已合併為「家園抽屜」單一形態,prop 保留向下相容,實際無作用 */
   variant?: 'sheet' | 'center';
-  /** 隱藏右上角的關閉鈕(例如載入中) */
+  /** 隱藏右上角關閉鈕(loading 時用) */
   hideClose?: boolean;
 }
 
 /**
- * 通用 Modal 容器(玻璃擬態版,金邊框已退役):
- *  - 外層 .modal-backdrop:0.25 黑 + blur 8px,把後面遊戲畫面糊掉聚焦
- *  - 內層 .glass-popup:rgba(250,246,232,0.35) + blur 24 + 圓角 20 + 1px 金線
- *  - 標題列 .popup-title(18 / 600 / 深綠墨)+ .popup-title-divider 金漸層線
- *  - 關閉鈕 .glass-close-btn 圓形玻璃,跟左上 HUD badge 視覺呼應
- *
- * sheet: 手機友善,從底部 8px 浮起;center: 桌機置中。兩者皆圓角卡片風,
- * 全 app(HUD / BottomBar / Modal)透明度統一 0.35 形成一致玻璃語言。
+ * 玻璃抽屜 Modal(家園抽屜式):
+ *  - 全 5 個彈窗統一從底部 slide-up,固定高度 calc(100vh - 140px)
+ *    上方 140px 永遠看得到 HUD + 一截背景,跟手遊「家園」抽屜風格一致
+ *  - 結構三層:
+ *      .modal-backdrop  外圍 dim + blur 遮罩,點擊關閉
+ *      .glass-popup     固定高度抽屜,圓角僅頂部,動畫 slide-up
+ *        ├ .glass-popup-header  sticky 標題列,不捲
+ *        └ .glass-popup-content  flex-1 + overflow-y-auto 內容捲動
+ *  - variant prop 已棄用(留型別免破壞 caller),sheet/center 行為已統一
  */
 export default function Modal({
   open,
   onClose,
   title,
   children,
-  variant = 'sheet',
   hideClose = false
 }: ModalProps) {
   useEffect(() => {
@@ -40,11 +40,6 @@ export default function Modal({
 
   if (!open) return null;
 
-  const containerClass =
-    variant === 'sheet'
-      ? 'fixed left-1/2 -translate-x-1/2 bottom-2 w-[calc(100vw-16px)] max-w-[420px] max-h-[90vh]'
-      : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-32px)] max-w-[420px] max-h-[85vh]';
-
   return (
     <div
       className="modal-backdrop fixed inset-0 z-50"
@@ -52,12 +47,9 @@ export default function Modal({
       role="dialog"
       aria-modal="true"
     >
-      <div
-        className={`${containerClass} glass-popup flex flex-col overflow-hidden`}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="glass-popup" onClick={(e) => e.stopPropagation()}>
         {(title || !hideClose) && (
-          <div className="px-5 pt-4 pb-3">
+          <div className="glass-popup-header">
             <div className="flex items-center justify-between gap-2">
               <h2 className="popup-title font-zh truncate">{title}</h2>
               {!hideClose && (
@@ -71,10 +63,9 @@ export default function Modal({
                 </button>
               )}
             </div>
-            <div className="popup-title-divider mt-3" />
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-5 pb-5 pt-1">{children}</div>
+        <div className="glass-popup-content">{children}</div>
       </div>
     </div>
   );

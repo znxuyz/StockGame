@@ -27,7 +27,7 @@ export default function Bestiary() {
   const owned = ownedSpecies.size;
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <h4 className="text-sm font-bold mb-2">
         📚 神祇圖鑑 ({owned}/{total})
       </h4>

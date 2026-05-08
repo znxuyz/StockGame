@@ -14,7 +14,7 @@ export default function HoldTimeDistribution() {
 
   if (!holdings || holdings.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-3 border border-gray-200">
+      <div className="data-card p-3">
         <h4 className="text-sm font-bold mb-2">⏳ 持有時間分布</h4>
         <p className="text-xs text-gray-400 text-center py-4">沒有持倉</p>
       </div>
@@ -39,7 +39,7 @@ export default function HoldTimeDistribution() {
   ];
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <h4 className="text-sm font-bold mb-2">⏳ 持有時間分布</h4>
       <div className="space-y-2 text-xs">
         {items.map((it) => {

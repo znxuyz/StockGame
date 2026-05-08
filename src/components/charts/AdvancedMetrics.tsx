@@ -69,7 +69,7 @@ export default function AdvancedMetrics() {
 
   if (!metrics) {
     return (
-      <div className="bg-white rounded-lg p-3 border border-gray-200 text-xs text-gray-400 text-center">
+      <div className="data-card p-3 text-xs text-gray-400 text-center">
         計算中⋯
       </div>
     );
@@ -80,7 +80,7 @@ export default function AdvancedMetrics() {
     totalPnL !== 0 ? Math.abs(metrics.realized) / (Math.abs(metrics.realized) + Math.abs(metrics.unrealized)) : 0;
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200 space-y-2">
+    <div className="data-card p-3 space-y-2">
       <h4 className="text-sm font-bold">📐 進階指標</h4>
       <div className="grid grid-cols-3 gap-2 text-center">
         <Metric

@@ -17,7 +17,7 @@ export default function TopHoldings() {
 
   if (!holdings || holdings.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-3 border border-gray-200">
+      <div className="data-card p-3">
         <h4 className="text-sm font-bold mb-2">🏅 個股排行</h4>
         <p className="text-xs text-gray-400 text-center py-4">沒有持倉</p>
       </div>
@@ -45,7 +45,7 @@ export default function TopHoldings() {
   const maxAbs = Math.max(1, ...rows.map((r) => Math.abs(r.pnl)));
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <h4 className="text-sm font-bold mb-2">🏅 個股排行（TOP 5）</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <RankList title="💰 賺最多" rows={winners} maxAbs={maxAbs} positive />

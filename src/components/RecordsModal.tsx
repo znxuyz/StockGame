@@ -37,18 +37,26 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
 
   return (
     <Modal open={open} onClose={onClose} title="紀錄">
-      <div className="flex flex-col">
-        {/* Tabs */}
-        <div className="grid grid-cols-5 border-b border-gray-200 sticky top-0 bg-white z-10">
+      <div className="flex flex-col -mx-5 -mt-4">
+        {/* Tabs(sticky 玻璃)— -mx/-mt 拉到 glass-popup-content padding 邊以滿版 */}
+        <div
+          className="grid grid-cols-5 sticky top-0 z-10 border-b"
+          style={{
+            background: 'rgba(250, 246, 232, 0.55)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            borderColor: 'rgba(212, 175, 55, 0.25)'
+          }}
+        >
           {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`py-2 text-sm font-bold border-b-2 transition-colors ${
+              className={`py-2.5 text-sm font-bold border-b-2 transition-colors ${
                 tab === t
-                  ? 'text-sand-300 border-sand-300'
-                  : 'text-gray-500 border-transparent hover:bg-gray-50'
+                  ? 'text-mythic-jade-500 border-mythic-jade-400'
+                  : 'text-gray-500 border-transparent hover:bg-white/20'
               }`}
             >
               {TAB_LABEL[t]}
@@ -56,7 +64,7 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
           ))}
         </div>
 
-        <div className="p-3 space-y-3">
+        <div className="p-4 space-y-3">
           {tab === 'overview' && (
             <>
               <ReturnCurve />
@@ -100,7 +108,7 @@ function AchievementsList() {
 
   return (
     <div className="space-y-3">
-      <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-center">
+      <div className="unlock-counter px-3 py-2 text-sm font-bold text-center">
         🏆 已解鎖 {unlockedCount} / {ACHIEVEMENTS.length}
       </div>
       {[...grouped.entries()].map(([cat, list]) => (
@@ -115,11 +123,7 @@ function AchievementsList() {
               return (
                 <div
                   key={def.id}
-                  className={`px-3 py-2 rounded text-xs ${
-                    unlocked
-                      ? 'bg-amber-50 border border-amber-200'
-                      : 'bg-white border border-gray-200'
-                  }`}
+                  className={`achievement-card px-3 py-2 text-xs ${unlocked ? 'unlocked' : ''}`}
                 >
                   <div className="flex items-center justify-between">
                     <span className={unlocked ? 'font-bold text-amber-800' : 'text-gray-700'}>
@@ -171,7 +175,7 @@ function TransactionsList() {
               ? 'text-amber-600'
               : 'text-rose-600';
         return (
-          <div key={t.id} className="px-3 py-2 bg-white border border-gray-200 rounded text-xs">
+          <div key={t.id} className="item-card px-3 py-2 text-xs">
             <div className="flex justify-between">
               <span className={`font-bold ${typeColor}`}>{typeLabel}</span>
               <span className="text-gray-400">

@@ -131,8 +131,8 @@ export default function SettingsModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="設定" variant="center">
-      <div className="p-4 space-y-3">
+    <Modal open={open} onClose={onClose} title="設定">
+      <div className="space-y-3">
         <div>
           <label className="block text-xs text-gray-500 mb-1">玩家名稱（可選）</label>
           <input

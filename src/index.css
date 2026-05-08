@@ -64,21 +64,79 @@
   }
 
   /**
-   * 玻璃彈窗(Modal 用):
-   *  - alpha 0.35 跟 HUD / BottomBar 對齊,整 app 統一玻璃語言
-   *  - 不再用金邊框 PNG,改 1px 細金線 + 圓角 20px
-   *  - 雙重陰影:外柔和投射 + 內 1px 白高光模擬玻璃折射
-   *  - blur 24px 強過 HUD,因為彈窗開啟時要把後方遊戲畫面糊掉聚焦
+   * 玻璃彈窗 — 底部抽屜式(bottom sheet drawer):
+   *  - position: fixed bottom: 0,固定高度 calc(100vh - 140px)
+   *    140px = HUD ~90px + 透氣空間 ~50px,讓 HUD 永遠看得到
+   *  - 圓角只在頂部(border-radius: 24 24 0 0)
+   *  - alpha 0.75 比 HUD 厚,因為固定高度抽屜要承載大量表單/列表內容,可讀性優先
+   *  - blur 24 + saturate 150 強過 HUD,把後方遊戲畫面糊掉聚焦
+   *  - 邊框:上 + 兩側金線,下無邊(因為貼底)
+   *  - 立體陰影向上投射(0 -8px 32px)
+   *  - 內含 .glass-popup-header(固定頂)+ .glass-popup-content(可捲)
    */
   .glass-popup {
-    background: rgba(250, 246, 232, 0.35);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    height: calc(100vh - 140px);
+    max-height: calc(100vh - 140px);
+    border-radius: 24px 24px 0 0;
+    background: rgba(250, 246, 232, 0.75);
     backdrop-filter: blur(24px) saturate(150%);
     -webkit-backdrop-filter: blur(24px) saturate(150%);
-    border: 1px solid rgba(212, 175, 55, 0.5);
-    border-radius: 20px;
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.12),
-      0 1px 0 rgba(255, 255, 255, 0.8) inset;
+    border-top: 1px solid rgba(212, 175, 55, 0.5);
+    border-left: 1px solid rgba(212, 175, 55, 0.3);
+    border-right: 1px solid rgba(212, 175, 55, 0.3);
+    border-bottom: none;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /**
+   * 抽屜頂部標題列(固定不捲):
+   *  - 半透明 0.5 比 popup 略厚,讓標題明顯
+   *  - blur 8px 微質感
+   *  - 下緣 1px 淡金線分隔內容區
+   *  - z-10 蓋過內容區捲動的東西
+   */
+  .glass-popup-header {
+    position: sticky;
+    top: 0;
+    background: rgba(250, 246, 232, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  /**
+   * 抽屜內容區(可捲動):
+   *  - flex: 1 填滿剩餘高度
+   *  - overflow-y: auto 內容超出時垂直捲
+   *  - -webkit-overflow-scrolling: touch iOS 慣性捲
+   */
+  .glass-popup-content {
+    flex: 1;
+    overflow-y: auto;
+    /* 底部 padding 加 safe-area,iOS PWA home indicator 不會吃掉最後一個 item */
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
   }
 
   /**
@@ -94,27 +152,97 @@
 
   /**
    * 圓形玻璃 close 按鈕(× 鈕),跟左上 HUD badge 視覺呼應。
-   *  - 純白 alpha 0.35 對齊整體語言
-   *  - 1px 金色邊圈定形,blur 8px 微質感
    */
   .glass-close-btn {
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(212, 175, 55, 0.3);
   }
 
   /**
-   * 彈窗內項目卡(列表 item / stat 卡):
-   *  - 純白底 alpha 0.35 跟 popup 同透明度但底色略亮,卡片從 popup 中微浮起
-   *  - 若實機看卡跟 popup 太融合可調 alpha 0.55(暫不調,先看實機)
+   * 通用列表項目卡(售出/餵食 神獸列表、紀錄交易明細):
+   *  - 純白底 0.4 略浮起
+   *  - 1px 白色半透明邊讓卡片邊緣有玻璃折射感
+   *  - 12px 圓角 + 微陰影
    */
   .item-card {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  }
+  /** HoldingPicker 選中態:翡翠玻璃,跟「買入神獸」操作鈕同色系 */
+  .item-card-selected {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.45);
+  }
+
+  /**
+   * 成就卡片(紀錄 > 成就 tab):
+   *  - 鎖住:白 0.35 + 白邊
+   *  - 解鎖:淡金底 0.5 + 金邊,跟其他金線元素呼應
+   */
+  .achievement-card {
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+  }
+  .achievement-card.unlocked {
+    background: rgba(255, 248, 220, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+  }
+
+  /**
+   * 圖表/數據卡(紀錄 > 對比的「跟大盤比」、各個 chart 包外殼):
+   *  - 白 0.35 + 金邊細線
+   *  - 16 圓角比 item-card 更柔和(內部裝圖表需要呼吸感)
+   */
+  .data-card {
     background: rgba(255, 255, 255, 0.35);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 12px;
+    border-radius: 16px;
+  }
+
+  /**
+   * 已解鎖獎杯數量列(🏆 已解鎖 12/50):
+   *  - 比 data-card 偏白,當成 banner 而非 chart 容器
+   */
+  .unlock-counter {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 14px;
+  }
+
+  /**
+   * 三色小指標卡(MarketCompareChart 的「你的累積/加權指數/Alpha」):
+   *  - 各自顏色 alpha 0.18 半透明
+   *  - 比純色 bg-rose-50 等更輕盈,呼應整體玻璃語言
+   */
+  .stat-pill {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 8px;
+  }
+  .stat-pill-rose {
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+  }
+  .stat-pill-blue {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  .stat-pill-amber {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
   }
 
   /**
@@ -123,13 +251,14 @@
   .popup-title {
     font-size: 18px;
     font-weight: 600;
-    color: #2A4A3A;
+    color: #2a4a3a;
     letter-spacing: 0.05em;
   }
 
   /**
    * 彈窗標題下方金線分隔(漸層):
    * 中間 60% 金色實線,兩端漸隱,比直接 border-bottom 雅致。
+   * (只在 sheet header 內手動放;sticky header 已有自己的 border-bottom)
    */
   .popup-title-divider {
     height: 1px;

@@ -13,7 +13,7 @@ export default function MonthlyPnL() {
 
   if (!snapshots || snapshots.length < 2) {
     return (
-      <div className="bg-white rounded-lg p-3 border border-gray-200">
+      <div className="data-card p-3">
         <h4 className="text-sm font-bold mb-2">📊 月度損益</h4>
         <p className="text-xs text-gray-400 text-center py-4">至少需要兩個月的快照</p>
       </div>
@@ -37,7 +37,7 @@ export default function MonthlyPnL() {
   const recent = data.slice(-12);
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <h4 className="text-sm font-bold mb-2">📊 月度損益</h4>
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={recent} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>

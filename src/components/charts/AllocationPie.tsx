@@ -53,7 +53,7 @@ export default function AllocationPie() {
 
   if (!holdings || holdings.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-3 border border-gray-200">
+      <div className="data-card p-3">
         <p className="text-xs text-gray-400 text-center py-6">沒有持倉，無法畫資產配置</p>
       </div>
     );
@@ -82,7 +82,7 @@ export default function AllocationPie() {
     }));
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <div className="flex items-center justify-between mb-1">
         <h4 className="text-sm font-bold">🧩 資產配置</h4>
         <div className="text-xs">

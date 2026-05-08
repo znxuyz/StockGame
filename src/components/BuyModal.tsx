@@ -147,7 +147,7 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
 
   return (
     <Modal open={open} onClose={handleClose} title="買入神獸">
-      <div className="p-4 space-y-3">
+      <div className="space-y-3">
         {/* 代號輸入 + 查詢 */}
         <div>
           <label className="block text-xs text-gray-500 mb-1">股票代號</label>

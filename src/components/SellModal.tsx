@@ -119,7 +119,7 @@ export default function SellModal({ open, onClose, settings, onActionComplete }:
 
   return (
     <Modal open={open} onClose={handleClose} title="售出神獸">
-      <div className="p-4 space-y-3">
+      <div className="space-y-3">
         <div>
           <label className="block text-xs text-gray-500 mb-1">選擇神獸</label>
           <HoldingPicker

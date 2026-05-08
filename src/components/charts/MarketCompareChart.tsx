@@ -61,7 +61,7 @@ export default function MarketCompareChart() {
 
   if (loading || !result) {
     return (
-      <div className="bg-white rounded-lg p-3 border border-gray-200">
+      <div className="data-card p-3">
         <p className="text-xs text-gray-400 text-center py-6">大盤對比載入中⋯</p>
       </div>
     );
@@ -69,7 +69,7 @@ export default function MarketCompareChart() {
 
   if (result.data.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-3 border border-gray-200">
+      <div className="data-card p-3">
         <h4 className="text-sm font-bold mb-2">📊 跟大盤比</h4>
         <p className="text-xs text-gray-500 text-center py-6">
           {historyError
@@ -95,13 +95,13 @@ export default function MarketCompareChart() {
       : 'text-gray-500';
 
   return (
-    <div className="bg-white rounded-lg p-3 border border-gray-200">
+    <div className="data-card p-3">
       <h4 className="text-sm font-bold mb-2">📊 跟大盤比(90 天)</h4>
 
-      {/* Alpha 摘要 */}
+      {/* Alpha 摘要 — 三色玻璃 pill */}
       <div className="grid grid-cols-3 gap-2 text-center text-xs mb-2">
-        <div className="bg-rose-50 rounded p-2 border border-rose-100">
-          <div className="text-gray-500">你的累積</div>
+        <div className="stat-pill stat-pill-rose p-2">
+          <div className="text-gray-600">你的累積</div>
           <div
             className={`font-bold ${result.portfolioLatestPct != null && result.portfolioLatestPct >= 0 ? 'text-tw-up' : 'text-tw-down'}`}
           >
@@ -110,8 +110,8 @@ export default function MarketCompareChart() {
               : '-'}
           </div>
         </div>
-        <div className="bg-blue-50 rounded p-2 border border-blue-100">
-          <div className="text-gray-500">加權指數</div>
+        <div className="stat-pill stat-pill-blue p-2">
+          <div className="text-gray-600">加權指數</div>
           <div
             className={`font-bold ${result.taiexLatestPct != null && result.taiexLatestPct >= 0 ? 'text-tw-up' : 'text-tw-down'}`}
           >
@@ -120,8 +120,8 @@ export default function MarketCompareChart() {
               : '-'}
           </div>
         </div>
-        <div className="bg-amber-50 rounded p-2 border border-amber-100">
-          <div className="text-gray-500">Alpha</div>
+        <div className="stat-pill stat-pill-amber p-2">
+          <div className="text-gray-600">Alpha</div>
           <div className={`font-bold ${alphaColor}`}>{alphaText}</div>
         </div>
       </div>

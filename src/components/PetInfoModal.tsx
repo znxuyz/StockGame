@@ -159,7 +159,7 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
 
         {/* 持倉 / 損益 */}
         {detail && (
-          <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm space-y-1">
+          <div className="data-card p-3 text-sm space-y-1">
             <Row label="持有股數">{detail.holding.shares} 股</Row>
             <Row label="平均成本">{formatPrice(detail.holding.avgCost)}</Row>
             <Row label="累積投入">NT$ {formatInt(detail.holding.totalCost)}</Row>
