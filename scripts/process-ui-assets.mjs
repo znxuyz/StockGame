@@ -33,7 +33,7 @@ const TASKS = [
   { in: 'public/assets/btn/buy.JPG',           out: 'public/assets/btn/buy.png',           mode: 'white',       resize: 256 },
   { in: 'public/assets/btn/feed.JPG',          out: 'public/assets/btn/feed.png',          mode: 'white',       resize: 256 },
   { in: 'public/assets/btn/sell.JPG',          out: 'public/assets/btn/sell.png',          mode: 'white',       resize: 256 },
-  { in: 'public/assets/btn/records.JPG',       out: 'public/assets/btn/records.png',       mode: 'dark',        resize: 256 },
+  { in: 'public/assets/btn/records.JPG',       out: 'public/assets/btn/records.png',       mode: 'white-flood', resize: 256 },
   { in: 'public/assets/btn/settings.JPG',      out: 'public/assets/btn/settings.png',      mode: 'white',       resize: 256 },
   // 橫幅(寬螢幕)2528 寬縮 1280 上限
   { in: 'public/assets/ui/top_banner.JPG',     out: 'public/assets/ui/top_banner.png',     mode: 'black',       resize: 1280 },
