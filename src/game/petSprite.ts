@@ -2,22 +2,26 @@ import Phaser from 'phaser';
 import type { WorldScene } from './scene';
 
 /**
- * 一隻寵物的視覺單位（立繪 / emoji + 境界光環 + 損益標籤 + 名稱）。
+ * 一隻寵物的視覺單位（立繪 / emoji + 損益標籤 + 名稱）。
  *
  * 設計：
  *  - 寵物本體優先用 Phaser.GameObjects.Image 顯示立繪(species.art=true 時),
  *    texture 載不到就 fallback 用 emoji Text(跨平台 OK)
- *  - 單一立繪、不分 idle/asc/corrupt frame:進化用光環顏色表達、
- *    黑化用 tint+alpha 變灰暗,跟舊版邏輯一致
- *  - 境界光環用 Graphics 畫圓
+ *  - 黑化用 tint+alpha 變灰暗,境界用 nameText 前綴 emoji 表示
  *  - 損益標籤用兩個 Text 疊在 Container 上方
- *  - 全部塞進 Container，方便整體位移
+ *  - 全部塞進 Container,方便整體位移
  *
- * 動作：
- *  - 在 territory（半徑 80）內隨機漫步
- *  - 速度慢（每秒 ~20 px）
- *  - 達到目標點後 0.5-3 秒停留，再選新目標
- *  - 沒走路動畫:移動時 image setFlipX、emoji setScale 表現方向
+ * 互動 (2026-05 更新):
+ *  - hit area 改 makePixelPerfect(1) — 只有立繪不透明像素被算中
+ *    (圓形 hit 範圍會誤觸視覺空白,user 堅持「點哪到哪」)
+ *  - emoji fallback 沒 texture,退回預設 text bounds
+ *  - hover tint 米白 + scale 1.05,pointerdown scale 0.92 yoyo + iOS 短震
+ *
+ * 動作 (2026-05 更新):
+ *  - 不再有 home 領地概念
+ *  - 全 playableArea 自由漫遊:scene.tweens 拉到隨機目標(>=80px 距離)
+ *  - 抵達後停留 1-5 秒,再選新目標
+ *  - tween 期間 step() 只更新 depth = container.y(下蓋上,視覺一致)
  */
 
 export interface PetSpriteData {
@@ -46,19 +50,21 @@ export type PetTier =
   | 'cursed2'
   | 'cursed3';
 
-/** 寵物移動速度(px/sec)— 領地內漫步,不必快 */
-const MOVE_SPEED = 22;
-/** 點擊判定半徑 — 圓形 hit area,比 sprite 略大手指好戳但不至於誤觸到隔壁 */
-const HIT_RADIUS = 75;
-/** 重疊推開半徑 — 兩隻距離小於這個值就互相推開(scene update 跑) */
-const REPULSION_RADIUS = 95;
+/** 自由漫遊速度(px/sec) */
+const MOVE_SPEED = 30;
+/** 兩次 wander 目標之間最小距離,避免原地小範圍打轉 */
+const MIN_WANDER_DIST = 80;
+/** 抵達目標後停留下界 1s */
+const PAUSE_MIN = 1000;
+/** 抵達目標後停留上界 5s */
+const PAUSE_MAX = 5000;
+/** Pixel-perfect 的 alpha threshold(>=1 才算 hit,過濾完全透明像素) */
+const PIXEL_PERFECT_THRESHOLD = 1;
 const EMOJI_SIZE = 100;
 /** 立繪顯示邊長 */
 const SPRITE_DISPLAY_SIZE = 130;
-/** 領地半徑:寵物從 home 出發,在這個半徑內漫步,不會跑到別人領地撞牆 */
-const TERRITORY_RADIUS = 110;
-
-export { REPULSION_RADIUS };
+/** 重疊推開半徑 — scene update 跑軟排斥用 */
+export const REPULSION_RADIUS = 95;
 
 /** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
 const TIER_EMOJI: Record<PetTier, string> = {
@@ -87,31 +93,23 @@ export class PetSprite {
   pnlText: Phaser.GameObjects.Text;
   pnlBg: Phaser.GameObjects.Rectangle;
   nameText: Phaser.GameObjects.Text;
-
-  /** 領地中心 */
-  homeX: number;
-  homeY: number;
-  /** 當前移動目標點（世界座標） */
-  targetX: number;
-  targetY: number;
-  /** 抵達目標後的停留時間（ms） */
-  pauseUntil = 0;
-
   data: PetSpriteData;
+
+  /** 互動目標 — art 走 image+pixelPerfect,emoji 走 emoji text(預設 bounds) */
+  private hitTarget: Phaser.GameObjects.Image | Phaser.GameObjects.Text;
+  /** 走動方向 — 給 pointerout 還原翻面用 */
+  private facingLeft = false;
+  /** 抵達目標後排程的「下一輪 wander」timer,relocate/destroy 要取消 */
+  private pendingTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: PetSpriteData) {
     this.scene = scene;
-    this.homeX = x;
-    this.homeY = y;
-    this.targetX = x;
-    this.targetY = y;
     this.data = data;
 
     // 容器（整體位移用）
     this.container = scene.add.container(x, y);
 
-    // 立繪 + emoji 兜底:同位置疊著、按 texture 是否載入決定顯示哪個
-    // 不再渲染 ring 圓圈;tier 改用 nameText 前綴 emoji 表示
+    // 立繪 + emoji 兜底
     const key = spriteKey(data.speciesId);
     const hasTexture = data.hasArt && scene.textures.exists(key);
     this.image = scene.add
@@ -129,10 +127,9 @@ export class PetSprite {
       .setOrigin(0.5)
       .setVisible(!hasTexture);
 
-    // 損益標籤 + 名牌位置以立繪一半邊長為基準(沒 ring 後)
     const half = SPRITE_DISPLAY_SIZE / 2;
 
-    // 損益標籤背景 + 文字
+    // 損益標籤
     this.pnlBg = scene.add.rectangle(0, -half - 16, 76, 22, 0xffffff, 0.95);
     this.pnlBg.setStrokeStyle(1, 0xe5e7eb);
     this.pnlText = scene.add
@@ -145,7 +142,7 @@ export class PetSprite {
       .setOrigin(0.5);
     this.pnlBox = scene.add.container(0, 0, [this.pnlBg, this.pnlText]);
 
-    // 股票名稱（在腳邊）— 開頭加 tier emoji
+    // 名牌 — tier emoji 前綴
     this.nameText = scene.add
       .text(0, half + 6, `${TIER_EMOJI[data.tier]} ${data.stockName}`, {
         fontSize: '13px',
@@ -158,32 +155,38 @@ export class PetSprite {
 
     this.container.add([this.image, this.emoji, this.pnlBox, this.nameText]);
 
-    // 互動 — 圓形 hit area(取代舊矩形),局部座標 (0,0) = container 中心
-    //  - 比 sprite 略大,手指誤差也戳得到(+20% 慷慨)
-    //  - 比舊矩形 95×95 收緊,點空白處不會誤觸隔壁神獸
-    this.container.setSize(HIT_RADIUS * 2, HIT_RADIUS * 2);
-    this.container.setInteractive(
-      new Phaser.Geom.Circle(0, 0, HIT_RADIUS),
-      Phaser.Geom.Circle.Contains
-    );
+    // === 互動 ===
+    // pixelPerfect 必須對有 texture 的 GameObject 設,Container 沒 texture。
+    // 所以拿 image(art)或 emoji(fallback)當 hitTarget,事件 listener 都掛上去。
+    if (hasTexture) {
+      this.hitTarget = this.image;
+      // 只算立繪不透明區域,不會在透明像素誤觸 → 點哪到哪精準度
+      this.image.setInteractive(scene.input.makePixelPerfect(PIXEL_PERFECT_THRESHOLD));
+    } else {
+      this.hitTarget = this.emoji;
+      // emoji text 退回預設 rectangular bounds(text 有自己的測量)
+      this.emoji.setInteractive();
+    }
+    this.bindPointerHandlers();
 
-    // hover:tint 微亮 + 立繪放大 5%
-    this.container.on('pointerover', () => {
+    this.applyData(data);
+  }
+
+  /** 把 hover / down 事件綁到 hitTarget;hitTarget 改變時(applyData 換 art)要重綁 */
+  private bindPointerHandlers() {
+    this.hitTarget.on('pointerover', () => {
       this.scene.input.setDefaultCursor('pointer');
-      this.image.setTint(0xfff8dc); // 米白光暈
+      this.image.setTint(0xfff8dc);
       this.image.setScale(this.image.scaleX * 1.05, this.image.scaleY * 1.05);
     });
-    this.container.on('pointerout', () => {
+    this.hitTarget.on('pointerout', () => {
       this.scene.input.setDefaultCursor('default');
       this.image.clearTint();
-      // 還原成 displaySize 比例
       this.image.setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
-      this.image.setFlipX(this.container.x > this.targetX); // 保留方向 flip
+      this.image.setFlipX(this.facingLeft);
     });
-
-    // pointerdown 視覺回饋 + iOS 觸覺(scene 用 onPointerDown 接 pet id 開 modal)
-    this.container.on('pointerdown', () => {
-      // 縮 92% yoyo 做「按下感」
+    this.hitTarget.on('pointerdown', () => {
+      // 視覺反饋:整個 container 縮 92% yoyo,玩家明確感受按到了
       this.scene.tweens.add({
         targets: this.container,
         scaleX: 0.92,
@@ -192,27 +195,22 @@ export class PetSprite {
         yoyo: true,
         ease: 'Sine.easeOut'
       });
-      // iOS / Android 短震 10ms 觸覺反饋(支援的瀏覽器才會發)
+      // Android Chrome 短震 10ms(iOS Safari 不支援 navigator.vibrate)
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(10);
       }
     });
-
-    this.applyData(data);
-    this.pickNewTarget(0);
   }
 
-  /** 把玩家點擊轉發出去，讓 React 知道哪隻寵物被點 */
+  /** 把玩家點擊轉發出去,讓 React 知道哪隻寵物被點 */
   onPointerDown(handler: (petId: string) => void) {
-    this.container.on('pointerdown', () => handler(this.data.petId));
+    this.hitTarget.on('pointerdown', () => handler(this.data.petId));
   }
 
   applyData(data: PetSpriteData) {
     const prevPnl = this.data?.pnl;
     this.data = data;
-    // 沒有 ring 渲染了,tier 直接寫進 nameText emoji 前綴
 
-    // 重新評估 texture(物種可能變了 / 立繪後來才載完)
     const key = spriteKey(data.speciesId);
     const hasTexture = data.hasArt && this.scene.textures.exists(key);
 
@@ -236,14 +234,11 @@ export class PetSprite {
     this.pnlText.setColor(data.pnl >= 0 ? '#e23b3b' : '#1f9e4a');
     this.nameText.setText(`${TIER_EMOJI[data.tier]} ${data.stockName} · Lv.${data.level}`);
 
-    // 損益變動時閃光:漲淡黃、跌淡紅
-    // 第一次 applyData(prevPnl undefined)不閃,避免初始化跳一次
     if (prevPnl !== undefined && prevPnl !== data.pnl) {
       this.flashPnL(data.pnl > prevPnl ? 0xfde68a : 0xfecaca);
     }
   }
 
-  /** PnL 標籤閃光 500ms 後恢復白底 */
   flashPnL(color: number) {
     this.pnlBg.setFillStyle(color, 0.95);
     this.scene.time.delayedCall(500, () => {
@@ -251,21 +246,74 @@ export class PetSprite {
     });
   }
 
-  /** 隨機選新目標 — 限制在 home 領地半徑內 + scene playableArea 內(避開 HUD/BottomBar) */
-  pickNewTarget(now: number) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Math.random() * TERRITORY_RADIUS;
-    // scene 永遠是 WorldScene(由 ctor 傳入),曝露 getPlayableArea() 限制活動區
-    const a = (this.scene as WorldScene).getPlayableArea();
-    this.targetX = clamp(this.homeX + Math.cos(angle) * dist, a.left, a.right);
-    this.targetY = clamp(this.homeY + Math.sin(angle) * dist, a.top, a.bottom);
-    // 抵達後停留 1-4 秒
-    this.pauseUntil = now + 1000 + Math.random() * 3000;
+  /** scene 在 sprite 加進來後呼叫,啟動全地圖自由漫遊 */
+  startWandering() {
+    this.wanderNext();
   }
 
-  /** scene 用:resize 時把超出 playableArea 的神獸 tween 回新邊界 */
-  getHome(): { x: number; y: number } {
-    return { x: this.homeX, y: this.homeY };
+  /**
+   * 隨機挑 playableArea 內、距離當前位置 >= MIN_WANDER_DIST、
+   * 且離其他神獸 >= MIN_WANDER_DIST 的目標,tween 過去再排下一輪。
+   */
+  private wanderNext() {
+    const worldScene = this.scene as WorldScene;
+    const a = worldScene.getPlayableArea();
+    const others = worldScene.getOtherPositions(this.data.petId);
+    const cur = { x: this.container.x, y: this.container.y };
+
+    let target = cur;
+    for (let i = 0; i < 20; i++) {
+      const tx = a.left + Math.random() * (a.right - a.left);
+      const ty = a.top + Math.random() * (a.bottom - a.top);
+      const distSelf = Math.hypot(tx - cur.x, ty - cur.y);
+      if (distSelf < MIN_WANDER_DIST) continue;
+      const tooClose = others.some(
+        (p) => Math.hypot(tx - p.x, ty - p.y) < MIN_WANDER_DIST
+      );
+      if (tooClose) continue;
+      target = { x: tx, y: ty };
+      break;
+    }
+
+    // 朝目標翻面
+    this.facingLeft = target.x < cur.x;
+    this.image.setFlipX(this.facingLeft);
+    this.emoji.setScale(this.facingLeft ? -1 : 1, 1);
+
+    const dist = Math.hypot(target.x - cur.x, target.y - cur.y);
+    const duration = Math.max(500, (dist / MOVE_SPEED) * 1000);
+
+    this.scene.tweens.add({
+      targets: this.container,
+      x: target.x,
+      y: target.y,
+      duration,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        // 停 1-5 秒讓玩家看清,再走下一段
+        this.pendingTimer = this.scene.time.delayedCall(
+          PAUSE_MIN + Math.random() * (PAUSE_MAX - PAUSE_MIN),
+          () => this.wanderNext()
+        );
+      }
+    });
+  }
+
+  /** 取消當前 tween + pending timer,平滑移到新位置後重啟漫遊 (resize 時用) */
+  relocate(x: number, y: number) {
+    this.scene.tweens.killTweensOf(this.container);
+    if (this.pendingTimer) {
+      this.pendingTimer.remove();
+      this.pendingTimer = null;
+    }
+    this.scene.tweens.add({
+      targets: this.container,
+      x,
+      y,
+      duration: 600,
+      ease: 'Cubic.easeOut',
+      onComplete: () => this.wanderNext()
+    });
   }
 
   /** scene update 用:讓 pairwise repulsion 拿位置算距離 */
@@ -273,56 +321,29 @@ export class PetSprite {
     return { x: this.container.x, y: this.container.y };
   }
 
-  /** scene update 用:被別隻推開的位移(已 clamp 到 playableArea) */
+  /**
+   * scene update 用:被別隻推開的位移(已 clamp 到 playableArea)。
+   * 注意:tween 進行中時 nudge 會被 tween 下一 tick 覆蓋,
+   * 軟排斥主要在「停留 1-5s」期間生效。停留 + grid spawn + 距離過濾
+   * 已大幅降低重疊機率,軟排斥當最後保險。
+   */
   nudge(dx: number, dy: number) {
     const a = (this.scene as WorldScene).getPlayableArea();
     this.container.x = clamp(this.container.x + dx, a.left, a.right);
     this.container.y = clamp(this.container.y + dy, a.top, a.bottom);
   }
 
-  setHome(x: number, y: number) {
-    this.homeX = x;
-    this.homeY = y;
-    // tween 0.6s 平滑移到新 home,而不是瞬移
-    this.scene.tweens.add({
-      targets: this.container,
-      x,
-      y,
-      duration: 600,
-      ease: 'Cubic.easeOut'
-    });
-    // 重設目標,下一個 pickNewTarget 從新 home 開始
-    this.targetX = x;
-    this.targetY = y;
-    this.pauseUntil = this.scene.time.now + 800;
-  }
-
-  /** 每 tick 呼叫;delta 為自上次的毫秒 */
-  step(now: number, delta: number) {
-    // 不論是否移動,都依 Y 軸排序 depth(下方的蓋上方的,點擊也優先選到視覺上前面那隻)
+  /** 每 tick 呼叫:只剩 depth 排序(走動由 tween 處理) */
+  step() {
     this.container.setDepth(this.container.y);
-
-    if (now < this.pauseUntil) return;
-
-    const dx = this.targetX - this.container.x;
-    const dy = this.targetY - this.container.y;
-    const dist = Math.hypot(dx, dy);
-    const stepDist = (MOVE_SPEED * delta) / 1000;
-
-    if (dist < stepDist) {
-      this.container.x = this.targetX;
-      this.container.y = this.targetY;
-      this.pickNewTarget(now);
-    } else {
-      this.container.x += (dx / dist) * stepDist;
-      this.container.y += (dy / dist) * stepDist;
-      // 走動時左右翻轉 — image 用 flipX,emoji 用 scale
-      this.image.setFlipX(dx < 0);
-      this.emoji.setScale(dx >= 0 ? 1 : -1, 1);
-    }
   }
 
   destroy() {
+    this.scene.tweens.killTweensOf(this.container);
+    if (this.pendingTimer) {
+      this.pendingTimer.remove();
+      this.pendingTimer = null;
+    }
     this.container.destroy();
   }
 }

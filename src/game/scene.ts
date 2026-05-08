@@ -29,8 +29,8 @@ const RICE_PAPER_BG = '#efe6cf';
 
 /**
  * 神獸活動區域(playableArea)邊界保留:
- *  - HUD 在 viewport 上方 ~90px,神獸 home 不該在那帶 + 30px buffer
- *  - BottomBar 在 viewport 下方 ~110px,神獸 home 不該在那帶 + 30px buffer
+ *  - HUD 在 viewport 上方 ~90px,神獸不該跑到那帶 + 30px buffer
+ *  - BottomBar 在 viewport 下方 ~110px,神獸不該跑到那帶 + 30px buffer
  *  - 兩側 40px 留白讓神獸不貼牆
  *  - 數字跟 .hud / .hud-bottom 的 padding/box-shadow 範圍對齊
  */
@@ -38,8 +38,6 @@ const HUD_HEIGHT = 90;
 const BOTTOM_BAR_HEIGHT = 110;
 const PET_VERTICAL_PADDING = 30;
 const PET_SIDE_PADDING = 40;
-/** 神獸 home 之間最小距離(避免初始重疊) */
-const MIN_PET_SPACING = 80;
 
 export interface PlayableArea {
   top: number;
@@ -132,34 +130,77 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 在 playableArea 內挑一個跟既有 home 距離 >= MIN_PET_SPACING 的隨機點。
-   * 試 50 次找不到就 fallback 純隨機(密度太高時無法保證間距)。
+   * 在 playableArea 內以「網格 + jitter」分散神獸:
+   *  - 6 隻 → 3×2 網格;9 隻 → 3×3;依 ceil(sqrt(N)) 決定列數
+   *  - 每隻落在自己的 cell 中心 ± 40% jitter,避免完全格狀
+   *  - 新增神獸時找「沒被佔據的格子」放,讓分散持續均勻
    */
-  private pickRandomHome(existing: Array<{ x: number; y: number }>): { x: number; y: number } {
+  private pickGridCellPosition(targetTotal: number): { x: number; y: number } {
+    const a = this.playableArea;
+    const cols = Math.max(1, Math.ceil(Math.sqrt(targetTotal)));
+    const rows = Math.max(1, Math.ceil(targetTotal / cols));
+    const cellW = (a.right - a.left) / cols;
+    const cellH = (a.bottom - a.top) / rows;
+    const existingPositions = [...this.sprites.values()].map((s) => s.getPosition());
+
+    // 走訪每個格子,挑第一個沒人在裡面的
+    for (let i = 0; i < cols * rows; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cx = a.left + col * cellW + cellW / 2;
+      const cy = a.top + row * cellH + cellH / 2;
+      const occupied = existingPositions.some(
+        (p) =>
+          Math.abs(p.x - cx) < cellW * 0.5 && Math.abs(p.y - cy) < cellH * 0.5
+      );
+      if (!occupied) {
+        const jitterX = (Math.random() - 0.5) * cellW * 0.4;
+        const jitterY = (Math.random() - 0.5) * cellH * 0.4;
+        return { x: cx + jitterX, y: cy + jitterY };
+      }
+    }
+    // 全格滿(密度太高),fallback 純隨機 + 距離過濾
+    return this.pickRandomFallback(existingPositions);
+  }
+
+  private pickRandomFallback(existing: Array<{ x: number; y: number }>): {
+    x: number;
+    y: number;
+  } {
     const a = this.playableArea;
     const w = Math.max(1, a.right - a.left);
     const h = Math.max(1, a.bottom - a.top);
     for (let attempt = 0; attempt < 50; attempt++) {
       const x = a.left + Math.random() * w;
       const y = a.top + Math.random() * h;
-      const ok = existing.every((p) => Math.hypot(p.x - x, p.y - y) > MIN_PET_SPACING);
+      const ok = existing.every((p) => Math.hypot(p.x - x, p.y - y) > 80);
       if (ok) return { x, y };
     }
     return { x: a.left + Math.random() * w, y: a.top + Math.random() * h };
   }
 
-  /** viewport resize → 把跑出新 area 邊界的神獸 tween 回最近的有效位置 */
+  /** wanderNext 用:給某隻神獸所有「其他神獸」的當前位置(避免目標太近) */
+  getOtherPositions(excludePetId: string): Array<{ x: number; y: number }> {
+    const out: Array<{ x: number; y: number }> = [];
+    for (const [id, sprite] of this.sprites) {
+      if (id === excludePetId) continue;
+      out.push(sprite.getPosition());
+    }
+    return out;
+  }
+
+  /** viewport resize → 把跑出新 area 邊界的神獸 tween 回最近的有效位置,並重啟 wander */
   private handleResize() {
     this.computePlayableArea();
     const a = this.playableArea;
     for (const sprite of this.sprites.values()) {
-      const home = sprite.getHome();
+      const pos = sprite.getPosition();
       const outOfBounds =
-        home.x < a.left || home.x > a.right || home.y < a.top || home.y > a.bottom;
+        pos.x < a.left || pos.x > a.right || pos.y < a.top || pos.y > a.bottom;
       if (outOfBounds) {
-        const newX = Phaser.Math.Clamp(home.x, a.left, a.right);
-        const newY = Phaser.Math.Clamp(home.y, a.top, a.bottom);
-        sprite.setHome(newX, newY);
+        const newX = Phaser.Math.Clamp(pos.x, a.left, a.right);
+        const newY = Phaser.Math.Clamp(pos.y, a.top, a.bottom);
+        sprite.relocate(newX, newY);
       }
     }
   }
@@ -301,30 +342,39 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 同步寵物清單到場景：
+   * 同步寵物清單到場景:
    *  - 不存在的 sprite 移除
-   *  - 新出現的建立 — home 位置在 playableArea 隨機散佈,跟既有寵物距離 >= 80px
+   *  - 新出現的:
+   *      a. 用 pickGridCellPosition 找空格(網格分散,均勻散佈整個 playableArea)
+   *      b. PetSprite.startWandering() 啟動全地圖自由漫遊
    *  - 已存在的更新 emoji / tier / 損益
    */
   syncPets(pets: PetSpriteData[]) {
     const seen = new Set<string>();
-    pets.forEach((p) => {
+    // 先掃出新增的數量,讓 grid 計算用「最終總數」決定格數
+    const newPets: PetSpriteData[] = [];
+    for (const p of pets) {
       seen.add(p.petId);
       const existing = this.sprites.get(p.petId);
       if (existing) {
         existing.applyData(p);
       } else {
-        const existingPositions = [...this.sprites.values()].map((s) => s.getHome());
-        const { x, y } = this.pickRandomHome(existingPositions);
-        const sprite = new PetSprite(this, x, y, p);
-        // pointerdown 只記下「按到哪一隻」,真正 fire click 在 setupCameraDrag 的 pointerup
-        // (那邊會 check didDrag,順便讓多隻重疊時改在 pointerup 拿 top-most)
-        sprite.onPointerDown((id) => {
-          this.pendingPetClick = id;
-        });
-        this.sprites.set(p.petId, sprite);
+        newPets.push(p);
       }
-    });
+    }
+
+    const finalTotal = this.sprites.size + newPets.length;
+    for (const p of newPets) {
+      const { x, y } = this.pickGridCellPosition(finalTotal);
+      const sprite = new PetSprite(this, x, y, p);
+      // pointerdown 只記下「按到哪一隻」,真正 fire click 在 setupCameraDrag 的 pointerup
+      sprite.onPointerDown((id) => {
+        this.pendingPetClick = id;
+      });
+      this.sprites.set(p.petId, sprite);
+      sprite.startWandering();
+    }
+
     // 移除已賣光（retired）的
     for (const [id, sprite] of this.sprites) {
       if (!seen.has(id)) {
@@ -334,12 +384,11 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  update(time: number, delta: number) {
+  update() {
     for (const sprite of this.sprites.values()) {
-      sprite.step(time, delta);
+      sprite.step();
     }
-    // 軟性互推:重疊的兩隻每 frame 各分一半位移分離,
-    // 跟 Phaser Arcade Physics 比起來不會 bouncy,但能保證不會疊在一起
+    // 軟性互推作為後備:停留期間生效,tween 進行中會被 tween 覆蓋
     this.applyPairwiseRepulsion();
   }
 
