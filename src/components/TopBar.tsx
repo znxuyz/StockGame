@@ -87,26 +87,17 @@ export default function TopBar({
 
   return (
     <div className="bg-mythic-paper-100">
-      {/* 神話橫幅:1280×243 比例,full width 自動縮放(手機 400px → ~76px tall) */}
-      <img
-        src="/assets/ui/top_banner.png"
-        alt=""
-        aria-hidden
-        className="w-full block select-none pointer-events-none"
-        draggable={false}
-      />
-
       {!summary ? (
         <div className="px-3 py-2 text-xs text-mythic-ink-50/60 text-center font-zh">
           計算中⋯
         </div>
       ) : (
         <>
-          {/* 主數據面板:badge + 神獸數 + 總市值 / 投入 / 報酬 */}
+          {/* 主數據面板:top_banner.png 當外框 bg,badge + 神獸數 + 總市值 / 投入 / 報酬 浮在內 */}
           <StatsPanel summary={summary} />
 
           {/* 底列:市場狀態 + 更新時間 + 今日 + 雲端 + 成就 */}
-          <div className="flex items-center justify-between px-3 pb-1.5 text-[11px] text-mythic-ink-50/80 font-zh leading-snug">
+          <div className="flex items-center justify-between px-3 pb-1.5 pt-1 text-[11px] text-mythic-ink-50/80 font-zh leading-snug">
             <span className="truncate">
               {market.icon} {market.label}
               <span
@@ -147,7 +138,17 @@ function StatsPanel({ summary }: { summary: PortfolioSummary }) {
   const pnlClass = summary.totalPnL >= 0 ? 'text-tw-up' : 'text-tw-down';
   const rateClass = summary.returnRate >= 0 ? 'text-tw-up' : 'text-tw-down';
   return (
-    <div className="flex items-center gap-3 px-3 py-2 border-b-2 border-mythic-gold-300/70">
+    // 用 top_banner.png 當底,padding 留出 banner 兩側裝飾,內容浮在中央米紙區
+    <div
+      className="flex items-center gap-2 pl-12 pr-12 py-3"
+      style={{
+        backgroundImage: 'url(/assets/ui/top_banner.png)',
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        minHeight: '92px'
+      }}
+    >
       {/* 寵物徽章 */}
       <img
         src="/assets/ui/badge_pet.png"
@@ -158,7 +159,7 @@ function StatsPanel({ summary }: { summary: PortfolioSummary }) {
       />
 
       {/* 數據兩列(左:神獸數 / 投入  右:總市值 / 報酬) */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-0 flex-1 text-[11px] font-zh leading-tight">
+      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 flex-1 text-[11px] font-zh leading-tight">
         <div>
           <span className="text-mythic-jade-400">神獸</span>
           <b className="ml-1 text-mythic-ink-200 text-sm">{summary.holdingCount}</b>

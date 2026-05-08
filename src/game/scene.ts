@@ -37,6 +37,8 @@ export class WorldScene extends Phaser.Scene {
   /** 拖曳判斷門檻（像素），低於此距離視為點擊 */
   private dragThreshold = 6;
   private didDrag = false;
+  /** 哪一隻寵物按下了 pointer。pointerup 沒拖曳才會 fire click */
+  private pendingPetClick: string | null = null;
 
   constructor() {
     super('WorldScene');
@@ -187,6 +189,8 @@ export class WorldScene extends Phaser.Scene {
       const dy = pointer.y - this.dragStart.y;
       if (!this.didDrag && Math.hypot(dx, dy) > this.dragThreshold) {
         this.didDrag = true;
+        // 一旦判定為拖曳,即使 pointerdown 落在寵物上也不算點擊
+        this.pendingPetClick = null;
       }
       if (this.didDrag) {
         // 拖曳速度跟隨 zoom 反比例,zoom 越大移動 1px scroll 也 1px(視覺一致)
@@ -196,6 +200,11 @@ export class WorldScene extends Phaser.Scene {
       }
     });
     this.input.on('pointerup', () => {
+      // 沒拖曳 + pointerdown 落在寵物上 → 真正觸發點擊
+      if (!this.didDrag && this.pendingPetClick) {
+        this.clickHandler?.(this.pendingPetClick);
+      }
+      this.pendingPetClick = null;
       this.dragStart = null;
       this.cameraStart = null;
     });
@@ -222,9 +231,10 @@ export class WorldScene extends Phaser.Scene {
       } else {
         const { x, y } = layoutFor(idx, p.petId);
         const sprite = new PetSprite(this, x, y, p);
+        // pointerdown 只記下「按到哪一隻」,真正 fire click 在 setupCameraDrag 的 pointerup
+        // (那邊會 check didDrag,順便讓多隻重疊時改在 pointerup 拿 top-most)
         sprite.onPointerDown((id) => {
-          if (this.didDrag) return; // 拖曳中不算點擊
-          this.clickHandler?.(id);
+          this.pendingPetClick = id;
         });
         this.sprites.set(p.petId, sprite);
       }

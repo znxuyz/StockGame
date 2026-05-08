@@ -46,8 +46,8 @@ export type PetTier =
   | 'cursed2'
   | 'cursed3';
 
-/** 寵物移動速度(px/sec)— 整圖漫步要快一點才不會永遠在角落 */
-const MOVE_SPEED = 35;
+/** 寵物移動速度(px/sec)— 領地內漫步,不必快 */
+const MOVE_SPEED = 22;
 /** 點擊判定半徑 — 比 sprite 大很多,手指好戳 */
 const HIT_RADIUS = 95;
 const EMOJI_SIZE = 100;
@@ -55,6 +55,8 @@ const EMOJI_SIZE = 100;
 const SPRITE_DISPLAY_SIZE = 130;
 /** 邊距 — pickNewTarget 不會選太靠近世界邊界的點 */
 const WORLD_MARGIN = 80;
+/** 領地半徑:寵物從 home 出發,在這個半徑內漫步,不會跑到別人領地撞牆 */
+const TERRITORY_RADIUS = 110;
 
 /** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
 const TIER_EMOJI: Record<PetTier, string> = {
@@ -226,16 +228,29 @@ export class PetSprite {
     });
   }
 
-  /** 隨機選新目標 — 全圖漫步,不再限制在 home 周圍小範圍 */
+  /** 隨機選新目標 — 限制在 home 領地半徑內,不會撞到別人 */
   pickNewTarget(now: number) {
-    this.targetX = WORLD_MARGIN + Math.random() * (WORLD_SIZE - WORLD_MARGIN * 2);
-    this.targetY = WORLD_MARGIN + Math.random() * (WORLD_SIZE - WORLD_MARGIN * 2);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * TERRITORY_RADIUS;
+    this.targetX = clamp(
+      this.homeX + Math.cos(angle) * dist,
+      WORLD_MARGIN,
+      WORLD_SIZE - WORLD_MARGIN
+    );
+    this.targetY = clamp(
+      this.homeY + Math.sin(angle) * dist,
+      WORLD_MARGIN,
+      WORLD_SIZE - WORLD_MARGIN
+    );
     // 抵達後停留 1-4 秒
     this.pauseUntil = now + 1000 + Math.random() * 3000;
   }
 
-  /** 每 tick 呼叫；delta 為自上次的毫秒 */
+  /** 每 tick 呼叫;delta 為自上次的毫秒 */
   step(now: number, delta: number) {
+    // 不論是否移動,都依 Y 軸排序 depth(下方的蓋上方的,點擊也優先選到視覺上前面那隻)
+    this.container.setDepth(this.container.y);
+
     if (now < this.pauseUntil) return;
 
     const dx = this.targetX - this.container.x;
@@ -263,4 +278,8 @@ export class PetSprite {
 
 function formatThousands(n: number): string {
   return n.toLocaleString('en-US');
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
 }
