@@ -4,23 +4,40 @@
 
 @layer components {
   /**
-   * 神話卡框 9-slice 邊框(共用)。
+   * 神話卡框 9-slice 邊框(Modal 用)。
    *  - frame_card.png 經 white-flood + trim,4 角金綠雲紋裝飾完整
-   *  - slice 100 不能改:對應 PNG 雲紋邊緣 100px(改小會把雲紋切到延展區變形)
-   *  - border-width 18 px:render 比例 100→18 ≈ 5.5x 縮小,框比之前細 35%
-   *    用於 HUD 90px 高度限制
+   *  - slice 100 對應 PNG 雲紋邊緣 100px(改小會把雲紋切到延展區變形)
+   *  - border-width 28 px:render 比例 100→28 ≈ 3.5x 縮小,角落仍清楚
    *  - background-clip: padding-box → 不讓元素的米色 bg 漏到透明的 border 區
-   *    (這是 user 反映「框外側出現米色」的根本解法)
+   *  - HUD 已改用 .hud 玻璃擬態,不再用此 frame
    */
   .ornate-frame {
     border-style: solid;
     border-color: transparent;
-    border-width: 18px;
+    border-width: 28px;
     border-image-source: url('/assets/ui/frame_card.png');
     border-image-slice: 100;
-    border-image-width: 18px;
+    border-image-width: 28px;
     border-image-repeat: stretch;
     background-clip: padding-box;
+  }
+
+  /**
+   * 玻璃擬態 HUD(TopBar 用):
+   *  - 半透明米白底 + backdrop blur,透出底層 Phaser 背景
+   *  - 底部 1px 淡金色實線當下緣分界
+   *  - 數字一律 tabular-nums 等寬,避免變動時跳格
+   *  - 不用 position: fixed(會擋住 PhaserMap 右上角的 refresh 按鈕)
+   */
+  .hud {
+    width: 100%;
+    padding: 10px 14px 8px;
+    background: rgba(250, 246, 232, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    font-variant-numeric: tabular-nums;
   }
 }
 
