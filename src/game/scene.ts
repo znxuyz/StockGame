@@ -43,6 +43,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   preload() {
+    // 載入主背景 + 兩種粒子(JPG 黑底 spark 用 ADD blend 直接吃黑)
+    const base = import.meta.env.BASE_URL ?? '/';
+    this.load.image('world-bg', `${base}assets/bg/main.JPG`);
+    this.load.image('petal', `${base}assets/particles/petal.png`);
+    this.load.image('spark', `${base}assets/particles/spark.JPG`);
+
     // 只對 art:true 的物種嘗試載入立繪 — 其他物種一定 fallback emoji,
     // 不必讓 Phaser 噴一堆 404 進 console。
     const artSpecies = CREATURES.filter((c) => c.art === true);
@@ -52,7 +58,6 @@ export class WorldScene extends Phaser.Scene {
       console.warn(`[WorldScene] sprite 載入失敗,fallback emoji:${file.key}`);
     });
 
-    const base = import.meta.env.BASE_URL ?? '/';
     for (const c of artSpecies) {
       this.load.image(spriteKey(c.id), `${base}sprites/${c.id}.png`);
     }
@@ -65,7 +70,9 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.scrollX = (WORLD_SIZE - this.cameras.main.width) / 2;
     this.cameras.main.scrollY = (WORLD_SIZE - this.cameras.main.height) / 2;
 
-    this.drawDecorations();
+    this.drawBackground();
+    this.spawnPetalRain();
+    this.spawnSparks();
     this.setupCameraDrag();
     this.setupZoom();
   }
@@ -113,24 +120,57 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 場景裝飾:水墨意象 emoji(松、石、雲、月)散佈。
-   * 用 deterministic 偽亂數,避免每次 reload 位置變動。
-   * 之後若有正式美術 asset(水墨松/石/雲圖檔)再替換。
+   * 鋪滿世界的主背景圖(bg/main.JPG 太極櫻花庭院)。
+   * 用 cover-fit 縮放,水平剛好填滿,垂直略超出但被 camera bounds 裁掉。
    */
-  private drawDecorations() {
-    const decoEmojis = ['🌲', '🪨', '☁️', '🌙'];
-    for (let i = 0; i < 60; i++) {
-      const x = pseudoRand(i * 31) * WORLD_SIZE;
-      const y = pseudoRand(i * 17 + 5) * WORLD_SIZE;
-      const emoji = decoEmojis[Math.floor(pseudoRand(i) * decoEmojis.length)];
-      const text = this.add.text(x, y, emoji, {
-        fontSize: '28px',
-        fontFamily:
-          '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
-      });
-      text.setOrigin(0.5).setAlpha(0.7);
-      text.setDepth(-1);
-    }
+  private drawBackground() {
+    if (!this.textures.exists('world-bg')) return;
+    const bg = this.add.image(WORLD_SIZE / 2, WORLD_SIZE / 2, 'world-bg');
+    const scale = Math.max(WORLD_SIZE / bg.width, WORLD_SIZE / bg.height);
+    bg.setScale(scale).setDepth(-100);
+  }
+
+  /**
+   * 櫻花飄落粒子(相機鎖定):
+   *  - scrollFactor=0,跟著鏡頭走,不管 pan 到哪都從螢幕上方飄
+   *  - x 範圍設大於任何手機螢幕寬,確保螢幕兩側都有粒子
+   *  - 每顆 lifespan ~10 秒,frequency 500ms 一顆 → 螢幕上常有 ~20 顆
+   */
+  private spawnPetalRain() {
+    if (!this.textures.exists('petal')) return;
+    const emitter = this.add.particles(0, -40, 'petal', {
+      x: { min: -100, max: 2400 },
+      speedY: { min: 25, max: 65 },
+      speedX: { min: -20, max: 20 },
+      scale: { min: 0.18, max: 0.32 },
+      rotate: { min: 0, max: 360 },
+      alpha: { start: 0.85, end: 0 },
+      lifespan: { min: 7000, max: 12000 },
+      frequency: 500,
+      quantity: 1
+    });
+    emitter.setScrollFactor(0).setDepth(100);
+  }
+
+  /**
+   * 金光粒子(世界座標,加成混合):
+   *  - 世界範圍隨機冒,二度淡入淡出像螢火
+   *  - blendMode ADD 讓 spark.JPG 黑底直接被吃成透明,只剩金芒
+   *  - depth -10,在 bg 上、寵物下,當 ambient 點綴
+   */
+  private spawnSparks() {
+    if (!this.textures.exists('spark')) return;
+    const emitter = this.add.particles(0, 0, 'spark', {
+      x: { min: 0, max: WORLD_SIZE },
+      y: { min: 0, max: WORLD_SIZE },
+      scale: { start: 0.05, end: 0.18 },
+      alpha: { start: 0.55, end: 0 },
+      lifespan: 2200,
+      frequency: 350,
+      quantity: 1,
+      blendMode: 'ADD'
+    });
+    emitter.setDepth(-10);
   }
 
   private setupCameraDrag() {
