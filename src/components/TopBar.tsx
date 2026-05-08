@@ -53,7 +53,11 @@ function syncDisplay(status: SyncStatus): { icon: string; label: string; cls: st
 }
 
 /**
- * 螢幕頂部:神話橫幅 + 神獸徽章 + 5 個關鍵數字 + 盤中狀態 + 連登 + 成就計數。
+ * 單一 .ornate-frame 9-slice 邊框包住整個 HUD:
+ *  - 主資料區(badge + 神獸 / 投入 / 總市值 / 報酬)
+ *  - 內部金色分隔線
+ *  - 狀態列(市場狀態 / 更新時間 / 今日 / 雲端 / 成就·連登)
+ * 框內 bg 為半透明米白(rgba(250,246,232,0.6))讓金邊跟內容融合。
  */
 export default function TopBar({
   summary,
@@ -85,93 +89,89 @@ export default function TopBar({
   }, []);
   const sync = syncDisplay(syncStatus);
 
-  return (
-    <div className="bg-mythic-paper-100">
-      {!summary ? (
-        <div className="px-3 py-2 text-xs text-mythic-ink-50/60 text-center font-zh">
-          計算中⋯
-        </div>
-      ) : (
-        <>
-          {/* 主數據面板:top_banner.png 當外框 bg,badge + 神獸數 + 總市值 / 投入 / 報酬 浮在內 */}
-          <StatsPanel summary={summary} />
+  if (!summary) {
+    return (
+      <div className="px-3 py-2 text-xs text-mythic-ink-50/60 text-center font-zh">
+        計算中⋯
+      </div>
+    );
+  }
 
-          {/* 底列:市場狀態 + 更新時間 + 今日 + 雲端 + 成就 */}
-          <div className="flex items-center justify-between px-3 pb-1.5 pt-1 text-[11px] text-mythic-ink-50/80 font-zh leading-snug">
-            <span className="truncate">
-              {market.icon} {market.label}
-              <span
-                className={`ml-1 ${
-                  !refreshing && lastPriceUpdateAt && now - lastPriceUpdateAt > STALE_THRESHOLD_MS
-                    ? 'text-red-600'
-                    : ''
-                }`}
-              >
-                · {refreshing
-                  ? '更新中⋯'
-                  : lastPriceUpdateAt
-                    ? `更新於 ${relativeTime(lastPriceUpdateAt, now)}`
-                    : '尚未更新'}
-              </span>
-              <span className={`ml-2 ${summary.todayPnL >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
-                今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
-              </span>
-            </span>
-            <span className="flex items-center gap-2 shrink-0 ml-2">
-              {cloudSignedIn && (
-                <span className={sync.cls} title={syncErr ?? sync.label}>
-                  {sync.icon}
-                </span>
-              )}
-              <span>
-                🏆 {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
-              </span>
+  const stale =
+    !refreshing && lastPriceUpdateAt !== undefined && now - lastPriceUpdateAt > STALE_THRESHOLD_MS;
+  const updateLabel = refreshing
+    ? '更新中⋯'
+    : lastPriceUpdateAt
+      ? `更新於 ${relativeTime(lastPriceUpdateAt, now)}`
+      : '尚未更新';
+
+  const pnlClass = summary.totalPnL >= 0 ? 'text-tw-up' : 'text-tw-down';
+  const rateClass = summary.returnRate >= 0 ? 'text-tw-up' : 'text-tw-down';
+  const todayClass = summary.todayPnL >= 0 ? 'text-tw-up' : 'text-tw-down';
+
+  return (
+    <div
+      className="ornate-frame mx-2 my-1 px-3 pt-2 pb-1.5"
+      style={{ backgroundColor: 'rgba(250, 246, 232, 0.6)' }}
+    >
+      {/* 主資料區:badge + 4 格數字(2x2 grid) */}
+      <div className="flex items-center gap-3 mb-1.5">
+        <img
+          src="/assets/ui/badge_pet.png"
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="w-12 h-12 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
+        />
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 flex-1 leading-tight">
+          <Stat label="神獸" value={`${summary.holdingCount}`} suffix="隻" />
+          <Stat label="總市值" value={formatInt(summary.totalMarketValue)} />
+          <Stat label="投入" value={formatInt(summary.totalCost)} />
+          <div className="flex items-baseline gap-1 min-w-0">
+            <span className="text-[11px] text-mythic-jade-400 font-zh shrink-0">報酬</span>
+            <b className={`text-base font-bold ${pnlClass} truncate`}>
+              {formatSigned(summary.totalPnL)}
+            </b>
+            <span className={`text-[10px] ${rateClass} shrink-0`}>
+              ({formatPercent(summary.returnRate)})
             </span>
           </div>
-        </>
-      )}
+        </div>
+      </div>
+
+      {/* 分隔線(框內金色細線) */}
+      <div className="h-px bg-mythic-gold-300/40 mb-1" />
+
+      {/* 狀態列 */}
+      <div className="flex items-center justify-between text-[11px] text-mythic-ink-50/75 leading-snug font-zh gap-2">
+        <span className="truncate min-w-0">
+          {market.icon} {market.label}
+          <span className={`ml-1 ${stale ? 'text-red-600' : ''}`}>· {updateLabel}</span>
+          <span className={`ml-2 ${todayClass}`}>
+            今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
+          </span>
+        </span>
+        <span className="flex items-center gap-2 shrink-0">
+          {cloudSignedIn && (
+            <span className={sync.cls} title={syncErr ?? sync.label}>
+              {sync.icon}
+            </span>
+          )}
+          <span>
+            🏆 {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
 
-function StatsPanel({ summary }: { summary: PortfolioSummary }) {
-  const pnlClass = summary.totalPnL >= 0 ? 'text-tw-up' : 'text-tw-down';
-  const rateClass = summary.returnRate >= 0 ? 'text-tw-up' : 'text-tw-down';
+function Stat({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
-    // 用 .ornate-frame 9-slice 邊框包住數據,跟 modals 同一個視覺語言
-    <div className="ornate-frame bg-mythic-paper-100 flex items-center gap-3 mx-2 my-1 px-2 py-1.5">
-      {/* 寵物徽章 */}
-      <img
-        src="/assets/ui/badge_pet.png"
-        alt=""
-        aria-hidden
-        className="w-12 h-12 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
-        draggable={false}
-      />
-
-      {/* 數據兩列(左:神獸數 / 投入  右:總市值 / 報酬) */}
-      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 flex-1 text-[11px] font-zh leading-tight">
-        <div>
-          <span className="text-mythic-jade-400">神獸</span>
-          <b className="ml-1 text-mythic-ink-200 text-sm">{summary.holdingCount}</b>
-          <span className="text-mythic-ink-50/70"> 隻</span>
-        </div>
-        <div>
-          <span className="text-mythic-jade-400">總市值</span>
-          <b className="ml-1 text-mythic-ink-200 text-sm">{formatInt(summary.totalMarketValue)}</b>
-        </div>
-        <div>
-          <span className="text-mythic-jade-400">投入</span>
-          <b className="ml-1 text-mythic-ink-200 text-sm">{formatInt(summary.totalCost)}</b>
-        </div>
-        <div>
-          <span className="text-mythic-jade-400">報酬</span>
-          <b className={`ml-1 text-sm ${pnlClass}`}>{formatSigned(summary.totalPnL)}</b>
-          <span className={`ml-1 text-[10px] ${rateClass}`}>
-            ({formatPercent(summary.returnRate)})
-          </span>
-        </div>
-      </div>
+    <div className="flex items-baseline gap-1 min-w-0">
+      <span className="text-[11px] text-mythic-jade-400 font-zh shrink-0">{label}</span>
+      <b className="text-base font-bold text-mythic-ink-200 truncate">{value}</b>
+      {suffix && <span className="text-[11px] text-mythic-ink-50/70 shrink-0">{suffix}</span>}
     </div>
   );
 }
