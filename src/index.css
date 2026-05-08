@@ -65,6 +65,20 @@
     border-top: 1px solid rgba(212, 175, 55, 0.4);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
   }
+
+  /**
+   * Modal 內容半透明底(配合 .ornate-frame 金邊框):
+   *  - 外華麗(金邊框)+ 內輕盈(半透明米白)的層次
+   *  - alpha 0.7 比 HUD 的 0.35 厚,因為 modal 後方是黑色 dim overlay,
+   *    若太透字會吃到 overlay 變灰
+   *  - blur 12px 比 HUD 弱,modal 內容 (表單/數字) 可讀性優先
+   *  - 子層 .bg-white 卡片仍實心,形成「金邊→半透明→白卡」三段層次
+   */
+  .popup-content {
+    background: rgba(255, 252, 240, 0.7);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+  }
 }
 
 :root {

@@ -49,7 +49,7 @@ export default function Modal({
       aria-modal="true"
     >
       <div
-        className={`${containerClass} ornate-frame bg-mythic-paper-100 flex flex-col overflow-hidden`}
+        className={`${containerClass} ornate-frame popup-content flex flex-col overflow-hidden`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || !hideClose) && (
