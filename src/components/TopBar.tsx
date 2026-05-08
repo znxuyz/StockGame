@@ -37,24 +37,24 @@ function marketStatusDisplay(status: MarketStatus): { icon: string; label: strin
 /** 超過幾毫秒視為「資料太舊」要標紅 */
 const STALE_THRESHOLD_MS = 10 * 60_000;
 
-/**
- * 螢幕頂部資產列：5 個關鍵數字 + 盤中狀態 + 連登 + 成就計數。
- */
 /** 同步狀態 → icon + tooltip */
 function syncDisplay(status: SyncStatus): { icon: string; label: string; cls: string } {
   switch (status) {
     case 'syncing':
-      return { icon: '☁ ⟳', label: '同步中', cls: 'text-amber-600' };
+      return { icon: '☁ ⟳', label: '同步中', cls: 'text-mythic-gold-500' };
     case 'error':
       return { icon: '☁ ✗', label: '同步失敗', cls: 'text-red-600' };
     case 'offline':
       return { icon: '☁ ⊘', label: '離線', cls: 'text-gray-400' };
     case 'idle':
     default:
-      return { icon: '☁ ✓', label: '已同步', cls: 'text-emerald-600' };
+      return { icon: '☁ ✓', label: '已同步', cls: 'text-mythic-jade-400' };
   }
 }
 
+/**
+ * 螢幕頂部:神話橫幅 + 神獸徽章 + 5 個關鍵數字 + 盤中狀態 + 連登 + 成就計數。
+ */
 export default function TopBar({
   summary,
   marketStatus,
@@ -85,67 +85,100 @@ export default function TopBar({
   }, []);
   const sync = syncDisplay(syncStatus);
 
-  if (!summary) {
-    return (
-      <div className="bg-sand-50/95 backdrop-blur px-3 py-2 text-xs text-gray-500 text-center">
-        計算中⋯
-      </div>
-    );
-  }
+  return (
+    <div className="bg-mythic-paper-100">
+      {/* 神話橫幅:1280×243 比例,full width 自動縮放(手機 400px → ~76px tall) */}
+      <img
+        src="/assets/ui/top_banner.png"
+        alt=""
+        aria-hidden
+        className="w-full block select-none pointer-events-none"
+        draggable={false}
+      />
 
-  const updateLabel = refreshing
-    ? '更新中⋯'
-    : lastPriceUpdateAt
-      ? `更新於 ${relativeTime(lastPriceUpdateAt, now)}`
-      : '尚未更新';
-  const stale =
-    !refreshing && lastPriceUpdateAt !== undefined && now - lastPriceUpdateAt > STALE_THRESHOLD_MS;
+      {!summary ? (
+        <div className="px-3 py-2 text-xs text-mythic-ink-50/60 text-center font-zh">
+          計算中⋯
+        </div>
+      ) : (
+        <>
+          {/* 主數據面板:badge + 神獸數 + 總市值 / 投入 / 報酬 */}
+          <StatsPanel summary={summary} />
 
+          {/* 底列:市場狀態 + 更新時間 + 今日 + 雲端 + 成就 */}
+          <div className="flex items-center justify-between px-3 pb-1.5 text-[11px] text-mythic-ink-50/80 font-zh leading-snug">
+            <span className="truncate">
+              {market.icon} {market.label}
+              <span
+                className={`ml-1 ${
+                  !refreshing && lastPriceUpdateAt && now - lastPriceUpdateAt > STALE_THRESHOLD_MS
+                    ? 'text-red-600'
+                    : ''
+                }`}
+              >
+                · {refreshing
+                  ? '更新中⋯'
+                  : lastPriceUpdateAt
+                    ? `更新於 ${relativeTime(lastPriceUpdateAt, now)}`
+                    : '尚未更新'}
+              </span>
+              <span className={`ml-2 ${summary.todayPnL >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
+                今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
+              </span>
+            </span>
+            <span className="flex items-center gap-2 shrink-0 ml-2">
+              {cloudSignedIn && (
+                <span className={sync.cls} title={syncErr ?? sync.label}>
+                  {sync.icon}
+                </span>
+              )}
+              <span>
+                🏆 {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
+              </span>
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StatsPanel({ summary }: { summary: PortfolioSummary }) {
   const pnlClass = summary.totalPnL >= 0 ? 'text-tw-up' : 'text-tw-down';
   const rateClass = summary.returnRate >= 0 ? 'text-tw-up' : 'text-tw-down';
-
   return (
-    <div className="bg-sand-50/95 backdrop-blur px-3 pt-2 pb-1 text-xs leading-snug border-b border-sand-200 shadow-sm">
-      <div className="grid grid-cols-3 gap-x-2 gap-y-0.5">
+    <div className="flex items-center gap-3 px-3 py-2 border-b-2 border-mythic-gold-300/70">
+      {/* 寵物徽章 */}
+      <img
+        src="/assets/ui/badge_pet.png"
+        alt=""
+        aria-hidden
+        className="w-12 h-12 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
+        draggable={false}
+      />
+
+      {/* 數據兩列(左:神獸數 / 投入  右:總市值 / 報酬) */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-0 flex-1 text-[11px] font-zh leading-tight">
         <div>
-          <span className="text-gray-500">我的神獸：</span>
-          <b className="text-gray-800">{summary.holdingCount} 隻</b>
-        </div>
-        <div className="col-span-1">
-          <span className="text-gray-500">總市值：</span>
-          <b className="text-gray-800">{formatInt(summary.totalMarketValue)}</b>
+          <span className="text-mythic-jade-400">神獸</span>
+          <b className="ml-1 text-mythic-ink-200 text-sm">{summary.holdingCount}</b>
+          <span className="text-mythic-ink-50/70"> 隻</span>
         </div>
         <div>
-          <span className="text-gray-500">投入：</span>
-          <b className="text-gray-800">{formatInt(summary.totalCost)}</b>
-        </div>
-        <div className="col-span-2">
-          <span className="text-gray-500">神獸幫我賺：</span>
-          <b className={pnlClass}>{formatSigned(summary.totalPnL)}</b>
+          <span className="text-mythic-jade-400">總市值</span>
+          <b className="ml-1 text-mythic-ink-200 text-sm">{formatInt(summary.totalMarketValue)}</b>
         </div>
         <div>
-          <span className="text-gray-500">總報酬率：</span>
-          <b className={rateClass}>{formatPercent(summary.returnRate)}</b>
+          <span className="text-mythic-jade-400">投入</span>
+          <b className="ml-1 text-mythic-ink-200 text-sm">{formatInt(summary.totalCost)}</b>
         </div>
-      </div>
-      <div className="flex items-center justify-between mt-1 text-[11px] text-gray-500">
-        <span>
-          {market.icon} {market.label}
-          <span className={`ml-1 ${stale ? 'text-red-600' : ''}`}>· {updateLabel}</span>
-          <span className={`ml-2 ${summary.todayPnL >= 0 ? 'text-tw-up' : 'text-tw-down'}`}>
-            今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
+        <div>
+          <span className="text-mythic-jade-400">報酬</span>
+          <b className={`ml-1 text-sm ${pnlClass}`}>{formatSigned(summary.totalPnL)}</b>
+          <span className={`ml-1 text-[10px] ${rateClass}`}>
+            ({formatPercent(summary.returnRate)})
           </span>
-        </span>
-        <span className="flex items-center gap-2">
-          {cloudSignedIn && (
-            <span className={sync.cls} title={syncErr ?? sync.label}>
-              {sync.icon}
-            </span>
-          )}
-          <span>
-            🏆 {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
-          </span>
-        </span>
+        </div>
       </div>
     </div>
   );
