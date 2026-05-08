@@ -15,6 +15,7 @@ import {
   runAchievementChecks,
   checkInLoginToday,
   updateTaiexIntraday,
+  audio,
   type PortfolioSummary
 } from '@/services';
 import {
@@ -103,6 +104,17 @@ function Game() {
     return () => clearInterval(t);
   }, []);
 
+  // 第一次 user gesture 解鎖 BGM(autoplay 政策);任何 click/touch/keydown 都算
+  useEffect(() => {
+    const handler = () => audio.unlockOnce();
+    window.addEventListener('pointerdown', handler, { once: true });
+    window.addEventListener('keydown', handler, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', handler);
+      window.removeEventListener('keydown', handler);
+    };
+  }, []);
+
   // live data
   const settings = useLiveQuery(() => db.settings.get('singleton'), []);
   const holdings = useLiveQuery(() => db.holdings.toArray(), []);
@@ -119,13 +131,21 @@ function Game() {
     computeSummary().then(setSummary);
   }, [holdings, prices]);
 
+  // 同步 settings.soundEnabled → audio mute 狀態
+  useEffect(() => {
+    if (settings) audio.setMuted(!settings.soundEnabled);
+  }, [settings?.soundEnabled]);
+
   const unlockedCount = useMemo(
     () => (achievements ?? []).filter((a) => a.unlockedAt).length,
     [achievements]
   );
 
-  // 共用：動作完成後刷新成就 + 顯示 toast
+  // 共用:動作完成後刷新成就 + 顯示 toast(成功的買入/加碼/賣出順手響金幣音)
   async function postAction(message: string) {
+    if (/買入|加碼|售出|賣出/.test(message)) {
+      audio.playCoin();
+    }
     const ach = await runAchievementChecks();
     if (ach.newlyUnlocked.length > 0) {
       const names = ach.newlyUnlocked

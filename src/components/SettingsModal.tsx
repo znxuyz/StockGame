@@ -29,6 +29,7 @@ export default function SettingsModal({
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
   const [playerName, setPlayerName] = useState('');
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
   const { session } = useAuth();
   const userEmail = session?.user?.email ?? null;
@@ -94,6 +95,7 @@ export default function SettingsModal({
     setDiscountTenths(String(settings.brokerageFeeDiscount * 10));
     setMinFee(String(settings.brokerageMinFee));
     setPlayerName(settings.playerName ?? '');
+    setSoundEnabled(settings.soundEnabled);
   }, [open, settings]);
 
   async function handleSave() {
@@ -106,7 +108,8 @@ export default function SettingsModal({
         ...settings,
         brokerageFeeDiscount: safeTenths / 10,
         brokerageMinFee: safeMinFee,
-        playerName: playerName.trim() || undefined
+        playerName: playerName.trim() || undefined,
+        soundEnabled
       };
       await db.settings.put(next);
       onActionComplete('⚙ 設定已儲存');
@@ -172,6 +175,16 @@ export default function SettingsModal({
           />
           <p className="text-xs text-gray-500 mt-1">台新預設 NT$20。</p>
         </div>
+
+        <label className="flex items-center justify-between gap-3 py-1 cursor-pointer">
+          <span className="text-sm text-gray-700">🎵 音效 / BGM</span>
+          <input
+            type="checkbox"
+            checked={soundEnabled}
+            onChange={(e) => setSoundEnabled(e.target.checked)}
+            className="w-5 h-5 accent-emerald-500"
+          />
+        </label>
 
         <button
           type="button"

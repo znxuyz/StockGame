@@ -1,3 +1,5 @@
+export { audio } from './audio';
+
 export { buyOrFeed, sell } from './portfolio';
 export type { BuyParams, SellParams, ActionResult } from './portfolio';
 

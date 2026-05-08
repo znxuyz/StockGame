@@ -1,3 +1,5 @@
+import { audio } from '@/services';
+
 interface BottomBarProps {
   onBuy: () => void;
   onFeed: () => void;
@@ -6,6 +8,14 @@ interface BottomBarProps {
   onSettings: () => void;
   /** 沒任何持倉時，加碼/賣出禁用 */
   hasHoldings: boolean;
+}
+
+/** 點按鈕先響 click 再執行原 handler */
+function withClick(fn: () => void) {
+  return () => {
+    audio.playClick();
+    fn();
+  };
 }
 
 /**
@@ -31,30 +41,30 @@ export default function BottomBar({
       <div className="grid grid-cols-4 gap-1 px-2 pt-2 pb-1">
         <ActionButton
           src="/assets/btn/buy.png"
-          onClick={onBuy}
+          onClick={withClick(onBuy)}
           label="買入神獸"
         />
         <ActionButton
           src="/assets/btn/feed.png"
-          onClick={onFeed}
+          onClick={withClick(onFeed)}
           label="餵食加碼"
           disabled={!hasHoldings}
         />
         <ActionButton
           src="/assets/btn/sell.png"
-          onClick={onSell}
+          onClick={withClick(onSell)}
           label="售出神獸"
           disabled={!hasHoldings}
         />
         <ActionButton
           src="/assets/btn/records.png"
-          onClick={onRecords}
+          onClick={withClick(onRecords)}
           label="紀錄"
         />
       </div>
       <button
         type="button"
-        onClick={onSettings}
+        onClick={withClick(onSettings)}
         className="w-full text-[11px] text-mythic-jade-400 py-1 hover:text-mythic-jade-500 font-zh"
       >
         ⚙ 設定
