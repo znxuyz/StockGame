@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 :root {
-  font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  /* 神話美學:預設襯線中文(Noto Serif TC),數字 / UI 小字另用 .font-zh class 切回無襯線 */
+  font-family: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Noto Sans TC', serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

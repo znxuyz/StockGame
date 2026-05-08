@@ -26,18 +26,22 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 const force = process.argv.includes('--force');
 
+// resize 是「最長邊」上限,沒設就保留原始尺寸。手機 UI 不需要 1024px,
+// 縮小可以大幅減少 PNG 體積(PWA precache 才不會超過 2 MB 限制)。
 const TASKS = [
-  // 按鈕:3 顆白底 + 1 顆深藍底
-  { in: 'public/assets/btn/buy.JPG',           out: 'public/assets/btn/buy.png',           mode: 'white' },
-  { in: 'public/assets/btn/feed.JPG',          out: 'public/assets/btn/feed.png',          mode: 'white' },
-  { in: 'public/assets/btn/sell.JPG',          out: 'public/assets/btn/sell.png',          mode: 'white' },
-  { in: 'public/assets/btn/records.JPG',       out: 'public/assets/btn/records.png',       mode: 'dark' },
-  // UI:橫幅 + 徽章是黑底,卡片邊框是中空白底
-  { in: 'public/assets/ui/top_banner.JPG',     out: 'public/assets/ui/top_banner.png',     mode: 'black' },
-  { in: 'public/assets/ui/badge_pet.JPG',      out: 'public/assets/ui/badge_pet.png',      mode: 'black' },
-  { in: 'public/assets/ui/frame_card.JPG',     out: 'public/assets/ui/frame_card.png',     mode: 'white-flood' },
-  // 粒子:櫻花白底
-  { in: 'public/assets/particles/petal.JPG',   out: 'public/assets/particles/petal.png',   mode: 'white' }
+  // 按鈕:UI 顯示 ~80px,3x retina = 240,設 256
+  { in: 'public/assets/btn/buy.JPG',           out: 'public/assets/btn/buy.png',           mode: 'white',       resize: 256 },
+  { in: 'public/assets/btn/feed.JPG',          out: 'public/assets/btn/feed.png',          mode: 'white',       resize: 256 },
+  { in: 'public/assets/btn/sell.JPG',          out: 'public/assets/btn/sell.png',          mode: 'white',       resize: 256 },
+  { in: 'public/assets/btn/records.JPG',       out: 'public/assets/btn/records.png',       mode: 'dark',        resize: 256 },
+  // 橫幅(寬螢幕)2528 寬縮 1280 上限
+  { in: 'public/assets/ui/top_banner.JPG',     out: 'public/assets/ui/top_banner.png',     mode: 'black',       resize: 1280 },
+  // 徽章:UI 顯示 ~120px,512 足夠
+  { in: 'public/assets/ui/badge_pet.JPG',      out: 'public/assets/ui/badge_pet.png',      mode: 'black',       resize: 512 },
+  // 卡框:可能滿版 ~400px,3x = 1200,保留 1024(maxsize 1024)
+  { in: 'public/assets/ui/frame_card.JPG',     out: 'public/assets/ui/frame_card.png',     mode: 'white-flood', resize: 1024 },
+  // 櫻花粒子:Phaser 粒子顯示頂多 64px,3x = 192,設 128
+  { in: 'public/assets/particles/petal.JPG',   out: 'public/assets/particles/petal.png',   mode: 'white',       resize: 128 }
 ];
 
 /** 白底:RGB min ≥ 245 → 透明,215 ~ 245 漸進(跟 sprites pipeline 同閾值) */
@@ -148,7 +152,12 @@ async function processOne(task) {
     }
   }
 
-  const { data, info } = await sharp(inPath)
+  // 先 resize(若有設),再 ensureAlpha + raw 讀進 buffer 做去背
+  let pipeline = sharp(inPath);
+  if (task.resize) {
+    pipeline = pipeline.resize({ width: task.resize, height: task.resize, fit: 'inside', withoutEnlargement: true });
+  }
+  const { data, info } = await pipeline
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
