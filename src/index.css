@@ -25,19 +25,19 @@
   /**
    * 玻璃擬態 HUD(TopBar 用):
    *  - position: fixed 浮在 Phaser canvas 之上,backdrop-filter 才能 blur 到後面 main.JPG
-   *  - z-index 100 蓋過 PhaserMap 浮動按鈕(按鈕已在 PhaserMap 用 var(--hud-height) 推下避讓)
-   *  - 半透明米白(alpha 0.6)+ blur 12px + saturate 120% 增強質感
+   *  - z-index 30 < Modal z-50,modal 開啟時 HUD 會被覆蓋(正確層級)
+   *  - top: 0 + padding-top: calc(10px + safe-top) 讓玻璃 full-bleed 延伸到 viewport 頂(notch 下面)
+   *  - 半透明米白(alpha 0.35)+ blur 20px + saturate 140%
    *  - 底部 1px 淡金色實線當下緣分界
    *  - 數字一律 tabular-nums 等寬,避免變動時跳格
    */
   .hud {
     position: fixed;
-    /* 避開 iOS 瀏海(env 在桌機算 0,iPhone PWA 算 44px) */
-    top: env(safe-area-inset-top);
+    top: 0;
     left: 0;
     right: 0;
-    z-index: 100;
-    padding: 10px 14px 8px;
+    z-index: 30;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 8px;
     background: rgba(250, 246, 232, 0.35);
     backdrop-filter: blur(20px) saturate(140%);
     -webkit-backdrop-filter: blur(20px) saturate(140%);
@@ -45,10 +45,30 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     font-variant-numeric: tabular-nums;
   }
+
+  /**
+   * 玻璃擬態 BottomBar:對稱 HUD,bottom 鋪到 viewport 底(iOS home indicator 下面)。
+   *  - bottom: 0 + padding-bottom: calc(6px + safe-bottom) full-bleed
+   *  - border-top 替代 HUD 的 border-bottom,形成上下對稱金線
+   *  - z-30 同層,modal 仍然蓋過
+   */
+  .hud-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    padding: 8px 8px calc(6px + env(safe-area-inset-bottom));
+    background: rgba(250, 246, 232, 0.35);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border-top: 1px solid rgba(212, 175, 55, 0.4);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  }
 }
 
 :root {
-  /* HUD 預估高度,PhaserMap 浮動按鈕用此值往下避讓 */
+  /* HUD 預估高度,PhaserMap 浮動按鈕用此值往下避讓(不含 safe-area,parent 層自動處理) */
   --hud-height: 80px;
   /* 神話美學:預設襯線中文(Noto Serif TC),數字 / UI 小字另用 .font-zh class 切回無襯線 */
   font-family: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Noto Sans TC', serif;
