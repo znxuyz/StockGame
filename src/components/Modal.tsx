@@ -11,11 +11,22 @@ interface ModalProps {
   hideClose?: boolean;
 }
 
+/** frame_card.png 9-slice 邊框設定。slice 取 180px(對應 1024×1024 原圖內金邊厚度) */
+const FRAME_BORDER_STYLE = {
+  borderStyle: 'solid' as const,
+  borderColor: 'transparent',
+  borderWidth: '32px',
+  borderImageSource: 'url(/assets/ui/frame_card.png)',
+  borderImageSlice: 180,
+  borderImageWidth: '32px',
+  borderImageRepeat: 'stretch' as const
+};
+
 /**
- * 通用 modal 容器。
- * - sheet 模式適合手機：底部滑入、最大高度 90vh
- * - center 模式適合彈出小視窗（個股資訊）
- * - 點背景或按 Esc 關閉（hideClose=true 時禁止）
+ * 通用 modal 容器(神話卡框版)。
+ * - sheet 模式適合手機:從底部滑入,top + 兩側顯示金綠雲紋邊框
+ * - center 模式適合彈窗:四邊都有金綠雲紋邊框
+ * - frame_card.png 用 CSS border-image 9-slice 把 4 角裝飾固定、4 邊拉伸
  */
 export default function Modal({
   open,
@@ -38,28 +49,31 @@ export default function Modal({
 
   const containerClass =
     variant === 'sheet'
-      ? 'fixed inset-x-0 bottom-0 max-h-[90vh] rounded-t-2xl'
-      : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[85vh] w-[92vw] max-w-md rounded-2xl';
+      ? 'fixed inset-x-0 bottom-0 max-h-[90vh]'
+      : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[85vh] w-[92vw] max-w-md';
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
+      className="fixed inset-0 z-50 bg-black/45 flex items-end justify-center"
       onClick={hideClose ? undefined : onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className={`${containerClass} bg-white shadow-2xl flex flex-col overflow-hidden`}
+        className={`${containerClass} bg-mythic-paper-100 flex flex-col overflow-hidden`}
+        style={FRAME_BORDER_STYLE}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || !hideClose) && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h2 className="text-base font-bold text-gray-800">{title}</h2>
+          <div className="flex items-center justify-between px-4 py-2.5 border-b-2 border-mythic-gold-300/60">
+            <h2 className="text-base font-bold text-mythic-ink-200 font-serif tracking-wider">
+              {title}
+            </h2>
             {!hideClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xl leading-none"
+                className="w-8 h-8 rounded-full bg-mythic-jade-50 text-mythic-jade-500 hover:bg-mythic-jade-100 flex items-center justify-center text-xl leading-none border border-mythic-jade-200/50"
                 aria-label="關閉"
               >
                 ×
