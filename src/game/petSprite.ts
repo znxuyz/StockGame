@@ -85,7 +85,7 @@ const BODY_SHAPES: BodyShape[] = [
 /** 碰撞反彈 tween 時長 */
 const BOUNCE_DURATION = 200;
 /** 反彈後到下一次 wander 的恢復時間(神獸短暫呆著) */
-const BOUNCE_RECOVERY = 600;
+const BOUNCE_RECOVERY = 300;
 
 /** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
 const TIER_EMOJI: Record<PetTier, string> = {
