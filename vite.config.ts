@@ -19,12 +19,11 @@ export default defineConfig({
       lang: 'zh-Hant',
       categories: ['finance', 'games'],
       icons: [
-        // SVG(任意尺寸縮放,Android 12+ 支援)
-        { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-        // PNG fallback
+        // 九尾狐光柵 favicon(來源 public/app-icon-source.JPG,build:icons 烘出)
+        // 舊 icon.svg 不再 wire 進 manifest 但檔案保留以備 rollback
         { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-        // Maskable(Android 自動裁圓 / 圓角時保證主視覺不被切到)
+        // Maskable(Android adaptive 自動裁圓/圓角時主視覺在 80% safe-zone 內)
         { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
       ],
       shortcuts: [
