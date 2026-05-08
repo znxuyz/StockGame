@@ -11,22 +11,11 @@ interface ModalProps {
   hideClose?: boolean;
 }
 
-/** frame_card.png 9-slice 邊框設定。slice 取 180px(對應 1024×1024 原圖內金邊厚度) */
-const FRAME_BORDER_STYLE = {
-  borderStyle: 'solid' as const,
-  borderColor: 'transparent',
-  borderWidth: '32px',
-  borderImageSource: 'url(/assets/ui/frame_card.png)',
-  borderImageSlice: 180,
-  borderImageWidth: '32px',
-  borderImageRepeat: 'stretch' as const
-};
-
 /**
  * 通用 modal 容器(神話卡框版)。
  * - sheet 模式適合手機:從底部滑入,top + 兩側顯示金綠雲紋邊框
  * - center 模式適合彈窗:四邊都有金綠雲紋邊框
- * - frame_card.png 用 CSS border-image 9-slice 把 4 角裝飾固定、4 邊拉伸
+ * - .ornate-frame class 已在 index.css 定義(9-slice + bg-clip padding-box)
  */
 export default function Modal({
   open,
@@ -60,8 +49,7 @@ export default function Modal({
       aria-modal="true"
     >
       <div
-        className={`${containerClass} bg-mythic-paper-100 flex flex-col overflow-hidden`}
-        style={FRAME_BORDER_STYLE}
+        className={`${containerClass} ornate-frame bg-mythic-paper-100 flex flex-col overflow-hidden`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || !hideClose) && (

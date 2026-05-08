@@ -138,17 +138,8 @@ function StatsPanel({ summary }: { summary: PortfolioSummary }) {
   const pnlClass = summary.totalPnL >= 0 ? 'text-tw-up' : 'text-tw-down';
   const rateClass = summary.returnRate >= 0 ? 'text-tw-up' : 'text-tw-down';
   return (
-    // 用 top_banner.png 當底,padding 留出 banner 兩側裝飾,內容浮在中央米紙區
-    <div
-      className="flex items-center gap-2 pl-12 pr-12 py-3"
-      style={{
-        backgroundImage: 'url(/assets/ui/top_banner.png)',
-        backgroundSize: '100% 100%',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center',
-        minHeight: '92px'
-      }}
-    >
+    // 用 .ornate-frame 9-slice 邊框包住數據,跟 modals 同一個視覺語言
+    <div className="ornate-frame bg-mythic-paper-100 flex items-center gap-3 mx-2 my-1 px-2 py-1.5">
       {/* 寵物徽章 */}
       <img
         src="/assets/ui/badge_pet.png"

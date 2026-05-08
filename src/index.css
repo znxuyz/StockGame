@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /**
+   * 神話卡框 9-slice 邊框(共用)。
+   *  - frame_card.png 經 white-flood + trim,4 角金綠雲紋裝飾完整
+   *  - slice 100 從 1024 原圖每邊取 100 px 的「框料」,中間延展
+   *  - border-width 28 px:render 比例 100→28 ≈ 3.5x 縮小,角落仍清楚
+   *  - background-clip: padding-box → 不讓元素的米色 bg 漏到透明的 border 區
+   *    (這是 user 反映「框外側出現米色」的根本解法)
+   *  - 高度 400 / 800 / 1200 三種,4 角永遠不變形,只有中間延展
+   */
+  .ornate-frame {
+    border-style: solid;
+    border-color: transparent;
+    border-width: 28px;
+    border-image-source: url('/assets/ui/frame_card.png');
+    border-image-slice: 100;
+    border-image-width: 28px;
+    border-image-repeat: stretch;
+    background-clip: padding-box;
+  }
+}
+
 :root {
   /* 神話美學:預設襯線中文(Noto Serif TC),數字 / UI 小字另用 .font-zh class 切回無襯線 */
   font-family: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Noto Sans TC', serif;
