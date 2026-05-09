@@ -262,12 +262,60 @@ export class PetSprite {
     } else if (effectChanged) {
       this.ringRenderer.applyEffect(data.effect);
     }
+
+    // 加碼升級:level 上升 → 綠色飄字 + sprite 黃光閃 0.5s(階段 1.6)
+    if (prev && data.level > prev.level) {
+      this.spawnLevelUpFloater(prev.level, data.level);
+      this.flashLevelUp();
+    }
   }
 
   flashPnL(color: number) {
     this.pnlBg.setFillStyle(color, 0.95);
     this.scene.time.delayedCall(500, () => {
       this.pnlBg.setFillStyle(0xffffff, 0.95);
+    });
+  }
+
+  /**
+   * 升級飄字:從 sprite 上方飄出綠色 "Lv.45 → Lv.60 (+15)",1.5s 上升 + 淡出。
+   * 連續加碼可能多個飄字疊著(每次 applyData 都觸發),產生「連升」感,可接受。
+   */
+  private spawnLevelUpFloater(oldLevel: number, newLevel: number) {
+    const diff = newLevel - oldLevel;
+    const half = SPRITE_DISPLAY_SIZE / 2;
+    const text = this.scene.add
+      .text(0, -half - 30, `Lv.${oldLevel} → Lv.${newLevel} (+${diff})`, {
+        fontSize: '14px',
+        fontFamily: '"Noto Sans TC",sans-serif',
+        fontStyle: 'bold',
+        color: '#10b981', // emerald-500 綠
+        stroke: '#064e3b', // emerald-900 深綠邊
+        strokeThickness: 3
+      })
+      .setOrigin(0.5);
+    this.container.add(text);
+    this.scene.tweens.add({
+      targets: text,
+      y: -half - 70,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Cubic.easeOut',
+      onComplete: () => text.destroy()
+    });
+  }
+
+  /**
+   * 升級閃光:image / emoji 加 amber-200 暖黃 tint 0.5s 後清掉。
+   * tint 衝突點:hover 也用 tint 0xfff8dc,但 levelUp 觸發時玩家通常在
+   * Buy modal 裡(剛按下加碼按鈕),sprite 不會 hover,衝突可忽略。
+   */
+  private flashLevelUp() {
+    this.image.setTint(0xfde68a);
+    this.emoji.setTint(0xfde68a);
+    this.scene.time.delayedCall(500, () => {
+      this.image.clearTint();
+      this.emoji.clearTint();
     });
   }
 
