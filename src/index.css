@@ -450,3 +450,16 @@ button {
   100% { opacity: 0; transform: translateX(20%); }
 }
 .task-toast { animation: task-toast-in 3000ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* PWA 新版提示 — 從頂部滑入(放在 HUD 之上,不擋遊戲畫面) */
+@keyframes pwa-update-slide-down {
+  0%   { opacity: 0; transform: translate(-50%, -120%); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+.glass-popup-update {
+  background: rgba(255, 251, 240, 0.92);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  animation: pwa-update-slide-down 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}

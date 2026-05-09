@@ -50,6 +50,7 @@ import SettingsModal from '@/components/SettingsModal';
 import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
 import InstallPrompt from '@/components/InstallPrompt';
+import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
 import SignInModal from '@/components/SignInModal';
 import type { Pet, Stock } from '@/types';
 
@@ -72,6 +73,7 @@ export default function App() {
   if (seedError) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-sand-100 p-6">
+        <PwaUpdatePrompt />
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           初始化失敗：{seedError}
         </div>
@@ -82,12 +84,18 @@ export default function App() {
   if (!ready) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-sand-100 text-gray-500">
+        <PwaUpdatePrompt />
         資料庫初始化中⋯
       </div>
     );
   }
 
-  return <Game />;
+  return (
+    <>
+      <PwaUpdatePrompt />
+      <Game />
+    </>
+  );
 }
 
 function Game() {
