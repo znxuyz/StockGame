@@ -58,14 +58,24 @@
    *  - 立體陰影向上投射(0 -8px 32px)
    *  - 內含 .glass-popup-header(固定頂)+ .glass-popup-content(可捲)
    */
+  /**
+   * BottomBar 預估高度(button max-w 64 + label + padding + safe-area buffer)
+   * 用 CSS variable 集中管理,glass-popup bottom / height 共用避免散落
+   */
+  :root {
+    --bottom-bar-height: 96px;
+  }
+
   .glass-popup {
     position: fixed;
-    bottom: 0;
+    /* bottom 留 BottomBar 高度,popup 不疊 BottomBar(避免半透明 0.75 透出 BottomBar 邊緣) */
+    bottom: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
     left: 0;
     right: 0;
     width: 100vw;
-    height: calc(100vh - 140px);
-    max-height: calc(100vh - 140px);
+    /* HUD 140px + BottomBar var + safe-area = 完整可見高度,popup 填剩餘 */
+    height: calc(100vh - 140px - var(--bottom-bar-height) - env(safe-area-inset-bottom));
+    max-height: calc(100vh - 140px - var(--bottom-bar-height) - env(safe-area-inset-bottom));
     border-radius: 24px 24px 0 0;
     background: rgba(250, 246, 232, 0.75);
     backdrop-filter: blur(24px) saturate(150%);
@@ -103,10 +113,26 @@
     background: rgba(250, 246, 232, 0.5);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    /* 標題列只負責 padding-top + horizontal,bottom 給 headerExtra 自己處理(若無 extra,
+       border-bottom 自然貼齊標題行底端 + 12px 視覺 padding) */
     padding: 14px 20px 12px;
     border-bottom: 1px solid rgba(212, 175, 55, 0.2);
     z-index: 10;
     flex-shrink: 0;
+  }
+
+  /**
+   * 標題列下方額外內容 wrapper(階段 3.7,Modal headerExtra prop 用):
+   *  - 緊貼標題下方,跟 popup-header 同 sticky 一起停在頂部
+   *  - 抵消 popup-header padding-bottom 讓 extra 完全貼底,extra 自己控制 padding
+   *  - margin-x -20 抵消 popup-header padding-x 讓 extra(例如 tab 列)滿版
+   *  - margin-bottom -12 抵消 popup-header padding-bottom 讓 extra 完全貼到 border
+   */
+  .glass-popup-header-extra {
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: -12px;
+    margin-top: 8px;
   }
 
   /**
