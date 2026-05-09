@@ -6,6 +6,7 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
+    injectRegister: 'auto',
     includeAssets: ['icons/*.png'],
     manifest: {
       name: '山海經股票養成',
@@ -37,8 +38,20 @@ export default defineConfig({
       ]
     },
     workbox: {
-      globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+      // 部署新版時清掉舊版 precache,避免 Safari 永遠抓到舊資源
+      cleanupOutdatedCaches: true,
+      // skipWaiting=false:不強制立刻接管,等用戶按 PwaUpdatePrompt「更新」鈕才切版
+      // clientsClaim=true:新 SW activate 後立刻接管所有 tab,避免雙版本並存
+      skipWaiting: false,
+      clientsClaim: true,
+      globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}'],
       runtimeCaching: [
+        // ── 雲端 API:不快取(每次都要 fresh,避免拿到別人 / 過期資料)
+        {
+          urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+          handler: 'NetworkOnly'
+        },
+        // ── 台股價格 API:NetworkFirst + 短 TTL,離線時 fallback cache
         {
           urlPattern: /^https:\/\/openapi\.twse\.com\.tw\/.*/i,
           handler: 'NetworkFirst',
@@ -55,6 +68,34 @@ export default defineConfig({
             cacheName: 'tpex-api-cache',
             expiration: { maxEntries: 50, maxAgeSeconds: 60 * 10 },
             networkTimeoutSeconds: 10
+          }
+        },
+        // ── /api/* 代理(dev server proxy 路徑):NetworkFirst 5 分鐘 TTL
+        {
+          urlPattern: /\/api\//,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            networkTimeoutSeconds: 5,
+            expiration: { maxAgeSeconds: 60 * 5 }
+          }
+        },
+        // ── 神獸立繪:幾乎不變,CacheFirst 30 天
+        {
+          urlPattern: /\/sprites\/.*\.png$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'sprites-cache',
+            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }
+          }
+        },
+        // ── 場景背景 / 按鈕 / 粒子貼圖:CacheFirst 7 天
+        {
+          urlPattern: /\/assets\/(bg|btn|particles)\/.*$/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'assets-cache',
+            expiration: { maxAgeSeconds: 60 * 60 * 24 * 7 }
           }
         }
       ]
