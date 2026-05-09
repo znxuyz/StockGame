@@ -415,3 +415,12 @@ button {
 .milestone-overlay { animation: milestone-overlay 3000ms ease-in-out forwards; }
 .milestone-pillar  { animation: milestone-pillar 3000ms cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: bottom; }
 .milestone-text    { animation: milestone-text 3000ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* 任務完成右上角提示卡(階段 3.7)— 3s 滑入 hold 滑出 */
+@keyframes task-toast-in {
+  0%   { opacity: 0; transform: translateX(100%); }
+  10%  { opacity: 1; transform: translateX(0); }
+  85%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(20%); }
+}
+.task-toast { animation: task-toast-in 3000ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }

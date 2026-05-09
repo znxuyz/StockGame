@@ -9,6 +9,7 @@ import {
   realmLabel,
   EFFECT_ORDER,
   earnCultivation,
+  emitTaskTrigger,
   type SoulRealm
 } from '@/services';
 import { WorldScene } from './scene';
@@ -161,6 +162,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
               `${species?.name ?? '神獸'} 突破至${realmLabel(status.realm)}境`,
               pet.id
             );
+            // 階段 3.7:任務 trigger 計次
+            emitTaskTrigger('realm_breakthrough', 1);
           }
           // 升級 / 第一次初始化 / 降級 都寫回(下次跑不再觸發)
           db.pets.update(pet.id, { lastRealmCheck: status.realm });
@@ -185,6 +188,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
                 `${species?.name ?? '神獸'} ${labels[status.effect] ?? '魂環升級'}`,
                 pet.id
               );
+              // 階段 3.7:任務 trigger 計次(只升才發,降級不發)
+              emitTaskTrigger('effect_unlock', 1);
             }
           }
           db.pets.update(pet.id, { lastEffectCheck: status.effect });

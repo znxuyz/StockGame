@@ -70,6 +70,8 @@ export {
   claimTaskReward,
   getActiveTasks,
   checkAndGenerateDailyTasks,
-  checkAndGenerateWeeklyTasks
+  checkAndGenerateWeeklyTasks,
+  emitTaskTrigger,
+  attachTaskListeners
 } from './taskService';
 export type { ClaimTaskResult, ActiveTasks } from './taskService';

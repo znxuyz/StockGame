@@ -209,3 +209,31 @@ export async function getActiveTasks(): Promise<ActiveTasks> {
   ]);
   return { daily, weekly };
 }
+
+/**
+ * 業務模組 emit 任務 trigger 的 sugar(階段 3.7)。
+ * 統一從這個出口呼叫 eventBus,future 改機制只動這裡。
+ */
+export function emitTaskTrigger(triggerEvent: TaskTriggerEvent, delta: number = 1): void {
+  if (delta <= 0) return;
+  eventBus.emit('task:trigger', { triggerEvent, delta });
+}
+
+/**
+ * App.tsx 啟動時呼叫一次,attach 'task:trigger' listener → incrementTaskProgress。
+ * 回傳 detach fn 給 cleanup;重複 attach 會被 attached flag 擋掉。
+ */
+let attached = false;
+export function attachTaskListeners(): () => void {
+  if (attached) return () => undefined;
+  attached = true;
+  const off = eventBus.on('task:trigger', ({ triggerEvent, delta }) => {
+    incrementTaskProgress(triggerEvent, delta).catch((e) => {
+      console.warn('[taskService] progress update failed:', e);
+    });
+  });
+  return () => {
+    attached = false;
+    off();
+  };
+}

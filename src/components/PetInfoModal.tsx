@@ -7,6 +7,7 @@ import {
   realmProgress,
   realmLabel,
   effectLabel,
+  emitTaskTrigger,
   type HoldingDetail,
   type SoulRealm,
   type RingEffect
@@ -88,6 +89,11 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
       setPriceFlash(null);
     }
   }, [open]);
+
+  // 階段 3.7:每次 modal 開啟(對某 pet)→ emit open_pet_info(任務「巡視道場」用)
+  useEffect(() => {
+    if (open && pet) emitTaskTrigger('open_pet_info', 1);
+  }, [open, pet?.id]);
 
   // 三維度狀態(階段 1.1) — 需要 detail (有 holding+price) 才能算
   const status = useMemo(() => {
