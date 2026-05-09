@@ -16,8 +16,10 @@ import {
   checkInLoginToday,
   updateTaiexIntraday,
   audio,
+  checkAndUpdateStreak,
   type PortfolioSummary
 } from '@/services';
+import type { LoginStreak } from '@/types';
 import {
   pullNow,
   pushNow,
@@ -30,6 +32,7 @@ import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
 import CultivationFloater from '@/components/CultivationFloater';
+import DailyCheckInModal from '@/components/DailyCheckInModal';
 import BottomBar from '@/components/BottomBar';
 import PhaserMap from '@/game/PhaserMap';
 import BuyModal from '@/components/BuyModal';
@@ -84,6 +87,12 @@ export default function App() {
 function Game() {
   const [modal, setModal] = useState<ModalKind>(null);
   const [petTarget, setPetTarget] = useState<{ pet: Pet; stock: Stock } | null>(null);
+  /**
+   * 階段 3.2:每日簽到彈窗 streak。App 啟動 checkAndUpdateStreak 後,
+   * 若 isNewDay && !todayClaimed 設這個,DailyCheckInModal open。
+   * onClose 後設回 null。
+   */
+  const [checkInStreak, setCheckInStreak] = useState<LoginStreak | null>(null);
 
   const [toast, setToast] = useState<{ message: string; variant: 'info' | 'error' } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,6 +112,21 @@ function Game() {
   useEffect(() => {
     const t = setInterval(() => setMarketStatus(getMarketStatus()), 60_000);
     return () => clearInterval(t);
+  }, []);
+
+  // 階段 3.2:App 啟動檢查連登狀態,新一天且未領取 → 跳簽到彈窗
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const result = await checkAndUpdateStreak();
+      if (!mounted) return;
+      if (result.isNewDay && !result.streak.todayClaimed) {
+        setCheckInStreak(result.streak);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // 第一次 user gesture 解鎖 BGM(autoplay 政策);任何 click/touch/keydown 都算
@@ -347,6 +371,13 @@ function Game() {
         cloudSignedIn={!!userId}
       />
       <CultivationFloater />
+      {checkInStreak && (
+        <DailyCheckInModal
+          open
+          onClose={() => setCheckInStreak(null)}
+          streak={checkInStreak}
+        />
+      )}
 
       <PhaserMap
         onPetClick={handlePetClickById}
