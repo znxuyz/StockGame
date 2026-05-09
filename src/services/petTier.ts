@@ -160,11 +160,17 @@ const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30;
  *
  * holding 拿不到 / 已退役時所有欄位回 0(避免 modal 在資料還沒載完時崩)。
  * price 拿不到時 currentValue / returnRate 回 0(視為持平)。
+ *
+ * `firstBuyAt`(optional)— 若傳入,monthsHeld 用這個算;沒傳則 fallback
+ * holding.firstPurchasedAt → pet.bornAt。呼叫端常從 transactions 表查
+ * 該 code 最早的 buy/feed timestamp 傳進來,讓「清倉重買」的歷史持有
+ * 時間也算進去(只看當前 holding 的話會被重設掉)。
  */
 export function getPetStatus(
   pet: Pet,
   holding: Holding | undefined,
   price: StockPrice | undefined,
+  firstBuyAt?: number,
   now: number = Date.now()
 ): PetStatus {
   const totalInvested = holding?.totalCost ?? 0;
@@ -172,7 +178,7 @@ export function getPetStatus(
   const currentValue = price && shares > 0 ? price.currentPrice * shares : 0;
   const returnRate = totalInvested > 0 ? (currentValue - totalInvested) / totalInvested : 0;
 
-  const firstBuy = holding?.firstPurchasedAt ?? pet.bornAt;
+  const firstBuy = firstBuyAt ?? holding?.firstPurchasedAt ?? pet.bornAt;
   const monthsHeld = Math.max(0, (now - firstBuy) / MS_PER_MONTH);
 
   return {

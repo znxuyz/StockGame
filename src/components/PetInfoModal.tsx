@@ -89,15 +89,30 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
     }
   }, [open]);
 
+  // 該 code 最早的 buy/feed timestamp(包含已退役 pet 的舊買入)— 給三維度的
+  // 「持有月數」用,讓清倉重買的歷史時間也累積。
+  const earliestBuyAt = useLiveQuery(async () => {
+    if (!pet) return undefined;
+    const txns = await db.transactions
+      .where('code')
+      .equals(pet.code)
+      .filter((t) => t.type === 'buy' || t.type === 'feed')
+      .toArray();
+    if (txns.length === 0) return undefined;
+    return Math.min(...txns.map((t) => t.timestamp));
+  }, [pet?.code]);
+
   // 三維度狀態(階段 1.1) — 需要 detail (有 holding+price) 才能算
   const status = useMemo(() => {
     if (!pet || !detail) return null;
-    return getPetStatus(pet, detail.holding, detail.price);
-  }, [pet, detail]);
+    return getPetStatus(pet, detail.holding, detail.price, earliestBuyAt);
+  }, [pet, detail, earliestBuyAt]);
 
   if (!pet || !stock) return null;
   const species = getCreature(pet.speciesId);
-  const daysHeld = detail ? daysBetween(detail.holding.firstPurchasedAt, Date.now()) : 0;
+  // 持有天數同樣用最早 buy 時間算(跟三維度月數一致)
+  const firstBuy = earliestBuyAt ?? detail?.holding.firstPurchasedAt;
+  const daysHeld = firstBuy ? daysBetween(firstBuy, Date.now()) : 0;
   const flashClass = priceFlash === 'up' ? 'flash-up' : priceFlash === 'down' ? 'flash-down' : '';
 
   return (
