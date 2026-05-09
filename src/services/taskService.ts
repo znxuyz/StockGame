@@ -119,9 +119,21 @@ async function checkAndGenerateTasks(opts: GenerateOpts): Promise<void> {
 
   const picked = shuffle(opts.pool).slice(0, opts.pickCount);
   const generatedAt = Date.now();
+  let added = 0;
   for (const t of picked) {
-    await db.userTasks.add(
-      buildTaskFromTemplate(t, opts.taskType, generatedAt, opts.periodResetAt)
+    try {
+      await db.userTasks.add(
+        buildTaskFromTemplate(t, opts.taskType, generatedAt, opts.periodResetAt)
+      );
+      added++;
+    } catch (e) {
+      // 不靜默吞:Dexie 出錯時 log 給 dev console 看
+      console.error(`[taskService] add ${opts.taskType} task ${t.taskKey} failed:`, e);
+    }
+  }
+  if (added !== opts.pickCount) {
+    console.warn(
+      `[taskService] expected ${opts.pickCount} ${opts.taskType} tasks, only added ${added}`
     );
   }
 }
