@@ -8,3 +8,4 @@ export * from './achievement';
 export * from './snapshot';
 export * from './settings';
 export * from './cultivation';
+export * from './task';

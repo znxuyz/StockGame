@@ -13,7 +13,7 @@
  * 使用前先在下方 EventMap 註冊事件名 + payload 型別,讓 TS 強制檢查。
  */
 
-import type { CultivationReason } from '@/types';
+import type { CultivationReason, UserTask } from '@/types';
 
 /** 修為賺取事件 */
 export interface CultivationEarnEvent {
@@ -29,10 +29,16 @@ export interface CultivationSpendEvent {
   reasonText: string;
 }
 
+/** 任務完成事件(階段 3.1)— 進度首次 >= target 時 emit */
+export interface TaskCompletedEvent {
+  task: UserTask;
+}
+
 /** 集中註冊所有 event 名 + payload 型別,emit/on 都吃這張 map 確保型別 */
 export interface EventMap {
   'cultivation:earn': CultivationEarnEvent;
   'cultivation:spend': CultivationSpendEvent;
+  'task:completed': TaskCompletedEvent;
 }
 
 type Listener<T> = (payload: T) => void;
