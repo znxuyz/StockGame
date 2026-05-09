@@ -32,6 +32,7 @@ import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
 import CultivationFloater from '@/components/CultivationFloater';
+import MilestoneCelebration from '@/components/MilestoneCelebration';
 import DailyCheckInModal from '@/components/DailyCheckInModal';
 import BottomBar from '@/components/BottomBar';
 import PhaserMap from '@/game/PhaserMap';
@@ -371,6 +372,7 @@ function Game() {
         cloudSignedIn={!!userId}
       />
       <CultivationFloater />
+      <MilestoneCelebration />
       {checkInStreak && (
         <DailyCheckInModal
           open
