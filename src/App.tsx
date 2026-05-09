@@ -166,6 +166,12 @@ function Game() {
   // 階段 2.6:訂閱 cultivation 兩表,任何 earn/spend 觸發 push debounce
   const userCultivation = useLiveQuery(() => db.userCultivation.get('main'), []);
   const cultivationLog = useLiveQuery(() => db.cultivationLog.count(), []);
+  // 階段 3.8:訂閱 streak / tasks / milestones,任何變動觸發 push debounce
+  // tasks 用 toArray:Dexie liveQuery 對 count 在 update 時不 retrigger,進度推進也要 push
+  // milestones 是 append-only,count 即可
+  const userLoginStreak = useLiveQuery(() => db.userLoginStreak.get('main'), []);
+  const userTasksArr = useLiveQuery(() => db.userTasks.toArray(), []);
+  const milestoneCount = useLiveQuery(() => db.milestoneRewards.count(), []);
 
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   useEffect(() => {
@@ -354,7 +360,10 @@ function Game() {
     achievements,
     settings,
     userCultivation,
-    cultivationLog
+    cultivationLog,
+    userLoginStreak,
+    userTasksArr,
+    milestoneCount
   ]);
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
