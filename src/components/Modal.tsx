@@ -7,6 +7,11 @@ interface ModalProps {
   children: ReactNode;
   /** 隱藏右上角關閉鈕(loading 時用) */
   hideClose?: boolean;
+  /**
+   * 標題列下方額外內容(階段 3.7 修)— 例如 RecordsModal 的 tab 列。
+   * 跟標題同 sticky popup-header 內,完全貼齊不需 caller 自己 hack sticky。
+   */
+  headerExtra?: ReactNode;
 }
 
 /**
@@ -25,7 +30,8 @@ export default function Modal({
   onClose,
   title,
   children,
-  hideClose = false
+  hideClose = false,
+  headerExtra
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -61,6 +67,7 @@ export default function Modal({
                 </button>
               )}
             </div>
+            {headerExtra && <div className="glass-popup-header-extra">{headerExtra}</div>}
           </div>
         )}
         <div className="glass-popup-content">{children}</div>

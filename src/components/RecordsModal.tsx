@@ -58,53 +58,48 @@ export default function RecordsModal({ open, onClose, onPetClick }: RecordsModal
     if (trigger) emitTaskTrigger(trigger, 1);
   }, [open, tab]);
 
-  return (
-    <Modal open={open} onClose={onClose} title="紀錄">
-      <div className="flex flex-col -mx-5 -mt-4">
-        {/* Tabs(sticky 玻璃)— -mx/-mt 拉到 glass-popup-content padding 邊以滿版 */}
-        <div
-          className="grid grid-cols-7 sticky top-0 z-10 border-b"
-          style={{
-            background: 'rgba(250, 246, 232, 0.55)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            borderColor: 'rgba(212, 175, 55, 0.25)'
-          }}
+  /** Tab 列(headerExtra)— 渲染進 popup-header 內,完全貼齊標題下方無空白 */
+  const tabBar = (
+    <div
+      className="grid grid-cols-7 border-b"
+      style={{ borderColor: 'rgba(212, 175, 55, 0.25)' }}
+    >
+      {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => setTab(t)}
+          className={`py-2.5 text-sm font-bold border-b-2 transition-colors ${
+            tab === t
+              ? 'text-mythic-jade-500 border-mythic-jade-400'
+              : 'text-gray-500 border-transparent hover:bg-white/20'
+          }`}
         >
-          {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`py-2.5 text-sm font-bold border-b-2 transition-colors ${
-                tab === t
-                  ? 'text-mythic-jade-500 border-mythic-jade-400'
-                  : 'text-gray-500 border-transparent hover:bg-white/20'
-              }`}
-            >
-              {TAB_LABEL[t]}
-            </button>
-          ))}
-        </div>
+          {TAB_LABEL[t]}
+        </button>
+      ))}
+    </div>
+  );
 
-        <div className="p-4 space-y-3">
-          {tab === 'tasks' && <TasksTab />}
-          {tab === 'overview' && (
-            <>
-              <ReturnCurve />
-              <AdvancedMetrics />
-              <AllocationPie />
-              <MonthlyPnL />
-              <TopHoldings />
-              <HoldTimeDistribution />
-            </>
-          )}
-          {tab === 'compare' && <MarketCompareChart />}
-          {tab === 'achievements' && <AchievementsList />}
-          {tab === 'bestiary' && <Bestiary />}
-          {tab === 'transactions' && <TransactionsList />}
-          {tab === 'cultivation' && <CultivationTab onPetClick={onPetClick} />}
-        </div>
+  return (
+    <Modal open={open} onClose={onClose} title="紀錄" headerExtra={tabBar}>
+      <div className="space-y-3">
+        {tab === 'tasks' && <TasksTab />}
+        {tab === 'overview' && (
+          <>
+            <ReturnCurve />
+            <AdvancedMetrics />
+            <AllocationPie />
+            <MonthlyPnL />
+            <TopHoldings />
+            <HoldTimeDistribution />
+          </>
+        )}
+        {tab === 'compare' && <MarketCompareChart />}
+        {tab === 'achievements' && <AchievementsList />}
+        {tab === 'bestiary' && <Bestiary />}
+        {tab === 'transactions' && <TransactionsList />}
+        {tab === 'cultivation' && <CultivationTab onPetClick={onPetClick} />}
       </div>
     </Modal>
   );
