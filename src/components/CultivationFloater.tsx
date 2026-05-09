@@ -40,27 +40,31 @@ export default function CultivationFloater() {
   const idRef = useRef(0);
 
   useEffect(() => {
+    // 收集所有 pending timer,unmount 時統一清,避免 setState on unmounted。
+    // 實務上 CultivationFloater 在 App root 永不 unmount,但保險起見加 cleanup,
+    // React StrictMode dev 重 mount 也安全。
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+
     const enqueue = (amount: number, type: 'earn' | 'spend') => {
       idRef.current += 1;
       const id = idRef.current;
       const now = Date.now();
-      // 比較「現在」跟「上一個飄字 + stagger」哪個晚,取晚的當這次的延遲基準
       const delay = Math.max(0, nextEmitAtRef.current - now);
       nextEmitAtRef.current = now + delay + STAGGER_OFFSET_MS;
 
       const showT = setTimeout(() => {
+        timers.delete(showT);
         setItems((prev) => [
           ...prev,
           { id, amount, type, large: amount >= LARGE_THRESHOLD }
         ]);
         const removeT = setTimeout(() => {
+          timers.delete(removeT);
           setItems((prev) => prev.filter((i) => i.id !== id));
         }, DURATION_MS);
-        // 不需另外清 timeout — component unmount 也只是 leak 一個 setTimeout,
-        // 1.5s 後自然 GC,可接受
-        void removeT;
+        timers.add(removeT);
       }, delay);
-      void showT;
+      timers.add(showT);
     };
 
     const offEarn = eventBus.on('cultivation:earn', ({ amount }) => enqueue(amount, 'earn'));
@@ -69,6 +73,8 @@ export default function CultivationFloater() {
     return () => {
       offEarn();
       offSpend();
+      for (const t of timers) clearTimeout(t);
+      timers.clear();
     };
   }, []);
 
