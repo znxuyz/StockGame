@@ -8,6 +8,23 @@ export function formatInt(n: number): string {
   return Math.round(n).toLocaleString('zh-TW');
 }
 
+/**
+ * 緊湊整數格式(HUD / 飄字用):
+ *   < 1,000      → 純數字 "987"
+ *   < 10,000     → 千分位 "1,234"
+ *   < 1,000,000  → "12.3K"(1 位小數,夠看細節又省空間)
+ *   >= 1,000,000 → "1.2M"
+ * 負數保留正負號(例如 -1,200 / -12.3K)。
+ */
+export function formatCount(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs < 1000) return sign + Math.round(abs).toString();
+  if (abs < 10_000) return sign + Math.round(abs).toLocaleString('en-US');
+  if (abs < 1_000_000) return `${sign}${(abs / 1000).toFixed(1)}K`;
+  return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
+}
+
 /** 帶正負號的千位逗號（賺/賠用） */
 export function formatSigned(n: number): string {
   const v = Math.round(n);
