@@ -92,13 +92,14 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 本機 IndexedDB（Dexie schema v9） | ✅ |
+| 本機 IndexedDB（Dexie schema v10） | ✅ |
 | 盤中自動更新（每 30s + 背景回前景補抓） | ✅（`silentRefresh` in `App.tsx`） |
 | 「上次更新時間」相對時間 + stale 警示 | ✅（`TopBar`） |
-| 雲端帳號（Magic Link） | ✅（Supabase auth） |
+| 雲端帳號（Apple / Google / Email+密碼） | ✅（Supabase auth；Magic Link 降級為密碼重設） |
 | 雙向 sync + 衝突 dialog | ✅（`cloudSync.ts` + `SyncConflictModal`） |
 | 帳號刪除（雲端 + 本地一起清） | ✅（Cloudflare Function + admin API + 雙擊確認） |
 | PWA 安裝引導（iOS 教學 + Android beforeinstallprompt） | ✅（`InstallPrompt.tsx`） |
+| PWA 自動更新提示（30 分鐘 polling + 玩家可控更新） | ✅（`PwaUpdatePrompt.tsx` + `cleanupOutdatedCaches`） |
 | 國定假日 / 颱風假處理 | ✅（`src/data/holidays.json`） |
 | 產業分類自動歸類 | ✅（`src/data/industries.json`） |
 

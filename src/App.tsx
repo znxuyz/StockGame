@@ -122,6 +122,14 @@ function Game() {
   /** 阻擋初始 sync 完成前的 push(避免空本地把雲端清掉) */
   const allowAutoPushRef = useRef(false);
 
+  // OAuth / Email+密碼登入成功 → SIGNED_IN 事件 → useAuth 更新 session →
+  // 自動關掉 SignInModal(supabase-js 已自行清乾淨 URL hash/query)
+  useEffect(() => {
+    if (userId && modal === 'signin') {
+      setModal(null);
+    }
+  }, [userId, modal]);
+
   // 每分鐘更新 market status(open / after-hours / weekend / holiday)
   useEffect(() => {
     const t = setInterval(() => setMarketStatus(getMarketStatus()), 60_000);

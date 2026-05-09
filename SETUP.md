@@ -103,7 +103,7 @@ create trigger user_data_touch_updated_at
 
 ⚠️ **service_role key 絕對不可以放前端 / commit 進 repo / 帶 `VITE_` 前綴**。它有 admin 權限能繞過 RLS 看任何人資料。
 
-### 2.4 設 Auth Redirect URL(magic link 點完跳回 app 用)
+### 2.4 設 Auth Redirect URL(OAuth callback / 密碼重設信跳回 app 用)
 
 左側 **Authentication → URL Configuration**:
 
@@ -115,6 +115,41 @@ create trigger user_data_touch_updated_at
   ```
 
 按 **Save**。
+
+### 2.5 啟用第三方登入(Apple / Google,可選但推薦)
+
+預設前端會顯示 Apple / Google / Email+密碼 三選一登入。其中 Email+密碼是 Supabase 預設啟用,不用設;Apple / Google 要在 Dashboard 啟用,並去對應的開發者後台拿 Client ID + Secret。
+
+#### Email + 密碼
+
+左側 **Authentication → Providers → Email** 確認啟用(預設 ✓)。
+
+- **Confirm email**:強烈建議**關掉**,讓玩家註冊後立刻可用,不用等驗證信。後續若有 spam 問題再開。
+- **Secure password change**、**Mailer** 等其他選項用預設即可。
+
+#### Sign in with Apple
+
+1. 在 [Apple Developer](https://developer.apple.com/) 申請 Service ID + Sign in with Apple 設定 + Key(完整步驟見 [Supabase 文件](https://supabase.com/docs/guides/auth/social-login/auth-apple))。
+2. Supabase Dashboard → **Authentication → Providers → Apple** → Enable。填:
+   - **Client IDs**:你在 Apple 申請的 Service ID(例 `com.yourname.stockgame`)
+   - **Secret Key (for OAuth)**:用 Apple 給的 .p8 key + Team ID + Key ID 自己生 JWT(Supabase 文件有 OpenSSL 指令)
+3. 把 Supabase 給你的 callback URL(例 `https://abc.supabase.co/auth/v1/callback`)填回 Apple Service ID 的 Return URLs。
+
+#### Sign in with Google
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → Create OAuth Client ID(類型選 Web application)。
+2. **Authorized redirect URIs** 填 Supabase 的 callback URL(例 `https://abc.supabase.co/auth/v1/callback`)。
+3. 拿到 Client ID + Client Secret。
+4. Supabase Dashboard → **Authentication → Providers → Google** → Enable,把 ID + Secret 貼進去。
+
+#### 驗證
+
+部署後在 SignInModal:
+- 點「使用 Apple 登入」/「使用 Google 登入」→ 跳第三方登入頁 → 完成 → 跳回 app 自動登入
+- 用 Email + 密碼註冊 → 立刻可用(若你關了 Confirm email)
+- 點「忘記密碼?」→ 寄一封 magic link 連結到 email,點完跳回 app SIGNED_IN
+
+> Apple / Google 任一個沒啟用,前端按鈕仍會顯示但點下去 Supabase 會回錯誤訊息給玩家。要藏按鈕的話可以在 `SignInModal.tsx` 用 env var feature flag 條件渲染,目前未做。
 
 ---
 
@@ -168,7 +203,10 @@ Cloudflare 部署完會給你一個網址,類似 `your-app.pages.dev`(你 projec
 
 - [ ] 看到首頁、地圖、買入神獸 / 餵食加碼 / 售出神獸 / 紀錄 4 個底部按鈕
 - [ ] 點「設定」應該看到「☁ 雲端同步」section + 「登入以同步資料」橘色按鈕
-- [ ] 點登入 → 輸入信箱 → 寄出 → 收信(若沒收到看垃圾信件夾)→ 點連結 → 跳回 app 自動登入
+- [ ] 點登入 → 三選一(Apple / Google / Email+密碼)
+  - Apple / Google → 跳第三方登入頁 → 完成 → 跳回 app 自動登入
+  - Email + 密碼 → 註冊 / 登入 → 立即生效(前提 Supabase Confirm email 關掉)
+  - 忘記密碼 → 寄重設連結到 email,點連結跳回 app 後改密碼
 - [ ] 右上 TopBar 出現 ☁ ✓ icon
 - [ ] 隨便買一檔股票 → 1 秒後 ☁ icon 短暫變 ⟳ 又變回 ✓
 - [ ] Supabase Dashboard → Database → Tables → `user_data` → 看到一筆 row
