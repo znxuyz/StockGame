@@ -94,6 +94,7 @@ export class PetSprite {
   pnlText: Phaser.GameObjects.Text;
   pnlBg: Phaser.GameObjects.Rectangle;
   nameText: Phaser.GameObjects.Text;
+  levelText: Phaser.GameObjects.Text;
   data: PetSpriteData;
 
   /** 互動目標 — art 走 image+pixelPerfect,emoji 走 emoji text(預設 bounds) */
@@ -145,9 +146,9 @@ export class PetSprite {
       .setOrigin(0.5);
     this.pnlBox = scene.add.container(0, 0, [this.pnlBg, this.pnlText]);
 
-    // 名牌 — 股票名 + 修為等級
+    // 名牌 — 股票名(白底膠囊)
     this.nameText = scene.add
-      .text(0, half + 6, `${data.stockName} · Lv.${data.level}`, {
+      .text(0, half + 6, data.stockName, {
         fontSize: '13px',
         fontFamily: '"Noto Sans TC",sans-serif',
         color: '#1f2937',
@@ -156,7 +157,19 @@ export class PetSprite {
       })
       .setOrigin(0.5, 0);
 
-    this.container.add([this.image, this.emoji, this.pnlBox, this.nameText]);
+    // 等級數字 — 名牌下方,金色帶黑邊讓三位數一眼可見(階段 1.4)
+    this.levelText = scene.add
+      .text(0, half + 28, `Lv.${data.level}`, {
+        fontSize: '15px',
+        fontFamily: '"Noto Sans TC",sans-serif',
+        fontStyle: 'bold',
+        color: '#fbbf24',
+        stroke: '#1f2937',
+        strokeThickness: 3
+      })
+      .setOrigin(0.5, 0);
+
+    this.container.add([this.image, this.emoji, this.pnlBox, this.nameText, this.levelText]);
 
     // 魂環渲染器(addAt 0 把 ring 放最底層,sprite 蓋在上面)
     this.ringRenderer = new SoulRingRenderer(scene, this.container, SPRITE_DISPLAY_SIZE);
@@ -234,7 +247,8 @@ export class PetSprite {
     const sign = data.pnl >= 0 ? '+' : '';
     this.pnlText.setText(`${sign}${formatThousands(Math.round(data.pnl))}`);
     this.pnlText.setColor(data.pnl >= 0 ? '#e23b3b' : '#1f9e4a');
-    this.nameText.setText(`${data.stockName} · Lv.${data.level}`);
+    this.nameText.setText(data.stockName);
+    this.levelText.setText(`Lv.${data.level}`);
 
     if (prev?.pnl !== undefined && prev.pnl !== data.pnl) {
       this.flashPnL(data.pnl > prev.pnl ? 0xfde68a : 0xfecaca);
