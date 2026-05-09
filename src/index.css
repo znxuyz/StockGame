@@ -391,3 +391,27 @@ button {
     0 0 6px rgba(251, 191, 36, 0.6),
     0 1px 3px rgba(0, 0, 0, 0.5);
 }
+
+/* 連登里程碑慶祝(階段 3.3)— 3s 全螢幕,黑幕 + 光柱 + 中央文字 */
+@keyframes milestone-overlay {
+  0%   { opacity: 0; }
+  10%  { opacity: 0.6; }
+  85%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+@keyframes milestone-pillar {
+  0%   { opacity: 0; transform: scaleY(0); }
+  20%  { opacity: 0.85; transform: scaleY(1); }
+  85%  { opacity: 0.85; transform: scaleY(1); }
+  100% { opacity: 0; transform: scaleY(1); }
+}
+@keyframes milestone-text {
+  0%   { opacity: 0; transform: scale(0.5); }
+  20%  { opacity: 1; transform: scale(1.15); }
+  30%  { transform: scale(1); }
+  85%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+.milestone-overlay { animation: milestone-overlay 3000ms ease-in-out forwards; }
+.milestone-pillar  { animation: milestone-pillar 3000ms cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: bottom; }
+.milestone-text    { animation: milestone-text 3000ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
