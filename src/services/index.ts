@@ -69,6 +69,7 @@ export {
   incrementTaskProgress,
   claimTaskReward,
   getActiveTasks,
-  checkAndGenerateDailyTasks
+  checkAndGenerateDailyTasks,
+  checkAndGenerateWeeklyTasks
 } from './taskService';
 export type { ClaimTaskResult, ActiveTasks } from './taskService';

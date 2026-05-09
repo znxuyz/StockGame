@@ -18,6 +18,7 @@ import {
   audio,
   checkAndUpdateStreak,
   checkAndGenerateDailyTasks,
+  checkAndGenerateWeeklyTasks,
   type PortfolioSummary
 } from '@/services';
 import type { LoginStreak } from '@/types';
@@ -127,6 +128,7 @@ function Game() {
         setCheckInStreak(result.streak);
       }
       await checkAndGenerateDailyTasks();
+      await checkAndGenerateWeeklyTasks();
     })();
     return () => {
       mounted = false;
