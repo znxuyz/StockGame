@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import type { WorldScene } from './scene';
+import { SoulRingRenderer } from './soulRing';
+import type { SoulRealm, RingEffect } from '@/services/petTier';
 
 /**
  * 一隻寵物的視覺單位（立繪 / emoji + 損益標籤 + 名稱）。
@@ -35,6 +37,10 @@ export interface PetSpriteData {
   stockName: string;
   pnl: number;
   level: number;
+  /** 魂環境界(凡/靈/妖/神/聖/仙)— 由 services/petTier.getRealm 算 */
+  realm: SoulRealm;
+  /** 魂環特效(暗/普通/脈動/旋轉/噴光)— 由 services/petTier.getRingEffect 算 */
+  effect: RingEffect;
 }
 
 /** 自由漫遊速度(px/sec) */
@@ -96,6 +102,8 @@ export class PetSprite {
   private facingLeft = false;
   /** 抵達目標後排程的「下一輪 wander」timer,relocate/destroy 要取消 */
   private pendingTimer: Phaser.Time.TimerEvent | null = null;
+  /** 9 顆魂環半圓渲染器(階段 1.2) */
+  private ringRenderer: SoulRingRenderer;
 
   constructor(scene: Phaser.Scene, x: number, y: number, data: PetSpriteData) {
     this.scene = scene;
@@ -150,6 +158,9 @@ export class PetSprite {
 
     this.container.add([this.image, this.emoji, this.pnlBox, this.nameText]);
 
+    // 魂環渲染器(addAt 0 把 ring 放最底層,sprite 蓋在上面)
+    this.ringRenderer = new SoulRingRenderer(scene, this.container, SPRITE_DISPLAY_SIZE);
+
     // === 互動 ===
     // pixelPerfect 必須對有 texture 的 GameObject 設,Container 沒 texture。
     // 所以拿 image(art)或 emoji(fallback)當 hitTarget,事件 listener 都掛上去。
@@ -203,7 +214,7 @@ export class PetSprite {
   }
 
   applyData(data: PetSpriteData) {
-    const prevPnl = this.data?.pnl;
+    const prev = this.data;
     this.data = data;
 
     const key = spriteKey(data.speciesId);
@@ -225,8 +236,17 @@ export class PetSprite {
     this.pnlText.setColor(data.pnl >= 0 ? '#e23b3b' : '#1f9e4a');
     this.nameText.setText(`${data.stockName} · Lv.${data.level}`);
 
-    if (prevPnl !== undefined && prevPnl !== data.pnl) {
-      this.flashPnL(data.pnl > prevPnl ? 0xfde68a : 0xfecaca);
+    if (prev?.pnl !== undefined && prev.pnl !== data.pnl) {
+      this.flashPnL(data.pnl > prev.pnl ? 0xfde68a : 0xfecaca);
+    }
+
+    // 魂環:realm 變動 → 重畫 9 顆環(換顏色);只 effect 變動 → 只切 alpha 不重畫
+    const realmChanged = !prev || prev.realm !== data.realm;
+    const effectChanged = !prev || prev.effect !== data.effect;
+    if (realmChanged) {
+      this.ringRenderer.render(data.realm, data.effect);
+    } else if (effectChanged) {
+      this.ringRenderer.applyEffect(data.effect);
     }
   }
 
@@ -382,6 +402,7 @@ export class PetSprite {
       this.pendingTimer.remove();
       this.pendingTimer = null;
     }
+    this.ringRenderer.destroy();
     this.container.destroy();
   }
 }
