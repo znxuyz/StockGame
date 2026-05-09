@@ -51,6 +51,7 @@ import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
 import InstallPrompt from '@/components/InstallPrompt';
 import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
+import PasswordRecoveryModal from '@/components/PasswordRecoveryModal';
 import SignInModal from '@/components/SignInModal';
 import type { Pet, Stock } from '@/types';
 
@@ -510,6 +511,9 @@ function Game() {
       {/* PWA 安裝提示(iOS Safari 顯示加入主畫面說明、Android 顯示安裝鈕;
           已裝桌面或 7 天內被關掉就不顯示) */}
       <InstallPrompt />
+
+      {/* 重設密碼回 app 後的設新密碼彈窗,訂閱 PASSWORD_RECOVERY 事件自動跳出 */}
+      <PasswordRecoveryModal />
     </div>
   );
 }
