@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
 import { claimTodayLogin, STREAK_MILESTONES } from '@/services';
 import type { LoginStreak } from '@/types';
@@ -35,6 +35,18 @@ export default function DailyCheckInModal({ open, onClose, streak }: DailyCheckI
   const [claiming, setClaiming] = useState(false);
   /** 本地鏡像 todayClaimed,讓「領取後立刻變灰」不必等 useLiveQuery 回流 */
   const [claimedLocal, setClaimedLocal] = useState(streak.todayClaimed);
+  /** 領取後的自動關閉 timer ref,unmount / 手動關時清掉避免 stale onClose 觸發 */
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // unmount 時清 pending auto-close timer
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const isClaimed = streak.todayClaimed || claimedLocal;
   const todayMilestone = STREAK_MILESTONES.find((m) => m.day === streak.currentStreak);
@@ -55,8 +67,11 @@ export default function DailyCheckInModal({ open, onClose, streak }: DailyCheckI
     if (result.success) {
       // 立刻反映 UI(飄字由 eventBus 自動觸發,不用這裡 emit)
       setClaimedLocal(true);
-      // 2s 後自動關,給玩家看完飄字
-      setTimeout(() => onClose(), AUTO_CLOSE_MS);
+      // 2s 後自動關,給玩家看完飄字。timer 存 ref 讓 unmount 時可清
+      autoCloseTimerRef.current = setTimeout(() => {
+        autoCloseTimerRef.current = null;
+        onClose();
+      }, AUTO_CLOSE_MS);
     }
     setClaiming(false);
   };
