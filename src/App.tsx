@@ -17,6 +17,7 @@ import {
   updateTaiexIntraday,
   audio,
   checkAndUpdateStreak,
+  checkAndGenerateDailyTasks,
   type PortfolioSummary
 } from '@/services';
 import type { LoginStreak } from '@/types';
@@ -116,6 +117,7 @@ function Game() {
   }, []);
 
   // 階段 3.2:App 啟動檢查連登狀態,新一天且未領取 → 跳簽到彈窗
+  // 階段 3.4:同時確保今日有 daily 任務(沒有就 shuffle 抽 3 個寫 db)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -124,6 +126,7 @@ function Game() {
       if (result.isNewDay && !result.streak.todayClaimed) {
         setCheckInStreak(result.streak);
       }
+      await checkAndGenerateDailyTasks();
     })();
     return () => {
       mounted = false;
