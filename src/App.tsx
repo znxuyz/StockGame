@@ -322,9 +322,14 @@ function Game() {
           //     (任務不從雲端拉,登入後本地若無就重抽)
           // 不能放任 pullNow 把本地任務清空變成空 tab。
           try {
-            await checkAndUpdateStreak();
+            const after = await checkAndUpdateStreak();
             await checkAndGenerateDailyTasks();
             await checkAndGenerateWeeklyTasks();
+            // 簽到 modal 跟雲端 streak 同步:若雲端今日已領,關掉啟動時跳出的 modal
+            // (避免「點領取後才發現已領」的 stale UX)
+            if (after.streak.todayClaimed) {
+              setCheckInStreak(null);
+            }
           } catch (e) {
             console.warn('[cloud] post-pull task re-init failed:', e);
           }
