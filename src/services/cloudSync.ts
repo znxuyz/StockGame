@@ -20,11 +20,14 @@ import type {
   DailySnapshot,
   Settings,
   UserCultivation,
-  CultivationLog
+  CultivationLog,
+  LoginStreak,
+  UserTask,
+  MilestoneReward
 } from '@/types';
 
-/** SCHEMA_VERSION 2(階段 2.6 加 cultivation 兩表) */
-const SCHEMA_VERSION = 2;
+/** SCHEMA_VERSION 3(階段 3.8 加 simulation/streak/task/milestone 三表) */
+const SCHEMA_VERSION = 3;
 const PUSH_DEBOUNCE_MS = 1000;
 
 export interface CloudBlob {
@@ -40,6 +43,12 @@ export interface CloudBlob {
   userCultivation?: UserCultivation | null;
   /** 階段 2.6:修為變動歷史(append-only) */
   cultivationLog?: CultivationLog[];
+  /** 階段 3.8:連登紀錄(singleton row) */
+  userLoginStreak?: LoginStreak | null;
+  /** 階段 3.8:任務進度 */
+  userTasks?: UserTask[];
+  /** 階段 3.8:連登里程碑領取紀錄 */
+  milestoneRewards?: MilestoneReward[];
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
@@ -77,7 +86,10 @@ async function readAllForSync(): Promise<CloudBlob> {
     snapshots,
     settings,
     userCultivation,
-    cultivationLog
+    cultivationLog,
+    userLoginStreak,
+    userTasks,
+    milestoneRewards
   ] = await Promise.all([
     db.stocks.toArray(),
     db.holdings.toArray(),
@@ -87,7 +99,10 @@ async function readAllForSync(): Promise<CloudBlob> {
     db.snapshots.toArray(),
     db.settings.get('singleton'),
     db.userCultivation.get('main'),
-    db.cultivationLog.toArray()
+    db.cultivationLog.toArray(),
+    db.userLoginStreak.get('main'),
+    db.userTasks.toArray(),
+    db.milestoneRewards.toArray()
   ]);
 
   return {
@@ -100,7 +115,10 @@ async function readAllForSync(): Promise<CloudBlob> {
     snapshots,
     settings: settings ?? null,
     userCultivation: userCultivation ?? null,
-    cultivationLog
+    cultivationLog,
+    userLoginStreak: userLoginStreak ?? null,
+    userTasks,
+    milestoneRewards
   };
 }
 
@@ -108,9 +126,10 @@ async function readAllForSync(): Promise<CloudBlob> {
  * 把雲端 blob 寫回本地。整個交易內先 clear 再 bulkPut,確保沒有殘留。
  * `prices` 表不動(它是 API 抓的,沒在 sync 範圍)。
  *
- * 對舊版 blob(schemaVersion === 1,沒 userCultivation/cultivationLog 欄位)
- * 兩個 cultivation 表的 clear 仍會跑(本地清空),但 bulkPut 因 array 為 undefined 跳過,
- * 結果:本地修為歸零。對 user 來說等於「換手機才登入,雲端還沒有 v2 資料」可接受。
+ * 對舊版 blob 缺欄位的處理:對應的本地表 clear 仍會跑(歸零),
+ * 但 bulkPut 因 array 為 undefined 跳過。等於「換手機才登入,雲端還沒新版資料」。
+ *   v1 → 缺 userCultivation/cultivationLog → 修為歸零
+ *   v2 → 缺 userLoginStreak/userTasks/milestoneRewards → 連登 / 任務歸零
  */
 async function writeAllFromSync(blob: CloudBlob): Promise<void> {
   await db.transaction(
@@ -124,7 +143,10 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       db.snapshots,
       db.settings,
       db.userCultivation,
-      db.cultivationLog
+      db.cultivationLog,
+      db.userLoginStreak,
+      db.userTasks,
+      db.milestoneRewards
     ],
     async () => {
       await db.stocks.clear();
@@ -153,6 +175,16 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
 
       await db.cultivationLog.clear();
       if (blob.cultivationLog?.length) await db.cultivationLog.bulkPut(blob.cultivationLog);
+
+      // 階段 3.8:streak / tasks / milestones 三表
+      await db.userLoginStreak.clear();
+      if (blob.userLoginStreak) await db.userLoginStreak.put(blob.userLoginStreak);
+
+      await db.userTasks.clear();
+      if (blob.userTasks?.length) await db.userTasks.bulkPut(blob.userTasks);
+
+      await db.milestoneRewards.clear();
+      if (blob.milestoneRewards?.length) await db.milestoneRewards.bulkPut(blob.milestoneRewards);
     }
   );
 }
