@@ -508,8 +508,9 @@ export class WorldScene extends Phaser.Scene {
       onComplete: () => pillar.destroy()
     });
 
-    // 3. sprite 放大 1.2x → 縮回
-    sprite.container.setDepth(9200); // 暫時拉到光柱之上,step() 下次會重設
+    // 3. sprite 放大 1.2x → 縮回。lockDepthAt 鎖 3 秒讓 step() 不會立刻把 depth
+    //    蓋回 container.y(否則 sprite 會被 overlay/pillar 蓋住,慶祝視覺失效)
+    sprite.lockDepthAt(9200, 3000);
     this.tweens.add({
       targets: sprite.container,
       scaleX: 1.2,
