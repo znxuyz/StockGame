@@ -27,7 +27,7 @@
 | 項目 | 狀態 |
 |---|---|
 | 50 隻神獸（含立繪 art:true） | ✅（`creatures.ts`） |
-| 50 隻立繪 PNG（背景全去乾淨） | ✅（`public/sprites/`，flood-fill 修過 17 隻殘留） |
+| 50 隻立繪 PNG（背景去乾淨） | ✅（`public/sprites/`，flood-fill 處理 4 隻整片殘留，46 隻保留原始去背狀態） |
 | 2400×1600 大地圖（橫向 3:2） | ✅（`WORLD_WIDTH` / `WORLD_HEIGHT` in `scene.ts`） |
 | 神獸散布整個 world（拖 camera 探索） | ✅（`playableArea` world-relative） |
 | 攝影機可拖可縮（pinch / wheel） | ✅ |
@@ -123,11 +123,15 @@ Bundle (production gzip 估值):
 docs/art-prompts.md（50 個 MJ URL）
     ↓ npm run download:sprites（user 本機）
 public/sprites/<id>.png
-    ↓（如有殘留 / halo）node scripts/flood-fill-sprite-bg.mjs --auto
-public/sprites/<id>.png（4 角 alpha 全乾淨）
-    ↓ Phaser preload
-立繪上場
+    ↓（用 iOS Lift Subject 等手工去背,輸出 PNG with transparent ring）
+public/sprites/<id>.png（transp ≥ 5%,大多數 sprite 在這停下不再處理）
+    ↓（若 transp < 5% 整片無去背 → 跑 flood-fill,跑前 cp 備份)
+node scripts/flood-fill-sprite-bg.mjs <file>.png
+    ↓
+Phaser preload 立繪上場
 ```
+
+> ⚠️ **不對 transp ≥ 5% 的 sprite 跑 flood-fill** — BFS 會跨 transparent gap 進主體，把白色細節誤殺（PR #16 修正了 13 隻被啃的 sprite，gu-hun-ku-shou 從 74% opaque → 31% 又回 74%）
 
 ```
 public/app-icon-source.JPG
