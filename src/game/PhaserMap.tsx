@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Phaser from 'phaser';
 import { db } from '@/db';
 import { getCreature } from '@/data/creatures';
+import { getPetStatus } from '@/services';
 import { WorldScene } from './scene';
 import type { PetSpriteData } from './petSprite';
 
@@ -119,6 +120,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         const marketValue = price ? price.currentPrice * h.shares : h.avgCost * h.shares;
         const pnl = marketValue - h.totalCost;
         const species = getCreature(pet.speciesId);
+        // 三維度狀態(階段 1.1):level / realm / effect 即時算
+        const status = getPetStatus(pet, h, price);
         return {
           petId: pet.id,
           speciesId: pet.speciesId,
@@ -126,7 +129,9 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
           emoji: species?.emoji ?? '❓',
           stockName: stock.name,
           pnl,
-          level: pet.level
+          level: status.level,
+          realm: status.realm,
+          effect: status.effect
         } satisfies PetSpriteData;
       })
       .filter((x): x is PetSpriteData => x !== null);
