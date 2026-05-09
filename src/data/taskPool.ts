@@ -91,3 +91,63 @@ export const DAILY_TASK_POOL: TaskTemplate[] = [
     triggerEvent: 'pet_buy_amount'
   }
 ];
+
+/** 週任務池(階段 3.5)— 每週日 0:00 重置抽 4 個 */
+export const WEEKLY_TASK_POOL: TaskTemplate[] = [
+  {
+    taskKey: 'weekly_streak',
+    title: '七日不輟',
+    description: '連續登入 7 天',
+    target: 7,
+    reward: 100,
+    triggerEvent: 'login'
+  },
+  {
+    taskKey: 'weekly_invest_50k',
+    title: '萬金散去',
+    description: '本週累計買入 NT$ 50,000',
+    target: 50000,
+    reward: 100,
+    triggerEvent: 'pet_buy_amount'
+  },
+  {
+    taskKey: 'weekly_sell_profit',
+    title: '修煉有成',
+    description: '賣出獲利 1 次',
+    target: 1,
+    reward: 100,
+    triggerEvent: 'pet_sell_profit'
+  },
+  {
+    taskKey: 'weekly_realm_up',
+    title: '境界突破',
+    description: '神獸境界突破 1 次',
+    target: 1,
+    reward: 200,
+    triggerEvent: 'realm_breakthrough'
+  },
+  {
+    taskKey: 'weekly_summon',
+    title: '萬獸來朝',
+    description: '召喚 3 隻新神獸',
+    target: 3,
+    reward: 150,
+    triggerEvent: 'pet_buy_new'
+  },
+  {
+    taskKey: 'weekly_level_up',
+    title: '飛躍千級',
+    description: '本週神獸累計升 100 級',
+    target: 100,
+    reward: 150,
+    triggerEvent: 'pet_level_up'
+  },
+  {
+    taskKey: 'weekly_effect',
+    title: '報酬之神',
+    description: '任一神獸報酬率突破 +20%',
+    target: 1,
+    reward: 100,
+    triggerEvent: 'effect_unlock'
+  }
+];

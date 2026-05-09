@@ -22,10 +22,11 @@ import { db } from '@/db';
 import type { TaskTriggerEvent, UserTask, CultivationReason } from '@/types';
 import { earnCultivation } from './cultivationService';
 import { eventBus } from './eventBus';
-import { DAILY_TASK_POOL, type TaskTemplate } from '@/data/taskPool';
+import { DAILY_TASK_POOL, WEEKLY_TASK_POOL, type TaskTemplate } from '@/data/taskPool';
 
-/** 每日抽幾個任務 */
+/** 每日抽幾個 / 每週抽幾個 */
 const DAILY_PICK_COUNT = 3;
+const WEEKLY_PICK_COUNT = 4;
 
 /** Fisher-Yates shuffle,純函式 */
 function shuffle<T>(arr: readonly T[]): T[] {
@@ -53,6 +54,22 @@ function getNextMidnight(now: Date = new Date()): number {
 }
 
 /**
+ * 本週開始 = 上一個週日凌晨 0:00。Date.getDay() 0=Sun, 1=Mon, ..., 6=Sat
+ * 例:今天週三 → 退 3 天到週日;今天週日 → 不退,本週開始就是今天 0:00
+ */
+function getThisWeekStart(now: Date = new Date()): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d.getTime();
+}
+
+/** 下週日凌晨 0:00(本週 resetAt) */
+function getNextWeekStart(now: Date = new Date()): number {
+  return getThisWeekStart(now) + 7 * 24 * 60 * 60 * 1000;
+}
+
+/**
  * 從 template 建一筆 UserTask(progress 0,not completed/claimed)。
  */
 function buildTaskFromTemplate(
@@ -77,29 +94,58 @@ function buildTaskFromTemplate(
   };
 }
 
+interface GenerateOpts {
+  taskType: 'daily' | 'weekly';
+  pool: readonly TaskTemplate[];
+  pickCount: number;
+  /** 本期開始的 unix millis(daily=今日 0:00,weekly=上週日 0:00) */
+  periodStart: number;
+  /** 本期結束(下期開始)的 unix millis,寫進 task.resetAt 給 UI 倒數計時 */
+  periodResetAt: number;
+}
+
 /**
- * 確保今日有 daily 任務:
- *   - 若任一 daily task generatedAt >= 今日凌晨 → 已生成,no-op
- *   - 否則:清掉所有 daily(過期),從 pool shuffle 抽 DAILY_PICK_COUNT 個寫進
- *
- * App.tsx 啟動時呼叫一次。同一天重開不重抽(已生成過)。
+ * Daily / Weekly 共用的「過期才重生」邏輯:
+ *   - 拉現有同 type task,看有沒有 generatedAt >= periodStart
+ *   - 有 → 同期內不重抽(no-op)
+ *   - 沒有 → 清舊(過期未領的也放棄,玩家錯過自負)+ shuffle 抽 pickCount 個寫進
  */
-export async function checkAndGenerateDailyTasks(now: Date = new Date()): Promise<void> {
-  const todayStart = getTodayStart(now);
-  const existing = await db.userTasks.where('taskType').equals('daily').toArray();
-  const hasToday = existing.some((t) => t.generatedAt >= todayStart);
-  if (hasToday) return;
+async function checkAndGenerateTasks(opts: GenerateOpts): Promise<void> {
+  const existing = await db.userTasks.where('taskType').equals(opts.taskType).toArray();
+  const hasCurrentPeriod = existing.some((t) => t.generatedAt >= opts.periodStart);
+  if (hasCurrentPeriod) return;
 
-  // 清舊 daily(包含未領完的,過期就放棄,玩家錯過自負)
-  await db.userTasks.where('taskType').equals('daily').delete();
+  await db.userTasks.where('taskType').equals(opts.taskType).delete();
 
-  const picked = shuffle(DAILY_TASK_POOL).slice(0, DAILY_PICK_COUNT);
-  const generatedAt = now.getTime();
-  const resetAt = getNextMidnight(now);
-
+  const picked = shuffle(opts.pool).slice(0, opts.pickCount);
+  const generatedAt = Date.now();
   for (const t of picked) {
-    await db.userTasks.add(buildTaskFromTemplate(t, 'daily', generatedAt, resetAt));
+    await db.userTasks.add(
+      buildTaskFromTemplate(t, opts.taskType, generatedAt, opts.periodResetAt)
+    );
   }
+}
+
+/** App.tsx 啟動呼叫:確保今日有 daily 任務(同一天重開不重抽) */
+export async function checkAndGenerateDailyTasks(now: Date = new Date()): Promise<void> {
+  await checkAndGenerateTasks({
+    taskType: 'daily',
+    pool: DAILY_TASK_POOL,
+    pickCount: DAILY_PICK_COUNT,
+    periodStart: getTodayStart(now),
+    periodResetAt: getNextMidnight(now)
+  });
+}
+
+/** App.tsx 啟動呼叫:確保本週有 weekly 任務(週日 0:00 重置) */
+export async function checkAndGenerateWeeklyTasks(now: Date = new Date()): Promise<void> {
+  await checkAndGenerateTasks({
+    taskType: 'weekly',
+    pool: WEEKLY_TASK_POOL,
+    pickCount: WEEKLY_PICK_COUNT,
+    periodStart: getThisWeekStart(now),
+    periodResetAt: getNextWeekStart(now)
+  });
 }
 
 /**
