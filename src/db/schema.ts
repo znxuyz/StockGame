@@ -187,6 +187,25 @@ export class StockGameDB extends Dexie {
       userTasks: '++id, taskKey, taskType, completed, claimed',
       milestoneRewards: '++id, &milestoneDay'
     });
+
+    /**
+     * v10:**重大修正** — userTasks 拿掉 `completed` / `claimed` 這兩個 boolean index。
+     *
+     * Root cause:IndexedDB 規範**不接受 boolean 作為 valid key**(只接受
+     * string / number / Date / Array)。Dexie schema declare boolean index 時,
+     * 任何 `db.userTasks.add({...completed: false, claimed: false...})` 會在
+     * IndexedDB 層級 throw DataError → task 完全寫不進去 → 任務 tab 永遠空。
+     *
+     * 修法:stores 改成 `'++id, taskKey, taskType'`,拿掉兩個 boolean index。
+     * UI 端早就用 `.toArray() + memory filter` 不靠這 index(BottomBar / TasksTab),
+     * 拿掉不影響功能。
+     *
+     * 不需要 upgrade callback:只改 schema declaration,Dexie 自動 modify
+     * IndexedDB store schema(IndexedDB 不會丟資料,只更新 indexes)。
+     */
+    this.version(10).stores({
+      userTasks: '++id, taskKey, taskType'
+    });
   }
 }
 
