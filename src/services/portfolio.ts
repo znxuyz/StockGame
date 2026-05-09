@@ -15,7 +15,18 @@ import { db } from '@/db';
 import type { Holding, Pet, Stock, Transaction } from '@/types';
 import { uuid, calcFee, calcTax, type FeeConfig } from '@/utils';
 import { calculateLevel } from './evolution';
-import { pickRandomCreature } from '@/data/creatures';
+import { earnCultivation } from './cultivationService';
+import { pickRandomCreature, getCreature } from '@/data/creatures';
+
+/** 修為獎勵金額(階段 2.3),改數字直接從這調 */
+const CULTIVATION_REWARD = {
+  /** 每升 1 級 */
+  perLevelUp: 5,
+  /** 第一次召喚某神獸種類進圖鑑 */
+  firstSummon: 20,
+  /** 賣出獲利,每 NT$1,000 利潤 = 1 點 */
+  perThousandProfit: 1
+} as const;
 
 export interface BuyParams {
   /** 已查到的股票 */
@@ -70,7 +81,18 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
   const fee = calcFee(grossAmount, params.feeConfig);
   const netAmount = grossAmount + fee;
 
-  return await db.transaction('rw', db.holdings, db.pets, db.transactions, db.stocks, async () => {
+  /**
+   * 階段 2.3 獎勵收集:transaction 結束後一次發 earnCultivation,
+   * 避免在交易 tx 內 await 外部 service(會卡住 Dexie tx,且 service 自己也寫 db)。
+   */
+  const cultivationRewards: Array<{
+    amount: number;
+    reason: 'pet_level_up' | 'pet_added_codex';
+    reasonText: string;
+    petId: string;
+  }> = [];
+
+  const result = await db.transaction('rw', db.holdings, db.pets, db.transactions, db.stocks, async () => {
     // 確保 stocks 表有這檔
     const existingStock = await db.stocks.get(params.stock.code);
     if (!existingStock) {
@@ -87,11 +109,12 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
       txnType = 'buy';
       const species = pickRandomCreature();
       const newPetId = uuid();
+      const newLevel = calculateLevel(grossAmount + fee);
       pet = {
         id: newPetId,
         code: params.stock.code,
         speciesId: species.id,
-        level: calculateLevel(grossAmount + fee),
+        level: newLevel,
         bornAt: params.now
       };
       holding = {
@@ -104,6 +127,31 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
         lastTransactionAt: params.now,
         petId: newPetId
       };
+
+      // 第一次召喚此 species(包含已退役的舊 pet 也算)→ +20 修為
+      const existingSameSpeciesCount = await db.pets
+        .where('speciesId')
+        .equals(species.id)
+        .count();
+      if (existingSameSpeciesCount === 0) {
+        cultivationRewards.push({
+          amount: CULTIVATION_REWARD.firstSummon,
+          reason: 'pet_added_codex',
+          reasonText: `召喚新神獸:${species.name}`,
+          petId: newPetId
+        });
+      }
+
+      // 新檔買入也算「從 0 升到 newLevel」→ 每級 +5
+      if (newLevel > 0) {
+        cultivationRewards.push({
+          amount: newLevel * CULTIVATION_REWARD.perLevelUp,
+          reason: 'pet_level_up',
+          reasonText: `${species.name} 達 Lv.${newLevel}`,
+          petId: newPetId
+        });
+      }
+
       await db.pets.put(pet);
       await db.holdings.put(holding);
     } else {
@@ -125,11 +173,24 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
       if (!existingPet) {
         throw new Error(`資料不一致：找不到 holding ${params.stock.code} 對應的寵物`);
       }
+      const oldLevel = existingPet.level;
+      const newLevel = calculateLevel(holding.totalCost);
       pet = {
         ...existingPet,
-        level: calculateLevel(holding.totalCost)
+        level: newLevel
       };
       await db.pets.put(pet);
+
+      // 加碼後升級 → 每升 1 級 +5 修為
+      if (newLevel > oldLevel) {
+        const species = getCreature(pet.speciesId);
+        cultivationRewards.push({
+          amount: (newLevel - oldLevel) * CULTIVATION_REWARD.perLevelUp,
+          reason: 'pet_level_up',
+          reasonText: `${species?.name ?? '神獸'} 升至 Lv.${newLevel}`,
+          petId: pet.id
+        });
+      }
     }
 
     const transaction: Transaction = {
@@ -149,6 +210,13 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
 
     return { holding, pet, transaction };
   });
+
+  // tx 結束後發修為獎勵(每筆獨立寫 db,飄字事件也按順序 emit)
+  for (const r of cultivationRewards) {
+    await earnCultivation(r.amount, r.reason, r.reasonText, r.petId);
+  }
+
+  return result;
 }
 
 /**
@@ -159,7 +227,19 @@ export async function sell(params: SellParams): Promise<ActionResult> {
   ensureValidQty(params.shares);
   ensureValidPrice(params.price);
 
-  return await db.transaction('rw', db.holdings, db.pets, db.transactions, db.stocks, async () => {
+  /**
+   * 賣出獲利的修為獎勵 — tx 內計算好 realizedPnL 後 push,tx 完跑 earnCultivation。
+   * 設計:**每次** sell 都按該次 realizedPnL > 0 給,部分賣 / 全賣都算。
+   * 這樣賣高位部分減倉也有獎勵,不只 settle 全部時。
+   */
+  interface SellReward {
+    amount: number;
+    reasonText: string;
+    petId: string;
+  }
+  const sellRewards: SellReward[] = [];
+
+  const result = await db.transaction('rw', db.holdings, db.pets, db.transactions, db.stocks, async () => {
     const holding = await db.holdings.get(params.code);
     if (!holding) {
       throw new Error(`沒有持有 ${params.code}，無法賣出`);
@@ -235,6 +315,25 @@ export async function sell(params: SellParams): Promise<ActionResult> {
     };
     await db.transactions.put(transaction);
 
+    // 階段 2.3:該次賣出有獲利 → floor(realizedPnL / 1000) 修為(tx 完才發)
+    if (realizedPnL > 0) {
+      const earned = Math.floor(realizedPnL * CULTIVATION_REWARD.perThousandProfit / 1000);
+      if (earned > 0) {
+        const species = getCreature(pet.speciesId);
+        sellRewards.push({
+          amount: earned,
+          reasonText: `賣出 ${species?.name ?? '神獸'} 獲利 NT$${realizedPnL.toLocaleString('en-US')}`,
+          petId: pet.id
+        });
+      }
+    }
+
     return { holding: updatedHolding, pet, transaction };
   });
+
+  for (const r of sellRewards) {
+    await earnCultivation(r.amount, 'sell_profit', r.reasonText, r.petId);
+  }
+
+  return result;
 }
