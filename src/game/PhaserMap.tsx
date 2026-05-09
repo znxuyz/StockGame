@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Phaser from 'phaser';
 import { db } from '@/db';
 import { getCreature } from '@/data/creatures';
-import { getPetStatus } from '@/services';
+import { getPetStatus, realmRank, type SoulRealm } from '@/services';
 import { WorldScene } from './scene';
 import type { PetSpriteData } from './petSprite';
 
@@ -111,6 +111,17 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
     const priceMap = new Map((prices ?? []).map((p) => [p.code, p]));
     const petByCode = new Map(pets.map((p) => [p.code, p]));
 
+    /**
+     * 階段 1.7:境界突破偵測。
+     * 走訪每隻 pet,比對 status.realm vs pet.lastRealmCheck:
+     *   - 升級(rank↑)        → 觸發 scene.celebrateBreakthrough + 寫回 lastRealmCheck
+     *   - 第一次(undefined)→ 只寫回不慶祝(避免新建神獸瞬間放動畫)
+     *   - 同階                → 跳過
+     *   - 降級(理論不會)    → 只寫回不慶祝(safety net)
+     * 寫回 db.pets.update 後 useLiveQuery 會 retrigger,但下次比對相等就 skip,無 loop。
+     */
+    const breakthroughs: Array<{ petId: string; newRealm: SoulRealm; speciesName: string }> = [];
+
     const data: PetSpriteData[] = holdings
       .map((h) => {
         const pet = petByCode.get(h.code);
@@ -122,6 +133,23 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         const species = getCreature(pet.speciesId);
         // 三維度狀態(階段 1.1):level / realm / effect 即時算
         const status = getPetStatus(pet, h, price);
+
+        // 境界突破偵測
+        if (pet.lastRealmCheck !== status.realm) {
+          if (
+            pet.lastRealmCheck !== undefined &&
+            realmRank(status.realm) > realmRank(pet.lastRealmCheck)
+          ) {
+            breakthroughs.push({
+              petId: pet.id,
+              newRealm: status.realm,
+              speciesName: species?.name ?? '神獸'
+            });
+          }
+          // 升級 / 第一次初始化 / 降級 都寫回(下次跑不再觸發)
+          db.pets.update(pet.id, { lastRealmCheck: status.realm });
+        }
+
         return {
           petId: pet.id,
           speciesId: pet.speciesId,
@@ -137,7 +165,13 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
       .filter((x): x is PetSpriteData => x !== null);
 
     // scene.scene / scene.events 在 game READY 後才存在；create() 後 isActive() 才為 true
-    waitForSceneReady(game, scene, () => scene.syncPets(data));
+    waitForSceneReady(game, scene, () => {
+      scene.syncPets(data);
+      // syncPets 完才有 sprite 可以放動畫
+      for (const bt of breakthroughs) {
+        scene.celebrateBreakthrough(bt.petId, bt.newRealm, bt.speciesName);
+      }
+    });
   }, [holdings, pets, stocks, prices]);
 
   const isEmpty = (holdings ?? []).length === 0;

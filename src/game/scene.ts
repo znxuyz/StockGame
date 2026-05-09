@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PetSprite, spriteKey, type PetSpriteData } from './petSprite';
 import { CREATURES } from '@/data/creatures';
+import { REALM_COLOR, realmLabel, type SoulRealm } from '@/services/petTier';
 
 /**
  * 水墨世界場景。
@@ -453,6 +454,104 @@ export class WorldScene extends Phaser.Scene {
   centerCamera() {
     this.cameras.main.scrollX = (WORLD_WIDTH - this.cameras.main.width) / 2;
     this.cameras.main.scrollY = (WORLD_HEIGHT - this.cameras.main.height) / 2;
+  }
+
+  /**
+   * 境界突破慶祝動畫(階段 1.7)。
+   *
+   * 呼叫端(PhaserMap)偵測到 status.realm > pet.lastRealmCheck 觸發。
+   * 整個過程 ~3 秒:
+   *   - 全螢幕黑 overlay 淡入淡出(scrollFactor 0,擋住其他神獸聚焦)
+   *   - 對應顏色光柱從 sprite 腳下升起 + 淡出
+   *   - sprite 放大 1.2x 後縮回
+   *   - 全螢幕中央文字「[名字] 突破至 X 境!」淡入淡出
+   *
+   * 不做的事:
+   *   - 不寫 DB(lastRealmCheck 由呼叫端寫,scene 只負責視覺)
+   *   - 不檢查 oldRealm vs newRealm 大小(由呼叫端把關)
+   *   - 不重畫魂環(sprite.applyData 下次自然會 render 新 realm 顏色)
+   */
+  celebrateBreakthrough(petId: string, newRealm: SoulRealm, speciesName: string) {
+    const sprite = this.sprites.get(petId);
+    if (!sprite) return;
+    const cam = this.cameras.main;
+    const pos = sprite.getPosition();
+
+    // 1. 全螢幕黑 overlay(viewport-fixed,深色幕讓主角凸出)
+    const overlay = this.add.rectangle(
+      cam.width / 2,
+      cam.height / 2,
+      cam.width,
+      cam.height,
+      0x000000
+    );
+    overlay.setAlpha(0).setScrollFactor(0).setDepth(9000);
+    this.tweens.add({
+      targets: overlay,
+      alpha: 0.55,
+      duration: 250,
+      yoyo: true,
+      hold: 2300,
+      onComplete: () => overlay.destroy()
+    });
+
+    // 2. 光柱(world-positioned,跟 sprite 走)
+    const pillarColor = REALM_COLOR[newRealm] ?? 0xff6b35; // xian (null) fallback 橘紅
+    const pillar = this.add.rectangle(pos.x, pos.y + 70, 80, 0, pillarColor, 0.7);
+    pillar.setOrigin(0.5, 1).setDepth(9100);
+    this.tweens.add({
+      targets: pillar,
+      height: 400,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Cubic.easeOut',
+      onComplete: () => pillar.destroy()
+    });
+
+    // 3. sprite 放大 1.2x → 縮回
+    sprite.container.setDepth(9200); // 暫時拉到光柱之上,step() 下次會重設
+    this.tweens.add({
+      targets: sprite.container,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 600,
+      ease: 'Back.easeOut',
+      yoyo: true,
+      hold: 1500,
+      onComplete: () => {
+        sprite.container.setScale(1);
+      }
+    });
+
+    // 4. 全螢幕中央文字
+    const textColor = pillarColor === 0x1a1a1a ? '#cccccc' : `#${pillarColor.toString(16).padStart(6, '0')}`;
+    const title = this.add
+      .text(
+        cam.width / 2,
+        cam.height / 2,
+        `${speciesName} 突破至 ${realmLabel(newRealm)}境!`,
+        {
+          fontSize: '32px',
+          fontFamily: '"Noto Sans TC",sans-serif',
+          fontStyle: 'bold',
+          color: textColor,
+          stroke: '#000000',
+          strokeThickness: 6,
+          align: 'center'
+        }
+      )
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(9300)
+      .setAlpha(0);
+    this.tweens.add({
+      targets: title,
+      alpha: 1,
+      duration: 300,
+      yoyo: true,
+      hold: 2200,
+      onComplete: () => title.destroy()
+    });
   }
 
   destroy() {
