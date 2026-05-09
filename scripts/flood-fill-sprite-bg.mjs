@@ -107,15 +107,12 @@ async function processFile(fp, { flood = true, halo = true } = {}) {
     const i = idx * 4;
     const x = idx % W, y = Math.floor(idx / W);
 
-    // 已透明 → 不算 cleared,但繼續向 4 鄰擴散(讓 BFS 走過已透明邊界帶,
-    // 抵達另一側的殘留)
-    if (data[i + 3] < 5) {
-      if (x > 0) queue.push(idx - 1);
-      if (x < W - 1) queue.push(idx + 1);
-      if (y > 0) queue.push(idx - W);
-      if (y < H - 1) queue.push(idx + W);
-      continue;
-    }
+    // 關鍵不變量:**BFS 不跨越 transparent gap**。
+    // 已透明像素是「之前已被去背」的 bg 邊界,主體被它包圍。
+    // 若 BFS 跨越透明區,會從外圍 bg 經透明 gap 進到「主體內部」,把
+    // 跟 bg 顏色相近的主體淺色像素(白骨、白翼、淺色高光)誤殺。
+    // 正確做法:遇透明就停,只走「跟 edge 經 opaque 路徑連通」的 bg。
+    if (data[i + 3] < 5) continue;
 
     const delta = minDeltaToSeeds(data, i, seeds);
     if (delta < FULL_TRANSPARENT_DELTA) {
