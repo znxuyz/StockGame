@@ -43,11 +43,18 @@ export interface CloudBlob {
   userCultivation?: UserCultivation | null;
   /** 階段 2.6:修為變動歷史(append-only) */
   cultivationLog?: CultivationLog[];
-  /** 階段 3.8:連登紀錄(singleton row) */
+  /** 階段 3.8:連登紀錄(singleton row) — 同步 currentStreak/longestStreak/lastLoginDate */
   userLoginStreak?: LoginStreak | null;
-  /** 階段 3.8:任務進度 */
+  /**
+   * @deprecated 階段 3.8 後改純本地。
+   * 任務有時效性(每日/週),跨裝置同步會清掉本地剛抽的任務。
+   * 雲端 blob 仍保留欄位讓舊 client push 上來不會 reject,但 readAll 不再寫入、
+   * writeAll 不再讀取。新裝置登入後跑 checkAndGenerateTasks 重新生成。
+   */
   userTasks?: UserTask[];
-  /** 階段 3.8:連登里程碑領取紀錄 */
+  /**
+   * @deprecated 同 userTasks。已領取的里程碑由 currentStreak 推算,不需 sync。
+   */
   milestoneRewards?: MilestoneReward[];
 }
 
@@ -75,7 +82,13 @@ export function subscribeSyncStatus(fn: (s: SyncStatus, err: string | null) => v
   return () => statusListeners.delete(fn);
 }
 
-/** 把所有要同步的 Dexie 表讀進 blob */
+/**
+ * 把所有要同步的 Dexie 表讀進 blob。
+ *
+ * 階段 3.8 修正:userTasks / milestoneRewards **不**讀進 blob(純本地狀態)。
+ * 任務跨裝置同步會清掉本地剛抽的任務,違反「每日任務 = 本地時區概念」。
+ * 已領里程碑由 currentStreak 推算,沒必要同步。
+ */
 async function readAllForSync(): Promise<CloudBlob> {
   const [
     stocks,
@@ -87,9 +100,7 @@ async function readAllForSync(): Promise<CloudBlob> {
     settings,
     userCultivation,
     cultivationLog,
-    userLoginStreak,
-    userTasks,
-    milestoneRewards
+    userLoginStreak
   ] = await Promise.all([
     db.stocks.toArray(),
     db.holdings.toArray(),
@@ -100,9 +111,7 @@ async function readAllForSync(): Promise<CloudBlob> {
     db.settings.get('singleton'),
     db.userCultivation.get('main'),
     db.cultivationLog.toArray(),
-    db.userLoginStreak.get('main'),
-    db.userTasks.toArray(),
-    db.milestoneRewards.toArray()
+    db.userLoginStreak.get('main')
   ]);
 
   return {
@@ -116,9 +125,8 @@ async function readAllForSync(): Promise<CloudBlob> {
     settings: settings ?? null,
     userCultivation: userCultivation ?? null,
     cultivationLog,
-    userLoginStreak: userLoginStreak ?? null,
-    userTasks,
-    milestoneRewards
+    userLoginStreak: userLoginStreak ?? null
+    // userTasks / milestoneRewards 故意不寫(階段 3.8 後純本地)
   };
 }
 
@@ -126,10 +134,18 @@ async function readAllForSync(): Promise<CloudBlob> {
  * 把雲端 blob 寫回本地。整個交易內先 clear 再 bulkPut,確保沒有殘留。
  * `prices` 表不動(它是 API 抓的,沒在 sync 範圍)。
  *
- * 對舊版 blob 缺欄位的處理:對應的本地表 clear 仍會跑(歸零),
- * 但 bulkPut 因 array 為 undefined 跳過。等於「換手機才登入,雲端還沒新版資料」。
- *   v1 → 缺 userCultivation/cultivationLog → 修為歸零
- *   v2 → 缺 userLoginStreak/userTasks/milestoneRewards → 連登 / 任務歸零
+ * 階段 3.8 修正:**userTasks / milestoneRewards 不從雲端覆蓋本地**。
+ * 任務跨裝置同步邏輯不對(每日任務是本地時區概念,雲端把今天的任務清掉
+ * 違反期待)。已領里程碑由 currentStreak 推算,不需 sync。
+ *
+ * 流程:登入時 cloudSync.pullNow() 寫完 → caller 跑
+ *   - checkAndUpdateStreak()      根據雲端來的 lastLoginDate 重算 todayClaimed
+ *   - checkAndGenerateDailyTasks  確保今日有任務(本地若已有不重抽)
+ *   - checkAndGenerateWeeklyTasks 同上
+ *
+ * 對舊版 blob(沒 userCultivation/cultivationLog/userLoginStreak)處理:
+ * 對應本地表 clear 後 bulkPut undefined 跳過 → 該功能歸零(等於「換手機才登入,
+ * 雲端還沒新版資料」可接受)。
  */
 async function writeAllFromSync(blob: CloudBlob): Promise<void> {
   await db.transaction(
@@ -144,9 +160,7 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       db.settings,
       db.userCultivation,
       db.cultivationLog,
-      db.userLoginStreak,
-      db.userTasks,
-      db.milestoneRewards
+      db.userLoginStreak
     ],
     async () => {
       await db.stocks.clear();
@@ -176,15 +190,12 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       await db.cultivationLog.clear();
       if (blob.cultivationLog?.length) await db.cultivationLog.bulkPut(blob.cultivationLog);
 
-      // 階段 3.8:streak / tasks / milestones 三表
+      // 階段 3.8:userLoginStreak 同步,userTasks / milestoneRewards 不動本地
       await db.userLoginStreak.clear();
       if (blob.userLoginStreak) await db.userLoginStreak.put(blob.userLoginStreak);
 
-      await db.userTasks.clear();
-      if (blob.userTasks?.length) await db.userTasks.bulkPut(blob.userTasks);
-
-      await db.milestoneRewards.clear();
-      if (blob.milestoneRewards?.length) await db.milestoneRewards.bulkPut(blob.milestoneRewards);
+      // 注意:userTasks / milestoneRewards 不 clear、不 write(純本地狀態)。
+      // caller 在 pullNow 後跑 checkAndGenerateTasks 確保任務存在。
     }
   );
 }
