@@ -1,4 +1,6 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { audio } from '@/services';
+import { db } from '@/db';
 
 interface BottomBarProps {
   onBuy: () => void;
@@ -40,6 +42,18 @@ export default function BottomBar({
   onSettings,
   hasHoldings
 }: BottomBarProps) {
+  // 階段 3.7:可領任務數(completed && !claimed)→ 紀錄按鈕紅點
+  // Dexie 不索引 boolean,直接 toArray + memory filter(任務數量小,效能不擔心)
+  const claimableTaskCount =
+    useLiveQuery(
+      async () => {
+        const tasks = await db.userTasks.toArray();
+        return tasks.filter((t) => t.completed && !t.claimed).length;
+      },
+      [],
+      0
+    ) ?? 0;
+
   return (
     <div className="hud-bottom">
       <div className="grid grid-cols-5 gap-0.5">
@@ -64,6 +78,7 @@ export default function BottomBar({
           src="/assets/btn/records.png"
           onClick={withClick(onRecords)}
           label="紀錄"
+          badge={claimableTaskCount > 0 ? claimableTaskCount : undefined}
         />
         <ActionButton
           src="/assets/btn/settings.png"
@@ -81,15 +96,17 @@ interface ActionButtonProps {
   onClick: () => void;
   label: string;
   disabled?: boolean;
+  /** 右上角紅色 badge 數字(階段 3.7,紀錄按鈕用) */
+  badge?: number;
 }
 
-function ActionButton({ src, onClick, label, disabled }: ActionButtonProps) {
+function ActionButton({ src, onClick, label, disabled, badge }: ActionButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex flex-col items-center justify-end gap-0.5 py-0.5 ${
+      className={`relative flex flex-col items-center justify-end gap-0.5 py-0.5 ${
         disabled
           ? 'opacity-40 grayscale cursor-not-allowed'
           : 'active:scale-95 transition-transform'
@@ -105,6 +122,14 @@ function ActionButton({ src, onClick, label, disabled }: ActionButtonProps) {
       <span className="text-[11px] font-bold tracking-wider text-mythic-ink-200 font-zh">
         {label}
       </span>
+      {badge !== undefined && badge > 0 && (
+        <span
+          className="absolute top-0 right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow"
+          aria-label={`${badge} 項可領取`}
+        >
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
     </button>
   );
 }

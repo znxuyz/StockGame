@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
 import { db } from '@/db';
 import { ACHIEVEMENTS } from '@/data/achievements';
+import { emitTaskTrigger } from '@/services';
+import type { TaskTriggerEvent } from '@/types';
 import { formatInt, formatPrice, formatSigned, formatPercent } from '@/utils';
 import ReturnCurve from './charts/ReturnCurve';
 import AllocationPie from './charts/AllocationPie';
@@ -39,8 +41,22 @@ const TAB_LABEL: Record<Tab, string> = {
  * 用 tab 分區:任務 / 圖表 / 對比 / 成就 / 圖鑑 / 交易明細 / 修為。
  * 任務放第 1 個讓玩家最快看到(階段 3.6)。
  */
+/** tab → task trigger 對應(階段 3.7),沒對應的 tab 不 emit */
+const TAB_TASK_TRIGGER: Partial<Record<Tab, TaskTriggerEvent>> = {
+  overview: 'view_chart',
+  bestiary: 'view_codex',
+  transactions: 'view_records'
+};
+
 export default function RecordsModal({ open, onClose, onPetClick }: RecordsModalProps) {
   const [tab, setTab] = useState<Tab>('tasks');
+
+  // 階段 3.7:tab 切換 → emit task trigger(view_chart / view_codex / view_records)
+  useEffect(() => {
+    if (!open) return;
+    const trigger = TAB_TASK_TRIGGER[tab];
+    if (trigger) emitTaskTrigger(trigger, 1);
+  }, [open, tab]);
 
   return (
     <Modal open={open} onClose={onClose} title="紀錄">

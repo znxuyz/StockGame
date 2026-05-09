@@ -13,7 +13,7 @@
  * 使用前先在下方 EventMap 註冊事件名 + payload 型別,讓 TS 強制檢查。
  */
 
-import type { CultivationReason, UserTask } from '@/types';
+import type { CultivationReason, UserTask, TaskTriggerEvent } from '@/types';
 
 /** 修為賺取事件 */
 export interface CultivationEarnEvent {
@@ -29,6 +29,18 @@ export interface CultivationSpendEvent {
   reasonText: string;
 }
 
+/**
+ * 任務進度觸發事件(階段 3.7)— 業務邏輯各 emit 點 → taskService listener 接 → incrementTaskProgress
+ *
+ * 用「統一 task:trigger event」而不是「11 個 event 各對應 11 種 trigger」,
+ * 簡化:1 個訂閱者(taskService)attach 一次,11 個業務點 emit 同 channel。
+ */
+export interface TaskTriggerEvent_Payload {
+  triggerEvent: TaskTriggerEvent;
+  /** 增加的進度量(累計類用 amount,計次類用 1 或 levelsGained) */
+  delta: number;
+}
+
 /** 任務完成事件(階段 3.1)— 進度首次 >= target 時 emit */
 export interface TaskCompletedEvent {
   task: UserTask;
@@ -38,6 +50,7 @@ export interface TaskCompletedEvent {
 export interface EventMap {
   'cultivation:earn': CultivationEarnEvent;
   'cultivation:spend': CultivationSpendEvent;
+  'task:trigger': TaskTriggerEvent_Payload;
   'task:completed': TaskCompletedEvent;
 }
 

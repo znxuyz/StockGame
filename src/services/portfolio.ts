@@ -16,6 +16,7 @@ import type { Holding, Pet, Stock, Transaction } from '@/types';
 import { uuid, calcFee, calcTax, type FeeConfig } from '@/utils';
 import { calculateLevel } from './evolution';
 import { earnCultivation } from './cultivationService';
+import { emitTaskTrigger } from './taskService';
 import { pickRandomCreature, getCreature } from '@/data/creatures';
 
 /** 修為獎勵金額(階段 2.3),改數字直接從這調 */
@@ -216,6 +217,23 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
     await earnCultivation(r.amount, r.reason, r.reasonText, r.petId);
   }
 
+  // 階段 3.7:任務 trigger emit(放最後,跟修為獎勵同樣 tx 完才出)
+  // - 新檔買入 → pet_buy_new + pet_buy_amount(amount = netAmount,跟買入花費同基準)
+  // - 加碼     → pet_feed   + pet_buy_amount + pet_level_up(if 升級)
+  if (result.transaction.type === 'buy') {
+    emitTaskTrigger('pet_buy_new', 1);
+  } else if (result.transaction.type === 'feed') {
+    emitTaskTrigger('pet_feed', 1);
+  }
+  emitTaskTrigger('pet_buy_amount', netAmount);
+  // levelGained:同 cultivationRewards 已收集 pet_level_up 獎勵,這裡再從 reward 推回
+  const levelUpReward = cultivationRewards.find((r) => r.reason === 'pet_level_up');
+  if (levelUpReward) {
+    // amount = (newLv - oldLv) * 5 → levelsGained = amount / 5
+    const levelsGained = Math.round(levelUpReward.amount / 5);
+    if (levelsGained > 0) emitTaskTrigger('pet_level_up', levelsGained);
+  }
+
   return result;
 }
 
@@ -333,6 +351,11 @@ export async function sell(params: SellParams): Promise<ActionResult> {
 
   for (const r of sellRewards) {
     await earnCultivation(r.amount, 'sell_profit', r.reasonText, r.petId);
+  }
+
+  // 階段 3.7:該次賣出有獲利 → 觸發 pet_sell_profit task trigger(計次任務)
+  if (sellRewards.length > 0) {
+    emitTaskTrigger('pet_sell_profit', 1);
   }
 
   return result;

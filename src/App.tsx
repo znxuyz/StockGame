@@ -19,6 +19,8 @@ import {
   checkAndUpdateStreak,
   checkAndGenerateDailyTasks,
   checkAndGenerateWeeklyTasks,
+  attachTaskListeners,
+  emitTaskTrigger,
   type PortfolioSummary
 } from '@/services';
 import type { LoginStreak } from '@/types';
@@ -35,6 +37,7 @@ import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
 import CultivationFloater from '@/components/CultivationFloater';
 import MilestoneCelebration from '@/components/MilestoneCelebration';
+import TaskCompletedToast from '@/components/TaskCompletedToast';
 import DailyCheckInModal from '@/components/DailyCheckInModal';
 import BottomBar from '@/components/BottomBar';
 import PhaserMap from '@/game/PhaserMap';
@@ -118,9 +121,11 @@ function Game() {
   }, []);
 
   // 階段 3.2:App 啟動檢查連登狀態,新一天且未領取 → 跳簽到彈窗
-  // 階段 3.4:同時確保今日有 daily 任務(沒有就 shuffle 抽 3 個寫 db)
+  // 階段 3.4/3.5:同時確保今日有 daily / 本週有 weekly 任務
+  // 階段 3.7:attach task listeners + emit 'login' 觸發週任務「七日不輟」
   useEffect(() => {
     let mounted = true;
+    const detach = attachTaskListeners();
     (async () => {
       const result = await checkAndUpdateStreak();
       if (!mounted) return;
@@ -129,9 +134,11 @@ function Game() {
       }
       await checkAndGenerateDailyTasks();
       await checkAndGenerateWeeklyTasks();
+      if (result.isNewDay) emitTaskTrigger('login', 1);
     })();
     return () => {
       mounted = false;
+      detach();
     };
   }, []);
 
@@ -378,6 +385,7 @@ function Game() {
       />
       <CultivationFloater />
       <MilestoneCelebration />
+      <TaskCompletedToast />
       {checkInStreak && (
         <DailyCheckInModal
           open
