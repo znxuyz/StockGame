@@ -8,7 +8,9 @@ import type {
   AchievementProgress,
   DailySnapshot,
   Settings,
-  MarketIndexBar
+  MarketIndexBar,
+  UserCultivation,
+  CultivationLog
 } from '@/types';
 
 /**
@@ -33,6 +35,10 @@ export class StockGameDB extends Dexie {
   settings!: Table<Settings, string>;
   /** 大盤指數歷史(只 TAIEX,日 K 收盤 + 盤中最新) */
   marketIndices!: Table<MarketIndexBar, [string, string]>;
+  /** 玩家修為總額(階段 2.1,單一 row id='main') */
+  userCultivation!: Table<UserCultivation, string>;
+  /** 修為變動歷史(階段 2.1,append-only) */
+  cultivationLog!: Table<CultivationLog, number>;
 
   constructor() {
     super('StockGameDB');
@@ -137,6 +143,21 @@ export class StockGameDB extends Dexie {
      *  - 不加 stores indexes(這兩個都不需要被 query)
      */
     this.version(6).stores({});
+
+    /**
+     * v7:修為點數系統(階段 2.1)— 加 2 張表:
+     *   userCultivation(id 'main' 單一 row)— 玩家修為總額
+     *   cultivationLog(++id auto-increment)— 修為變動歷史
+     *
+     * cultivationLog 索引:
+     *   - createdAt:orderBy 拉時間軸快(紀錄 tab 用)
+     *   - reason:filter「只看升級」這類 view
+     *   - relatedPetId:filter「跟某神獸有關的紀錄」(點 pet 跳到歷史)
+     */
+    this.version(7).stores({
+      userCultivation: 'id',
+      cultivationLog: '++id, createdAt, reason, relatedPetId'
+    });
   }
 }
 
