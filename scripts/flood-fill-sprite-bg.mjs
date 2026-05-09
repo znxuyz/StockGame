@@ -24,6 +24,15 @@ const FADE_END_DELTA = 55;
 /** 種子採樣:從 4 個角落各取 N×N 區塊,取 alpha > 50 的像素平均 RGB */
 const SEED_BLOCK = 24;
 const SEED_MIN_ALPHA = 50;
+/**
+ * Halo cleanup:fade 區創造的「主體外淡色光暈」要在 flood-fill 後做形態學清理。
+ *  - HALO_RADIUS = 3:在 3x3 窗(7×7 pixels)內找 opaque 核心
+ *  - HALO_OPAQUE_THRESHOLD = 230:該 pixel alpha >= 230 才算「主體核心」
+ *  - 若 partial-alpha pixel(5–230)的 7×7 鄰域沒任一 opaque pixel,
+ *    視為孤立 halo 殺掉(設為 0)。保留主體 anti-aliased 邊緣(旁邊有核心)。
+ */
+const HALO_RADIUS = 3;
+const HALO_OPAQUE_THRESHOLD = 230;
 
 /**
  * 取一個角落區塊內 alpha > SEED_MIN_ALPHA 的像素平均 RGB(過濾全透明像素,
@@ -55,11 +64,19 @@ function minDeltaToSeeds(data, i, seeds) {
   return min;
 }
 
-async function processFile(fp) {
+async function processFile(fp, { flood = true, halo = true } = {}) {
   const before = await sharp(fp).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { data, info } = before;
   const W = info.width, H = info.height;
   const N = W * H;
+  let cleared = 0, faded = 0, haloRemoved = 0;
+  if (!flood) {
+    if (halo) haloRemoved = haloCleanup(data, W, H);
+    await sharp(data, { raw: { width: W, height: H, channels: 4 } })
+      .png({ compressionLevel: 9 })
+      .toFile(fp);
+    return { cleared: 0, faded: 0, haloRemoved, total: N };
+  }
 
   // 4 角各取 24×24 區塊內 alpha>50 的像素當 seed,任一塊整片透明就跳過該 seed
   const seedsRaw = [
@@ -82,9 +99,6 @@ async function processFile(fp) {
   for (const [x, y] of seedPx) {
     queue.push(y * W + x);
   }
-
-  // 統計
-  let cleared = 0, faded = 0;
 
   while (queue.length > 0) {
     const idx = queue.shift();
@@ -124,18 +138,68 @@ async function processFile(fp) {
     if (y < H - 1) queue.push(idx + W);
   }
 
+  // Halo cleanup pass — 殺掉「主體外的孤立 fade 像素」(看起來像方框淡色 halo)
+  if (halo) haloRemoved = haloCleanup(data, W, H);
+
   await sharp(data, { raw: { width: W, height: H, channels: 4 } })
     .png({ compressionLevel: 9 })
     .toFile(fp);
 
-  return { cleared, faded, total: N };
+  return { cleared, faded, haloRemoved, total: N };
+}
+
+/**
+ * Halo cleanup:殺掉「主體外的孤立 partial-alpha pixel」。
+ * 拷貝原始 alpha 到 snapshot,讀 snapshot 寫 data,避免邊清邊動讓判斷漂移。
+ */
+function haloCleanup(data, W, H) {
+  const snapshot = new Uint8ClampedArray(W * H);
+  for (let i = 0; i < W * H; i++) snapshot[i] = data[i * 4 + 3];
+
+  let removed = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = y * W + x;
+      const a = snapshot[idx];
+      if (a < 5 || a > HALO_OPAQUE_THRESHOLD) continue; // 已透明 / 已主體 → 不動
+
+      let hasOpaqueNeighbor = false;
+      const yMin = Math.max(0, y - HALO_RADIUS);
+      const yMax = Math.min(H - 1, y + HALO_RADIUS);
+      const xMin = Math.max(0, x - HALO_RADIUS);
+      const xMax = Math.min(W - 1, x + HALO_RADIUS);
+      outer: for (let ny = yMin; ny <= yMax; ny++) {
+        for (let nx = xMin; nx <= xMax; nx++) {
+          if (snapshot[ny * W + nx] > HALO_OPAQUE_THRESHOLD) {
+            hasOpaqueNeighbor = true;
+            break outer;
+          }
+        }
+      }
+
+      if (!hasOpaqueNeighbor) {
+        data[idx * 4 + 3] = 0;
+        removed++;
+      }
+    }
+  }
+  return removed;
 }
 
 const args = process.argv.slice(2);
 let files;
 
-if (args[0] === '--auto') {
-  // 自動偵測:任一角 alpha > 30 視為待修
+// 如果有 --halo 旗標,只跑 halo cleanup 不跑 flood-fill(對所有 50 隻安全:halo 只殺
+// 「主體外孤立 partial-alpha pixel」,沒 halo 的 sprite 是 no-op)
+const haloOnly = args.includes('--halo');
+const passOpts = haloOnly ? { flood: false, halo: true } : { flood: true, halo: true };
+
+if (haloOnly) {
+  files = readdirSync(outDir).filter((f) => f.endsWith('.png'));
+  console.log(`--halo 模式:對 ${files.length} 隻 sprite 只跑 halo cleanup(不動 flood-fill)`);
+} else if (args[0] === '--auto') {
+  // 自動偵測:任一角 alpha > 8 OR partial-alpha 像素 > 4% 視為待修
+  // (前者抓「整片殘留 / 邊框 halo」,後者抓「主體外淡色光暈」)
   const all = readdirSync(outDir).filter((f) => f.endsWith('.png'));
   files = [];
   for (const f of all) {
@@ -156,10 +220,13 @@ if (args[0] === '--auto') {
     if (Math.max(...corners) > 15) files.push(f);
   }
   console.log(`自動偵測到 ${files.length} 隻待修:`, files.join(', '));
-} else if (args.length > 0) {
-  files = args.map((a) => basename(a));
+} else if (args.filter((a) => !a.startsWith('--')).length > 0) {
+  files = args.filter((a) => !a.startsWith('--')).map((a) => basename(a));
 } else {
-  console.error('用法: node scripts/flood-fill-sprite-bg.mjs <file1.png>... 或 --auto');
+  console.error('用法:');
+  console.error('  node scripts/flood-fill-sprite-bg.mjs <file1.png>...   # flood-fill + halo 指定檔');
+  console.error('  node scripts/flood-fill-sprite-bg.mjs --auto           # 自動偵測待修');
+  console.error('  node scripts/flood-fill-sprite-bg.mjs --halo           # 全 50 隻只跑 halo cleanup');
   process.exit(1);
 }
 
@@ -168,10 +235,15 @@ let okCount = 0, failCount = 0;
 for (const f of files) {
   const fp = resolve(outDir, f);
   try {
-    const { cleared, faded, total } = await processFile(fp);
+    const { cleared, faded, haloRemoved, total } = await processFile(fp, passOpts);
     const clearedPct = (cleared / total * 100).toFixed(1);
     const fadedPct = (faded / total * 100).toFixed(1);
-    console.log(`  ✓ ${f.padEnd(28)} 清除 ${clearedPct}% | 淡化 ${fadedPct}%`);
+    const haloPct = (haloRemoved / total * 100).toFixed(1);
+    if (passOpts.flood) {
+      console.log(`  ✓ ${f.padEnd(28)} 清除 ${clearedPct}% | 淡化 ${fadedPct}% | halo 殺 ${haloPct}%`);
+    } else {
+      console.log(`  ✓ ${f.padEnd(28)} halo 殺 ${haloPct}%`);
+    }
     okCount++;
   } catch (e) {
     console.error(`  ✗ ${f}: ${e.message}`);
