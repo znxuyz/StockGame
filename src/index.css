@@ -359,3 +359,35 @@ button {
 }
 .flash-up { animation: flash-up 500ms ease-out; }
 .flash-down { animation: flash-down 500ms ease-out; }
+
+/* 修為飄字(階段 2.4)— 1.5s 漸入上飄漸出,large 加金色光圈 */
+@keyframes cultivation-float-up {
+  0%   { opacity: 0; transform: translateY(0)    scale(0.85); }
+  15%  { opacity: 1; transform: translateY(-8px) scale(1);    }
+  80%  { opacity: 1; transform: translateY(-44px) scale(1);   }
+  100% { opacity: 0; transform: translateY(-56px) scale(1);   }
+}
+@keyframes cultivation-float-down {
+  0%   { opacity: 0; transform: translateY(0)    scale(0.85); }
+  15%  { opacity: 1; transform: translateY(8px)  scale(1);    }
+  80%  { opacity: 1; transform: translateY(44px) scale(1);    }
+  100% { opacity: 0; transform: translateY(56px) scale(1);    }
+}
+.cultivation-floater {
+  pointer-events: none;
+  font-weight: 700;
+  font-family: 'Noto Sans TC', sans-serif;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  /* tabular-nums 讓不同數字寬度對齊,避免飄字搖晃 */
+  font-variant-numeric: tabular-nums;
+}
+.cultivation-floater.earn { animation: cultivation-float-up 1500ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cultivation-floater.spend { animation: cultivation-float-down 1500ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cultivation-floater.large {
+  font-size: 18px;
+  text-shadow:
+    0 0 14px rgba(251, 191, 36, 0.85),
+    0 0 6px rgba(251, 191, 36, 0.6),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+}

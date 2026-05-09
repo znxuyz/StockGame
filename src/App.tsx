@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
+import CultivationFloater from '@/components/CultivationFloater';
 import BottomBar from '@/components/BottomBar';
 import PhaserMap from '@/game/PhaserMap';
 import BuyModal from '@/components/BuyModal';
@@ -331,6 +332,7 @@ function Game() {
         refreshing={refreshing}
         cloudSignedIn={!!userId}
       />
+      <CultivationFloater />
 
       <PhaserMap
         onPetClick={handlePetClickById}
