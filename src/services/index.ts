@@ -4,6 +4,21 @@ export { buyOrFeed, sell } from './portfolio';
 export type { BuyParams, SellParams, ActionResult } from './portfolio';
 
 export { calculateLevel } from './evolution';
+export {
+  getRealm,
+  realmLabel,
+  realmRank,
+  realmProgress,
+  REALM_ORDER,
+  REALM_THRESHOLD_MONTHS,
+  REALM_COLOR,
+  getRingEffect,
+  effectLabel,
+  EFFECT_ORDER,
+  EFFECT_THRESHOLD,
+  getPetStatus
+} from './petTier';
+export type { SoulRealm, RingEffect, PetStatus } from './petTier';
 
 export { runPriceUpdate, describePriceUpdateError } from './priceUpdate';
 export type { PriceUpdateResult } from './priceUpdate';

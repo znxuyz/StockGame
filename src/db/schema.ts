@@ -128,6 +128,15 @@ export class StockGameDB extends Dexie {
             delete p.purificationCount;
           });
       });
+
+    /**
+     * v6:三維度養成系統(階段 1.1)準備 — Pet 加 customName / lastRealmCheck 兩個 optional 欄位。
+     *  - 兩欄位都 optional,沒值 = undefined,IndexedDB document store 不需要 schema 改動
+     *  - 純粹 bump version 把「我們開始用這兩欄位」這事釘死
+     *  - 既有 pet 不需要 backfill — 兩欄位首次寫入時會自然出現
+     *  - 不加 stores indexes(這兩個都不需要被 query)
+     */
+    this.version(6).stores({});
   }
 }
 

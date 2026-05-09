@@ -9,7 +9,7 @@
  * 沒有事件 toast。
  */
 
-/** 計算等級:每 1,000 NT$ 投入 = 1 級,最低 1,最高 99 */
+/** 計算等級:每 1,000 NT$ 投入 = 1 級,最低 1,最高 999 */
 export function calculateLevel(totalCost: number): number {
-  return Math.max(1, Math.min(99, Math.floor(totalCost / 1000) + 1));
+  return Math.max(1, Math.min(999, Math.floor(totalCost / 1000) + 1));
 }
