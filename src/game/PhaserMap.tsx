@@ -100,23 +100,6 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
   const pets = useLiveQuery(() => db.pets.filter((p) => !p.retiredAt).toArray(), []);
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
   const prices = useLiveQuery(() => db.prices.toArray(), []);
-  /**
-   * 該 code 最早的 buy/feed timestamp。三維度的「持有月數」優先用這個,
-   * 讓「清倉重買」的歷史時間也算進去(holding.firstPurchasedAt 賣光重買會重設)。
-   * 一次撈全部 buy+feed transactions 在 memory 算 earliest,比 50 次 query 快。
-   */
-  const earliestBuyByCode = useLiveQuery(async () => {
-    const txns = await db.transactions
-      .where('type')
-      .anyOf(['buy', 'feed'])
-      .toArray();
-    const map = new Map<string, number>();
-    for (const t of txns) {
-      const cur = map.get(t.code);
-      if (cur === undefined || t.timestamp < cur) map.set(t.code, t.timestamp);
-    }
-    return map;
-  }, []);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -149,10 +132,9 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         const pnl = marketValue - h.totalCost;
         const species = getCreature(pet.speciesId);
         // 三維度狀態(階段 1.1):level / realm / effect 即時算
-        // monthsHeld 用 transactions 表的「該 code 最早 buy/feed」算,
-        // 讓清倉重買的歷史時間也累積。
-        const firstBuyAt = earliestBuyByCode?.get(h.code);
-        const status = getPetStatus(pet, h, price, firstBuyAt);
+        // monthsHeld 用 holding.firstPurchasedAt — 賣光重買時 holding 被刪除重建,
+        // firstPurchasedAt 重設成重買日,歷史持有時間不累積(設計如此)。
+        const status = getPetStatus(pet, h, price);
 
         // 境界突破偵測
         if (pet.lastRealmCheck !== status.realm) {
@@ -192,7 +174,7 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         scene.celebrateBreakthrough(bt.petId, bt.newRealm, bt.speciesName);
       }
     });
-  }, [holdings, pets, stocks, prices, earliestBuyByCode]);
+  }, [holdings, pets, stocks, prices]);
 
   const isEmpty = (holdings ?? []).length === 0;
 
