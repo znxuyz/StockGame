@@ -189,6 +189,10 @@ export class PetSprite {
     this.bindPointerHandlers();
 
     this.applyData(data);
+    // applyData 第一次 call 時 prev = this.data 已被先 set 成 data,
+    // realm/effect 偵測認為「沒變」會 skip ringRenderer.render — 9 顆魂環就永遠不會被畫。
+    // 補手動 render 一次,確保 sprite 出生就有環。
+    this.ringRenderer.render(data.realm, data.effect);
   }
 
   /** 把 hover / down 事件綁到 hitTarget;hitTarget 改變時(applyData 換 art)要重綁 */
