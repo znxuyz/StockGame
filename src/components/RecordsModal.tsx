@@ -13,6 +13,7 @@ import AdvancedMetrics from './charts/AdvancedMetrics';
 import MarketCompareChart from './charts/MarketCompareChart';
 import Bestiary from './Bestiary';
 import CultivationTab from './CultivationTab';
+import TasksTab from './TasksTab';
 
 interface RecordsModalProps {
   open: boolean;
@@ -21,9 +22,10 @@ interface RecordsModalProps {
   onPetClick?: (petId: string) => void;
 }
 
-type Tab = 'overview' | 'compare' | 'achievements' | 'bestiary' | 'transactions' | 'cultivation';
+type Tab = 'tasks' | 'overview' | 'compare' | 'achievements' | 'bestiary' | 'transactions' | 'cultivation';
 
 const TAB_LABEL: Record<Tab, string> = {
+  tasks: '任務',
   overview: '圖表',
   compare: '對比',
   achievements: '成就',
@@ -34,17 +36,18 @@ const TAB_LABEL: Record<Tab, string> = {
 
 /**
  * 紀錄頁主入口（modal sheet 變體，最大 95vh、可滾動）。
- * 用 tab 分區：圖表 / 對比 / 成就 / 圖鑑 / 交易明細 / 修為。
+ * 用 tab 分區:任務 / 圖表 / 對比 / 成就 / 圖鑑 / 交易明細 / 修為。
+ * 任務放第 1 個讓玩家最快看到(階段 3.6)。
  */
 export default function RecordsModal({ open, onClose, onPetClick }: RecordsModalProps) {
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>('tasks');
 
   return (
     <Modal open={open} onClose={onClose} title="紀錄">
       <div className="flex flex-col -mx-5 -mt-4">
         {/* Tabs(sticky 玻璃)— -mx/-mt 拉到 glass-popup-content padding 邊以滿版 */}
         <div
-          className="grid grid-cols-6 sticky top-0 z-10 border-b"
+          className="grid grid-cols-7 sticky top-0 z-10 border-b"
           style={{
             background: 'rgba(250, 246, 232, 0.55)',
             backdropFilter: 'blur(10px)',
@@ -69,6 +72,7 @@ export default function RecordsModal({ open, onClose, onPetClick }: RecordsModal
         </div>
 
         <div className="p-4 space-y-3">
+          {tab === 'tasks' && <TasksTab />}
           {tab === 'overview' && (
             <>
               <ReturnCurve />
