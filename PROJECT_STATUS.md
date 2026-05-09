@@ -94,7 +94,7 @@ Bundle (production gzip 估值):
 
 | 想找什麼 | 看哪 |
 |---|---|
-| 神獸定義 | `src/data/creatures.ts`（20 隻原創上古神祇） |
+| 神獸定義 | `src/data/creatures.ts`（50 隻原創上古神祇） |
 | 成就定義 | `src/data/achievements.ts` |
 | 境界進化 / 黑化規則 | `src/services/evolution.ts` |
 | 買 / 賣 / 加碼業務邏輯 | `src/services/portfolio.ts` |
