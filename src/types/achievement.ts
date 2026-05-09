@@ -3,7 +3,6 @@ export type AchievementCategory =
   | 'collection' // 收集類
   | 'profit' // 獲利類
   | 'loss' // 虧損類
-  | 'evolution' // 進化類
   | 'long-term' // 長期類
   | 'operation' // 操作類
   | 'social'; // 社交類（單機階段隱藏）

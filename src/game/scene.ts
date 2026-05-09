@@ -347,7 +347,7 @@ export class WorldScene extends Phaser.Scene {
    *  - 新出現的:
    *      a. 用 pickGridCellPosition 找空格(網格分散,均勻散佈整個 playableArea)
    *      b. PetSprite.startWandering() 啟動全地圖自由漫遊
-   *  - 已存在的更新 emoji / tier / 損益
+   *  - 已存在的更新 emoji / level / 損益
    */
   syncPets(pets: PetSpriteData[]) {
     const seen = new Set<string>();

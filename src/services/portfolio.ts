@@ -12,7 +12,7 @@
  */
 
 import { db } from '@/db';
-import type { Holding, Pet, Stock, Transaction, NormalTier } from '@/types';
+import type { Holding, Pet, Stock, Transaction } from '@/types';
 import { uuid, calcFee, calcTax, type FeeConfig } from '@/utils';
 import { calculateLevel } from './evolution';
 import { pickRandomCreature } from '@/data/creatures';
@@ -87,16 +87,11 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
       txnType = 'buy';
       const species = pickRandomCreature();
       const newPetId = uuid();
-      const startTier: NormalTier = 'normal';
       pet = {
         id: newPetId,
         code: params.stock.code,
         speciesId: species.id,
-        tier: startTier,
-        maxNormalTier: startTier,
         level: calculateLevel(grossAmount + fee),
-        evolutionCount: 0,
-        purificationCount: 0,
         bornAt: params.now
       };
       holding = {

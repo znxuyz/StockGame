@@ -126,6 +126,8 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 | 1 | 初始 8 張表 | — |
 | 2 | + marketIndices | 加新表 |
 | 3 | Pet 拿掉 `position` / `territory`（神獸座標改 game scene 內管理；後改為 world-relative playableArea） | upgrade callback 走訪 pets 刪兩欄位，**保留所有用戶資料** |
+| 4 | tier / 黑化 / 淨化 系統移除 step 1：cursed1/2/3 tier → 'normal'。順便 bulkDelete 9 個 corruption / tier 進化成就紀錄 | upgrade callback 改 tier 字串、刪 achievement |
+| 5 | Pet 拔掉 `tier` / `maxNormalTier` / `evolutionCount` / `firstCorruptedAt` / `purificationCount` 五個欄位 + 拔 tier 主鍵索引。新版 Pet 只剩 id / code / speciesId / level / bornAt / retiredAt | stores 改 `'id, code, retiredAt'`(無 tier index) + upgrade callback delete 五欄位 |
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 
@@ -190,6 +192,10 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 - ❌ `top_banner.png`（已改 fixed `.hud`）
 - ❌ `icon.svg`（已改 9 尾狐 PNG）
 - ❌ `Pet.position` / `Pet.territory` 欄位（v3 schema 已刪）
+- ❌ `Pet.tier` / `Pet.maxNormalTier` / `Pet.evolutionCount` / `Pet.firstCorruptedAt` / `Pet.purificationCount` 欄位（v5 schema 已刪）
+- ❌ `Tier` / `NormalTier` / `TIER_ORDER` / `CURSED_ORDER` / `isCorrupted()` 型別與工具（整套 tier 系統移除）
+- ❌ 「凡獸境/靈獸境/妖獸境/神獸境/聖獸境/仙獸境」六階文字標籤 + 「凶獸一/二/三階」黑化標籤（不再使用）
+- ❌ 「進化 / 黑化 / 淨化」事件 toast 與相關成就（first-corruption / cursed-3 / evo-* / purify-1 / celestial-3 都已移除）
 - ❌ `Modal variant="sheet" | "center"` prop（全砍，現在都是抽屜式）
 - ❌ Phaser `pickNewTarget` / `home` / `territory` 概念（改 tween-based 全地圖漫遊）
 - ❌ `setInteractive(new Phaser.Geom.Rectangle/Circle, ...)` 在神獸上（一律 pixelPerfect）

@@ -1,7 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { CREATURES, getCreature } from '@/data/creatures';
-import { isCorrupted } from '@/types';
 
 /**
  * 神獸圖鑑：依陣營分區,已收集的有彩色立繪,未收集的灰階剪影。
@@ -13,9 +12,6 @@ import { isCorrupted } from '@/types';
 export default function Bestiary() {
   const allPets = useLiveQuery(() => db.pets.toArray(), []);
   const ownedSpecies = new Set((allPets ?? []).map((p) => p.speciesId));
-  const everCorrupted = new Set(
-    (allPets ?? []).filter((p) => p.firstCorruptedAt || isCorrupted(p)).map((p) => p.speciesId)
-  );
 
   const grouped = new Map<string, typeof CREATURES>();
   for (const c of CREATURES) {
@@ -38,15 +34,12 @@ export default function Bestiary() {
             <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
               {list.map((c) => {
                 const got = ownedSpecies.has(c.id);
-                const corrupted = everCorrupted.has(c.id);
                 return (
                   <div
                     key={c.id}
                     className={`aspect-square rounded-lg flex flex-col items-center justify-center p-1 text-center overflow-hidden ${
                       got
-                        ? corrupted
-                          ? 'bg-purple-900/10 border border-purple-300'
-                          : 'bg-amber-50 border border-amber-200'
+                        ? 'bg-amber-50 border border-amber-200'
                         : 'bg-gray-100 border border-gray-200'
                     }`}
                     title={c.name + (got ? '' : '(未收集)')}

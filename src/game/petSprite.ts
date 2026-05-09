@@ -35,20 +35,7 @@ export interface PetSpriteData {
   stockName: string;
   pnl: number;
   level: number;
-  tier: PetTier;
-  isCorrupted: boolean;
 }
-
-export type PetTier =
-  | 'normal'
-  | 'spirit'
-  | 'demon'
-  | 'god'
-  | 'saint'
-  | 'celestial'
-  | 'cursed1'
-  | 'cursed2'
-  | 'cursed3';
 
 /** 自由漫遊速度(px/sec) */
 const MOVE_SPEED = 30;
@@ -86,19 +73,6 @@ const BODY_SHAPES: BodyShape[] = [
 const BOUNCE_DURATION = 200;
 /** 反彈後到下一次 wander 的恢復時間(神獸短暫呆著) */
 const BOUNCE_RECOVERY = 300;
-
-/** 境界 → 名牌前綴 emoji,給玩家在地圖上一眼判別 tier */
-const TIER_EMOJI: Record<PetTier, string> = {
-  normal: '⚪',
-  spirit: '🟢',
-  demon: '🟣',
-  god: '🟡',
-  saint: '🟠',
-  celestial: '🌈',
-  cursed1: '⬛',
-  cursed2: '🟥',
-  cursed3: '☠️'
-};
 
 /** 組 Phaser texture key,跟 WorldScene.preload() 註冊的對應 */
 export function spriteKey(speciesId: string): string {
@@ -163,9 +137,9 @@ export class PetSprite {
       .setOrigin(0.5);
     this.pnlBox = scene.add.container(0, 0, [this.pnlBg, this.pnlText]);
 
-    // 名牌 — tier emoji 前綴
+    // 名牌 — 股票名 + 修為等級
     this.nameText = scene.add
-      .text(0, half + 6, `${TIER_EMOJI[data.tier]} ${data.stockName}`, {
+      .text(0, half + 6, `${data.stockName} · Lv.${data.level}`, {
         fontSize: '13px',
         fontFamily: '"Noto Sans TC",sans-serif',
         color: '#1f2937',
@@ -238,22 +212,18 @@ export class PetSprite {
     if (hasTexture) {
       this.image.setTexture(key);
       this.image.setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
-      this.image.setAlpha(data.isCorrupted ? 0.55 : 1);
-      this.image.setTint(data.isCorrupted ? 0x444444 : 0xffffff);
       this.image.setVisible(true);
       this.emoji.setVisible(false);
     } else {
       this.image.setVisible(false);
       this.emoji.setText(data.emoji);
-      this.emoji.setAlpha(data.isCorrupted ? 0.55 : 1);
-      this.emoji.setTint(data.isCorrupted ? 0x444444 : 0xffffff);
       this.emoji.setVisible(true);
     }
 
     const sign = data.pnl >= 0 ? '+' : '';
     this.pnlText.setText(`${sign}${formatThousands(Math.round(data.pnl))}`);
     this.pnlText.setColor(data.pnl >= 0 ? '#e23b3b' : '#1f9e4a');
-    this.nameText.setText(`${TIER_EMOJI[data.tier]} ${data.stockName} · Lv.${data.level}`);
+    this.nameText.setText(`${data.stockName} · Lv.${data.level}`);
 
     if (prevPnl !== undefined && prevPnl !== data.pnl) {
       this.flashPnL(data.pnl > prevPnl ? 0xfde68a : 0xfecaca);
