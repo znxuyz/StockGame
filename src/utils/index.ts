@@ -5,6 +5,7 @@ export {
   formatSigned,
   formatPrice,
   formatPercent,
+  formatCount,
   daysBetween,
   relativeTime
 } from './format';

@@ -3,6 +3,8 @@ import { formatInt, formatSigned, formatPercent } from '@/utils';
 import type { PortfolioSummary } from '@/services';
 import { subscribeSyncStatus, type SyncStatus } from '@/services/cloudSync';
 import { isCloudConfigured } from '@/lib/supabase';
+import { useCultivation } from '@/hooks/useCultivation';
+import CultivationCounter from './CultivationCounter';
 import type { MarketStatus } from '@/api';
 
 interface TopBarProps {
@@ -103,6 +105,9 @@ export default function TopBar({
   }, []);
   const sync = syncDisplay(syncStatus);
 
+  // 訂閱修為餘額(階段 2.2):earn/spend 寫入 Dexie 後 hook 自動 re-render
+  const cultivation = useCultivation();
+
   if (!summary) {
     return (
       <div className="hud">
@@ -171,7 +176,13 @@ export default function TopBar({
             </span>
           )}
           <span>
-            🏆 {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
+            💎{' '}
+            <CultivationCounter
+              value={cultivation.amount}
+              className="text-mythic-gold-500 font-bold"
+            />
+            {' · 🏆 '}
+            {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
           </span>
         </span>
       </div>
