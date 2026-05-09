@@ -116,9 +116,18 @@ create trigger user_data_touch_updated_at
 
 按 **Save**。
 
-### 2.5 啟用第三方登入(Apple / Google,可選但推薦)
+### 2.5 啟用第三方登入(Apple / Google,可選)
 
-預設前端會顯示 Apple / Google / Email+密碼 三選一登入。其中 Email+密碼是 Supabase 預設啟用,不用設;Apple / Google 要在 Dashboard 啟用,並去對應的開發者後台拿 Client ID + Secret。
+**預設前端只顯示 Email + 密碼登入**。Apple / Google 按鈕用 env flag 控制,沒設就不渲染,避免 Supabase provider 還沒啟用時用戶點下去看到錯誤訊息。
+
+啟用步驟:在 Cloudflare Pages 環境變數 / `.env.local` 加上:
+
+```
+VITE_ENABLE_APPLE_LOGIN=true   # 或 false / 不設皆等於關閉
+VITE_ENABLE_GOOGLE_LOGIN=true
+```
+
+**先在 Supabase Dashboard 啟用對應 provider 再開 flag**,否則按鈕雖出現但點下去 Supabase 會回 `provider is not enabled`,前端會用 mapAuthError 翻成「這個登入方式尚未啟用,請改用 Email 登入」顯示給玩家。
 
 #### Email + 密碼
 
@@ -149,7 +158,7 @@ create trigger user_data_touch_updated_at
 - 用 Email + 密碼註冊 → 立刻可用(若你關了 Confirm email)
 - 點「忘記密碼?」→ 寄一封 magic link 連結到 email,點完跳回 app SIGNED_IN
 
-> Apple / Google 任一個沒啟用,前端按鈕仍會顯示但點下去 Supabase 會回錯誤訊息給玩家。要藏按鈕的話可以在 `SignInModal.tsx` 用 env var feature flag 條件渲染,目前未做。
+> Apple / Google 任一個沒啟用 → 對應的 `VITE_ENABLE_*_LOGIN` 別設,按鈕就不會渲染,玩家看到的是純 Email + 密碼登入。
 
 ---
 

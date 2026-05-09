@@ -333,7 +333,7 @@ useEffect deps 加進去,任何變動 → pushDebounced 1s。
 - **achievement `four-symbols` id 保留**：DB 層用 'four-symbols' 當 key 不能改（舊 user 已存），只把名稱改「天罡四極」、target 4 隻改成 鴻鈞道祖 / 玄黃地母 / 滄溟海尊 / 紫微天樞
 - **Vite env var build-time bake**：改 env var **必須** retry deploy 才生效；dev 啟動後改 `.env.local` 也要重啟 dev server
 - **Auth redirect**：Supabase 設定的 Site URL + Redirect URLs 是 hard-coded，新增部署環境（例如 staging）要去 Supabase dashboard 加。OAuth (Apple/Google) 跟密碼重設信都用同一份 redirect allowlist
-- **Apple / Google OAuth provider 沒啟用就點按鈕** → Supabase 會回 `provider is not enabled`。前端 `SignInModal` 仍把按鈕渲染（沒 feature flag），錯誤訊息會直接顯示給玩家。要藏可在 `SignInModal.tsx` 用 env 條件渲染（目前未做）
+- **Apple / Google OAuth provider 預設藏起來**:`SignInModal` 用 `VITE_ENABLE_APPLE_LOGIN` / `VITE_ENABLE_GOOGLE_LOGIN` 兩個 env flag 控制按鈕渲染,預設不顯示。要顯示 → Supabase Dashboard 先啟用 provider,再去 Cloudflare Pages env var 設成 `true` + retry deploy。沒同步好(flag=true 但 provider 沒啟用)點下去會被 `mapAuthError` 翻成「這個登入方式尚未啟用,請改用 Email 登入」
 - **Email confirm 預設開**：Supabase 預設 signUp 後要點 email 確認連結才能登入。SETUP.md 建議關掉（Authentication → Providers → Email → Confirm email），不然 `signUp` 完 session 不會立刻 fire,使用者以為註冊失敗
 - **iOS Safari `navigator.vibrate`**：iOS 不支援，**寫了不會錯但只 Android Chrome / 桌機 Chromium 會震**
 - **Phaser Container + pixelPerfect**：`makePixelPerfect` 必須掛在有 texture 的 GameObject（Image / Sprite）。Container 沒 texture，要把 hit 對象從 container 改到內部 image / emoji

@@ -148,3 +148,36 @@ export async function signOut(): Promise<void> {
   if (!isCloudConfigured) return;
   await supabase.auth.signOut();
 }
+
+/**
+ * 更新已登入使用者的密碼。
+ *  - 用在「忘記密碼」流程:用戶點重設信回到 app 後 supabase-js 會 fire
+ *    PASSWORD_RECOVERY 事件並建立暫時 session,此時呼叫即可改密碼
+ *  - 也可以給已登入用戶在設定頁改密碼用
+ */
+export async function updatePassword(newPassword: string): Promise<AuthResult> {
+  if (!isCloudConfigured) return { ok: false, error: '雲端同步未啟用' };
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
+ * 把 Supabase 原始 error.message 翻成中文友善訊息。
+ * 沒對應的英文訊息直接 fallback 原文,避免漏訊息。
+ */
+export function mapAuthError(rawMessage: string | undefined | null): string {
+  if (!rawMessage) return '操作失敗,請稍後再試';
+  const msg = rawMessage.trim();
+  // 先用 substring 比對(Supabase 訊息有時帶 prefix / suffix)
+  if (/Invalid login credentials/i.test(msg)) return '帳號或密碼錯誤,請重新輸入';
+  if (/User already registered/i.test(msg)) return '這個 email 已註冊過,請改用登入或重設密碼';
+  if (/Email not confirmed/i.test(msg)) return '帳號還沒啟用,請聯繫管理員';
+  if (/Password should be at least \d+ characters/i.test(msg)) return '密碼至少 6 個字元';
+  if (/rate limit|over_email_send_rate_limit/i.test(msg)) return '操作太頻繁,請稍後再試';
+  if (/Email rate limit exceeded/i.test(msg)) return '寄信頻率超過限制,請稍後再試';
+  if (/Unable to validate email address/i.test(msg)) return 'Email 格式不正確';
+  if (/provider is not enabled|Unsupported provider/i.test(msg))
+    return '這個登入方式尚未啟用,請改用 Email 登入';
+  return msg;
+}
