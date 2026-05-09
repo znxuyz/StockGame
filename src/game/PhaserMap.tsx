@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Phaser from 'phaser';
 import { db } from '@/db';
 import { getCreature } from '@/data/creatures';
-import { isCorrupted } from '@/types';
 import { WorldScene } from './scene';
 import type { PetSpriteData } from './petSprite';
 
@@ -127,9 +126,7 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
           emoji: species?.emoji ?? '❓',
           stockName: stock.name,
           pnl,
-          level: pet.level,
-          tier: pet.tier,
-          isCorrupted: isCorrupted(pet)
+          level: pet.level
         } satisfies PetSpriteData;
       })
       .filter((x): x is PetSpriteData => x !== null);

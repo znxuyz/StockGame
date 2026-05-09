@@ -3,8 +3,7 @@ export { audio } from './audio';
 export { buyOrFeed, sell } from './portfolio';
 export type { BuyParams, SellParams, ActionResult } from './portfolio';
 
-export { evolvePet, calculateLevel } from './evolution';
-export type { EvolutionInput, EvolutionResult } from './evolution';
+export { calculateLevel } from './evolution';
 
 export { runPriceUpdate, describePriceUpdateError } from './priceUpdate';
 export type { PriceUpdateResult } from './priceUpdate';

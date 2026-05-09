@@ -22,7 +22,6 @@ import type {
   StockPrice,
   Transaction
 } from '@/types';
-import { isCorrupted } from '@/types';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import { CREATURES } from '@/data/creatures';
 import { computeSummary, type PortfolioSummary } from './summary';
@@ -65,21 +64,6 @@ function holdingProfit(h: Holding, prices: Map<string, StockPrice>): number {
   return p.currentPrice * h.shares - h.totalCost;
 }
 
-/** 「曾經達到過」的境界（用於進化類成就） */
-function maxTierReached(pets: Pet[]): string {
-  const order = ['normal', 'spirit', 'demon', 'god', 'saint', 'celestial'];
-  let best = 0;
-  for (const p of pets) {
-    const idx = order.indexOf(p.maxNormalTier);
-    if (idx > best) best = idx;
-  }
-  return order[best];
-}
-
-function tierIndex(tier: string): number {
-  return ['normal', 'spirit', 'demon', 'god', 'saint', 'celestial'].indexOf(tier);
-}
-
 // 簡易記憶（不存 DB）：first-profit 一旦達成就應永久解鎖，靠 DB 的 unlockedAt 持久化
 // （所有 evaluator 用「once unlocked 永久 true」策略，下面 runAchievementChecks 會處理）
 
@@ -119,14 +103,9 @@ const EVALUATORS: Record<string, Evaluator> = {
   'monthly-12': (c) => monthlyStreakAtLeast(c, 12),
 
   // 虧損類
-  'first-corruption': (c) => unlockedIf(c.allPets.some((p) => p.firstCorruptedAt)),
   'single-down-50': (c) => {
     const has = c.holdings.some((h) => holdingReturnRate(h, c.prices) <= -0.5);
     return unlockedIf(has);
-  },
-  'cursed-3': (c) => {
-    const cursedCount = c.activePets.filter((p) => isCorrupted(p)).length;
-    return threshold(cursedCount, 3);
   },
   'feed-down-5': (c) => {
     // 任何 holding 在加碼 ≥ 5 次後仍為負報酬
@@ -147,21 +126,10 @@ const EVALUATORS: Record<string, Evaluator> = {
     return threshold(lossCount, 10);
   },
 
-  // 進化類
-  'evo-spirit': (c) => unlockedIf(tierIndex(maxTierReached(c.allPets)) >= tierIndex('spirit')),
-  'evo-demon': (c) => unlockedIf(tierIndex(maxTierReached(c.allPets)) >= tierIndex('demon')),
-  'evo-god': (c) => unlockedIf(tierIndex(maxTierReached(c.allPets)) >= tierIndex('god')),
-  'evo-saint': (c) => unlockedIf(tierIndex(maxTierReached(c.allPets)) >= tierIndex('saint')),
-  'evo-celestial': (c) =>
-    unlockedIf(tierIndex(maxTierReached(c.allPets)) >= tierIndex('celestial')),
+  // 等級類
   'level-99': (c) => {
     const max = c.activePets.reduce((m, p) => Math.max(m, p.level), 0);
     return { progress: max, unlocked: max >= 99 };
-  },
-  'purify-1': (c) => unlockedIf(c.allPets.some((p) => p.purificationCount > 0)),
-  'celestial-3': (c) => {
-    const count = c.activePets.filter((p) => p.tier === 'celestial').length;
-    return threshold(count, 3);
   },
 
   // 長期類

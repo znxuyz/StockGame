@@ -4,7 +4,6 @@ import { getCreature } from '@/data/creatures';
 import { getHoldingDetail, type HoldingDetail } from '@/services';
 import { formatInt, formatPrice, formatSigned, formatPercent, daysBetween } from '@/utils';
 import type { Pet, Stock } from '@/types';
-import { isCorrupted } from '@/types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 
@@ -14,30 +13,6 @@ interface PetInfoModalProps {
   pet: Pet | null;
   stock: Stock | null;
 }
-
-const TIER_LABEL: Record<string, string> = {
-  normal: '凡獸境',
-  spirit: '靈獸境',
-  demon: '妖獸境',
-  god: '神獸境',
-  saint: '聖獸境',
-  celestial: '仙獸境',
-  cursed1: '凶獸一階',
-  cursed2: '凶獸二階',
-  cursed3: '凶獸三階'
-};
-
-const TIER_BADGE: Record<string, { label: string; bg: string; text: string }> = {
-  normal: { label: '⚪', bg: 'bg-gray-100', text: 'text-gray-600' },
-  spirit: { label: '🟢', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  demon: { label: '🟣', bg: 'bg-purple-100', text: 'text-purple-700' },
-  god: { label: '🟡', bg: 'bg-amber-100', text: 'text-amber-700' },
-  saint: { label: '🟠', bg: 'bg-orange-100', text: 'text-orange-700' },
-  celestial: { label: '🌈', bg: 'bg-pink-100', text: 'text-pink-700' },
-  cursed1: { label: '⬛', bg: 'bg-purple-900/20', text: 'text-purple-900' },
-  cursed2: { label: '🟥', bg: 'bg-red-900/20', text: 'text-red-900' },
-  cursed3: { label: '☠️', bg: 'bg-black/30', text: 'text-black' }
-};
 
 export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModalProps) {
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
@@ -78,19 +53,15 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
 
   if (!pet || !stock) return null;
   const species = getCreature(pet.speciesId);
-  const corrupted = isCorrupted(pet);
-  const badge = TIER_BADGE[pet.tier];
   const daysHeld = detail ? daysBetween(detail.holding.firstPurchasedAt, Date.now()) : 0;
   const flashClass = priceFlash === 'up' ? 'flash-up' : priceFlash === 'down' ? 'flash-down' : '';
 
   return (
     <Modal open={open} onClose={onClose} title={species?.name ?? '神獸資訊'}>
       <div className="p-4 space-y-3">
-        {/* 神獸頭像 + 境界 — 立繪去背版,不再加圓形背景 */}
+        {/* 神獸頭像 + 修為 */}
         <div className="flex items-center gap-4">
-          <div
-            className={`w-28 h-28 flex items-center justify-center shrink-0 ${corrupted ? 'grayscale brightness-50' : ''}`}
-          >
+          <div className="w-28 h-28 flex items-center justify-center shrink-0">
             {species?.art ? (
               <img
                 src={`/sprites/${species.id}.png`}
@@ -112,13 +83,8 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-bold break-words">
-              {species?.name}
-              {corrupted && <span className="text-red-700 text-sm ml-1">·黑化</span>}
-            </h3>
-            <p className={`text-sm ${badge.text}`}>
-              {badge.label} {TIER_LABEL[pet.tier]} · 修為 Lv.{pet.level}
-            </p>
+            <h3 className="text-xl font-bold break-words">{species?.name}</h3>
+            <p className="text-sm text-gray-700">修為 Lv.{pet.level}</p>
             <p className="text-xs text-gray-500 italic mt-1">{species?.description}</p>
           </div>
         </div>
@@ -182,10 +148,6 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
               </Row>
             )}
             <Row label="持有天數">{daysHeld} 天</Row>
-            <Row label="進化次數">{pet.evolutionCount} 次</Row>
-            {pet.purificationCount > 0 && (
-              <Row label="淨化次數">{pet.purificationCount} 次</Row>
-            )}
           </div>
         )}
       </div>

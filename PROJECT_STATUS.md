@@ -14,8 +14,9 @@
 |---|---|
 | 台股上市 / 上櫃 / ETF 報價 | ✅ |
 | 買入 / 加碼 / 賣出（含手續費 + 證交稅） | ✅ |
-| 寵物境界進化 / 黑化 / 淨化 | ✅ |
-| 50+ 成就（7 類）+ 圖鑑 | ✅ |
+| 寵物境界進化 / 黑化 / 淨化 | ❌ 2026-05 整套移除（v5 schema 拔欄位），等新養成系統 |
+| 寵物修為等級 Lv.1–99（依累積投入算） | ✅ |
+| 30+ 成就（5 類）+ 圖鑑 | ✅ |
 | 紀錄頁 6 圖表 + IRR / 夏普 / MDD | ✅ |
 | 跟大盤比 Alpha（90 天） | ✅ |
 | 美股 / 港股 / 加密 | ❌（user 決議只做台股） |
@@ -53,7 +54,7 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 本機 IndexedDB（Dexie schema v3） | ✅ |
+| 本機 IndexedDB（Dexie schema v5） | ✅ |
 | 盤中自動更新（每 30s + 背景回前景補抓） | ✅（`silentRefresh` in `App.tsx`） |
 | 「上次更新時間」相對時間 + stale 警示 | ✅（`TopBar`） |
 | 雲端帳號（Magic Link） | ✅（Supabase auth） |
@@ -87,6 +88,8 @@ Bundle (production gzip 估值):
 | v1 | 8 張表：stocks, prices, holdings, pets, transactions, achievements, snapshots, settings |
 | v2 | + marketIndices（複合主鍵 `[symbol+date]`） |
 | v3 | Pet 拿掉廢棄欄位 `position` / `territory`（神獸座標改 game scene 內管理）。upgrade callback 保留所有用戶資料 |
+| v4 | tier / 黑化 / 淨化 系統移除 step 1：cursed1/2/3 → 'normal' 資料 hygiene。順便刪 9 個 corruption / tier 進化相關成就紀錄（`first-corruption`/`cursed-3`/`evo-*`/`purify-1`/`celestial-3`） |
+| v5 | Pet 拔掉 `tier` / `maxNormalTier` / `evolutionCount` / `firstCorruptedAt` / `purificationCount` 五個欄位（同時拔 tier 主鍵索引）。Pet 只剩 id / code / speciesId / level / bornAt / retiredAt。寵物 / 持倉 / 交易 等其他資料完全保留 |
 
 ---
 
@@ -96,7 +99,7 @@ Bundle (production gzip 估值):
 |---|---|
 | 神獸定義 | `src/data/creatures.ts`（50 隻原創上古神祇） |
 | 成就定義 | `src/data/achievements.ts` |
-| 境界進化 / 黑化規則 | `src/services/evolution.ts` |
+| 修為等級計算 | `src/services/evolution.ts`（精簡為 calculateLevel） |
 | 買 / 賣 / 加碼業務邏輯 | `src/services/portfolio.ts` |
 | 雲端同步 | `src/services/cloudSync.ts` |
 | Phaser 場景 + 碰撞 | `src/game/scene.ts` |
@@ -154,7 +157,7 @@ PWA / favicon 上線
 - **碰撞靠軟性方案**（多圓形 body shape + tween bounce），未上 Arcade Physics。實機觀察一週，若還會擠再升級
 - **拖曳神獸不支援**（user 決議）— 只能自由漫遊
 - **iOS 不支援 `navigator.vibrate`** — 只 Android Chrome / 桌機 Chromium 會震
-- **舊用戶 IndexedDB**：v1 → v2 → v3 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
+- **舊用戶 IndexedDB**：v1 → v2 → v3 → v4 → v5 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
 - **Magic link redirect**：Supabase 設定的 Site URL + Redirect URLs 是 hard-coded，新增部署環境（例如 staging）要去 Supabase dashboard 加
 
 ---

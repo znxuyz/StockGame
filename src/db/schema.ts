@@ -72,6 +72,62 @@ export class StockGameDB extends Dexie {
             delete p.territory;
           });
       });
+
+    /**
+     * v4:整套 tier / 黑化 / 淨化 系統移除 — 第一步「資料 hygiene」。
+     *  - 凶獸 tier (cursed1/2/3) 全改回 'normal',讓 v5 拔欄位前資料一致
+     *  - tier 主鍵索引仍保留,等 v5 才一起拔
+     *  - 順便刪除已棄用的 corruption 相關成就紀錄(用戶解過的也拿不到了)
+     */
+    this.version(4)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('pets')
+          .toCollection()
+          .modify((pet) => {
+            const p = pet as Record<string, unknown>;
+            if (p.tier === 'cursed1' || p.tier === 'cursed2' || p.tier === 'cursed3') {
+              p.tier = 'normal';
+            }
+          });
+        const removedAchievements = [
+          'first-corruption',
+          'cursed-3',
+          'evo-spirit',
+          'evo-demon',
+          'evo-god',
+          'evo-saint',
+          'evo-celestial',
+          'purify-1',
+          'celestial-3'
+        ];
+        await tx.table('achievements').bulkDelete(removedAchievements);
+      });
+
+    /**
+     * v5:Pet 拔掉 tier / maxNormalTier / evolutionCount / firstCorruptedAt /
+     *     purificationCount 五個欄位,並從 stores 主鍵索引拔掉 tier。
+     *  - 新版 Pet 只有 id / code / speciesId / level / bornAt / retiredAt
+     *  - 用戶現有 pet 的所有非廢欄位資料(level / bornAt / retiredAt / speciesId)完全保留
+     */
+    this.version(5)
+      .stores({
+        pets: 'id, code, retiredAt' // 拔掉 tier index
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('pets')
+          .toCollection()
+          .modify((pet) => {
+            const p = pet as Record<string, unknown>;
+            delete p.tier;
+            delete p.maxNormalTier;
+            delete p.evolutionCount;
+            delete p.firstCorruptedAt;
+            delete p.purificationCount;
+          });
+      });
   }
 }
 

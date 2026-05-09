@@ -1,29 +1,3 @@
-/**
- * 神獸境界（六階正向 + 三階凶獸）。
- * 升降轉換規則由 evolution 模組統一處理。
- */
-export type Tier =
-  | 'normal' // 凡獸
-  | 'spirit' // 靈獸
-  | 'demon' // 妖獸
-  | 'god' // 神獸
-  | 'saint' // 聖獸
-  | 'celestial' // 仙獸
-  | 'cursed1' // 凶獸一階
-  | 'cursed2' // 凶獸二階
-  | 'cursed3'; // 凶獸三階
-
-export const TIER_ORDER: Tier[] = [
-  'normal',
-  'spirit',
-  'demon',
-  'god',
-  'saint',
-  'celestial'
-];
-
-export const CURSED_ORDER: Tier[] = ['cursed1', 'cursed2', 'cursed3'];
-
 /** 神獸種類定義（靜態資料） */
 export interface CreatureSpecies {
   /** 唯一 id（英文 slug，方便日後加圖檔） */
@@ -46,6 +20,4 @@ export interface CreatureSpecies {
    * 不設或 false → 永遠顯示 emoji。
    */
   art?: boolean;
-  /** 是否凶獸專用（不會在隨機池裡） */
-  cursedOnly?: boolean;
 }

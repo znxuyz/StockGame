@@ -31,21 +31,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'monthly-12', category: 'profit', name: '年度長紅', description: '連續 12 個月每月帳上正報酬。', target: 12 },
 
   // 虧損類（黑色幽默）
-  { id: 'first-corruption', category: 'loss', name: '首次黑化', description: '第一隻寵物落入凶獸境。', target: 1 },
   { id: 'single-down-50', category: 'loss', name: '腰斬達人', description: '單檔股票虧損達 -50%。', target: 1 },
-  { id: 'cursed-3', category: 'loss', name: '凶獸動物園', description: '同時擁有 3 隻凶獸。', target: 3 },
   { id: 'feed-down-5', category: 'loss', name: '越跌越買', description: '同檔加碼 5 次後仍處於虧損狀態。', target: 5 },
   { id: 'realize-loss-10', category: 'loss', name: '割肉藝術家', description: '已實現虧損交易達 10 次。', target: 10 },
 
-  // 進化類
-  { id: 'evo-spirit', category: 'evolution', name: '初登靈獸', description: '首次有寵物突破到靈獸境。', target: 1 },
-  { id: 'evo-demon', category: 'evolution', name: '入妖獸境', description: '首次有寵物突破到妖獸境。', target: 1 },
-  { id: 'evo-god', category: 'evolution', name: '神獸誕生', description: '首次有寵物突破到神獸境。', target: 1 },
-  { id: 'evo-saint', category: 'evolution', name: '聖獸出世', description: '首次有寵物突破到聖獸境。', target: 1 },
-  { id: 'evo-celestial', category: 'evolution', name: '飛升仙獸', description: '首次有寵物突破到仙獸境。', target: 1 },
-  { id: 'level-99', category: 'evolution', name: '修為大成', description: '寵物修為達 Lv.99。', target: 99 },
-  { id: 'purify-1', category: 'evolution', name: '回頭是岸', description: '首次淨化凶獸回到正向境界。', target: 1 },
-  { id: 'celestial-3', category: 'evolution', name: '三仙同朝', description: '同時擁有 3 隻仙獸。', target: 3 },
+  // 修為類
+  { id: 'level-99', category: 'operation', name: '修為大成', description: '單一寵物修為達 Lv.99。', target: 99 },
 
   // 長期類
   { id: 'login-7', category: 'long-term', name: '一週簽到', description: '連續登入 7 天。', target: 7 },
