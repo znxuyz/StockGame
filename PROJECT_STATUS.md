@@ -17,6 +17,7 @@
 | 寵物境界進化 / 黑化 / 淨化（舊系統） | ❌ 2026-05 整套移除（v5 schema 拔欄位） |
 | **三維度養成系統**：等級 Lv.1-999 / 魂環境界 6 階 / 魂環特效 5 種 | ✅（階段 1） |
 | **修為點數系統**：5 個來源 + HUD 💎 + 飄字 + 紀錄 tab + 雲端同步 | ✅（階段 2） |
+| **每日簽到 + 任務系統**：連登 + 里程碑 + 8 daily 池 + 7 weekly 池 + 11 emit 點 + toast + 紅點 | ✅（階段 3） |
 | 30+ 成就（5 類）+ 圖鑑 | ✅ |
 | 紀錄頁 6 圖表 + IRR / 夏普 / MDD | ✅ |
 | 跟大盤比 Alpha（90 天） | ✅ |
@@ -53,10 +54,27 @@
 | 綠色 +N 飄字 1.5s 上飄漸出,amount ≥ 100 加金色光圈 | ✅（`CultivationFloater`） |
 | stagger 0.3s 排隊,連續觸發不重疊 | ✅ |
 | 紀錄頁第 6 個 tab「修為」: 餘額 + 累計 + 歷史 + 載入更多 + 點擊跳神獸 | ✅（`CultivationTab`） |
-| Supabase 雲端同步(沿用 user_data blob 擴充 schemaVersion 1→2) | ✅ |
-| 19 種 reason 代碼(階段 2 用 5 / 階段 3 預留 6 / 階段 4 預留 8) | ✅ |
+| Supabase 雲端同步(沿用 user_data blob 擴充 schemaVersion 1→3) | ✅ |
+| 19 種 reason 代碼 | ✅(階段 2 用 5、階段 3 用 4、階段 4 預留 8) |
 | 消耗管道(改名 / 催熟 / 換配色) | ❌ 階段 4 開放 |
-| 每日簽到 / 任務系統 | ❌ 階段 3 開放 |
+
+### 每日簽到 + 任務系統(階段 3)
+
+| 項目 | 狀態 |
+|---|---|
+| 連登紀錄(currentStreak / longestStreak / todayClaimed / lifetimeLogins) | ✅（`loginStreakService`） |
+| 簽到彈窗:7 日進度格 + 今日獎勵 + 下個里程碑 + 領取按鈕 | ✅（`DailyCheckInModal`） |
+| 連登中斷顯示「歷史最長 N 日」(激勵不羞辱) | ✅ |
+| 里程碑 7/14/30/60/100 日獎勵(+100/200/500/1000/2000) | ✅ |
+| 全螢幕慶祝動畫(黑幕 + 金色光柱 + 中央文字)3s | ✅（`MilestoneCelebration`） |
+| `milestoneRewards` 唯一索引防重領 | ✅ |
+| 每日任務池 8 個 + 凌晨 0:00 抽 3 個 | ✅（`DAILY_TASK_POOL`） |
+| 週任務池 7 個 + 週日 0:00 抽 4 個 | ✅（`WEEKLY_TASK_POOL`） |
+| 進度推進 11 個事件埋點(buy/feed/level_up/sell_profit/realm/effect/view×3/pet_info/login) | ✅ |
+| 任務 tab UI:倒數計時 + 進度條 + 領取按鈕 | ✅（`TasksTab`） |
+| 任務完成提示卡(右上角 emerald-500,3s 滑入滑出) | ✅（`TaskCompletedToast`） |
+| 紀錄按鈕紅點 badge(可領數量,>9 顯「9+」) | ✅ |
+| 統一 `eventBus 'task:trigger'` event 設計(11 emit + 1 listen) | ✅ |
 
 ### UI（玻璃擬態）
 
@@ -74,7 +92,7 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 本機 IndexedDB（Dexie schema v8） | ✅ |
+| 本機 IndexedDB（Dexie schema v9） | ✅ |
 | 盤中自動更新（每 30s + 背景回前景補抓） | ✅（`silentRefresh` in `App.tsx`） |
 | 「上次更新時間」相對時間 + stale 警示 | ✅（`TopBar`） |
 | 雲端帳號（Magic Link） | ✅（Supabase auth） |
@@ -113,6 +131,7 @@ Bundle (production gzip 估值):
 | v6 | Pet 加 `customName?` / `lastRealmCheck?` 兩個 optional 欄位(三維度養成系統用)。no-op upgrade |
 | v7 | 修為點數系統 — 加 2 張表:`userCultivation` (id 'main' singleton)、`cultivationLog` (++id auto, indexed by createdAt/reason/relatedPetId) |
 | v8 | Pet 加 `lastEffectCheck?: RingEffect` optional 欄位(報酬率特效升級偵測用)。no-op upgrade |
+| v9 | 簽到任務系統 — 加 3 張表:`userLoginStreak` (id 'main')、`userTasks` (++id auto, indexed by taskKey/taskType/completed/claimed)、`milestoneRewards` (++id, &milestoneDay 唯一索引防重領) |
 
 ---
 
@@ -128,6 +147,10 @@ Bundle (production gzip 估值):
 | 修為點數服務 | `src/services/cultivationService.ts`（earn/spend/getBalance/getDetail/getHistory） |
 | eventBus | `src/services/eventBus.ts`（飄字 / count-up 跨元件通知） |
 | 修為飄字 / 紀錄 tab | `src/components/CultivationFloater.tsx` / `CultivationTab.tsx` |
+| 連登 + 簽到服務 | `src/services/loginStreakService.ts`（checkAndUpdateStreak / claimTodayLogin / STREAK_MILESTONES） |
+| 任務服務 | `src/services/taskService.ts`（generate daily/weekly + incrementProgress + claim + attachTaskListeners） |
+| 任務池資料 | `src/data/taskPool.ts`（DAILY_TASK_POOL 8 / WEEKLY_TASK_POOL 7） |
+| 簽到 / 里程碑 / 任務 UI | `src/components/DailyCheckInModal.tsx` / `MilestoneCelebration.tsx` / `TasksTab.tsx` / `TaskCompletedToast.tsx` |
 | 買 / 賣 / 加碼業務邏輯 | `src/services/portfolio.ts` |
 | 雲端同步 | `src/services/cloudSync.ts` |
 | Phaser 場景 + 碰撞 | `src/game/scene.ts` |
@@ -185,8 +208,8 @@ PWA / favicon 上線
 - **碰撞靠軟性方案**（多圓形 body shape + tween bounce），未上 Arcade Physics。實機觀察一週，若還會擠再升級
 - **拖曳神獸不支援**（user 決議）— 只能自由漫遊
 - **iOS 不支援 `navigator.vibrate`** — 只 Android Chrome / 桌機 Chromium 會震
-- **舊用戶 IndexedDB**：v1 → v2 → v3 → v4 → v5 → v6 → v7 → v8 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
-- **多裝置修為衝突**：cloudSync 用 blob-level pull-overwrites-local，沒做 field-level merge。雲端 schemaVersion 1→2 兩個 cultivation 欄位 optional，舊 blob pull 後本地修為歸零。若兩裝置同時操作可能互蓋，要做 cross-device 即時同步需加 polling + lifetime_earned max merge
+- **舊用戶 IndexedDB**：v1 → ... → v9 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
+- **多裝置衝突**：cloudSync 用 blob-level pull-overwrites-local，沒做 field-level merge。雲端 schemaVersion 1→3，舊 blob pull 後本地對應表歸零。若兩裝置同時操作可能互蓋（cultivation / streak / tasks 都受影響），要做 cross-device 即時同步需加 polling + 各 field 的合理 merge 策略（lifetime_earned / lifetimeLogins 取 max，task progress 同 taskKey 取大）
 - **Magic link redirect**：Supabase 設定的 Site URL + Redirect URLs 是 hard-coded，新增部署環境（例如 staging）要去 Supabase dashboard 加
 
 ---

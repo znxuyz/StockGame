@@ -131,6 +131,7 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 | 6 | Pet 加 `customName?` / `lastRealmCheck?` optional 欄位(三維度養成系統用) | no-op upgrade(IndexedDB document store 不需 schema 改) |
 | 7 | 修為點數系統 — 加 2 張表 | `userCultivation: 'id'`(singleton 'main')+ `cultivationLog: '++id, createdAt, reason, relatedPetId'` |
 | 8 | Pet 加 `lastEffectCheck?: RingEffect` optional(防報酬率震盪洗修為) | no-op upgrade |
+| 9 | 簽到任務系統 — 加 3 張表:`userLoginStreak`(id 'main' singleton)、`userTasks`(++id auto, indexed by taskKey/taskType/completed/claimed)、`milestoneRewards`(++id, **&milestoneDay 唯一索引**防重領) |
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 
@@ -222,7 +223,93 @@ Phaser sprite 視覺:
 
 ### eventBus
 `src/services/eventBus.ts` 50 行輕量 type-safe event bus,EventMap 集中註冊事件 payload。
-事件:`'cultivation:earn'` / `'cultivation:spend'`,飄字元件訂閱 emit 觸發。
+事件:`'cultivation:earn'` / `'cultivation:spend'` / `'task:trigger'` / `'task:completed'`。
+
+---
+
+## 簽到 + 任務系統(階段 3)
+
+每天打開 App → 領簽到 → 推任務 → 累積修為 → 養神獸的日常循環。
+
+### 連登
+
+App.tsx 啟動 await `checkAndUpdateStreak()`:
+  - 第一次玩 → 建 row, currentStreak = 1
+  - lastLoginDate === today → 同日重開,`isNewDay=false`
+  - lastLoginDate === yesterday → currentStreak += 1, longestStreak 取 max
+  - 更早 → 斷簽,currentStreak = 1
+  - todayClaimed reset = false(進新一天才能再簽)
+
+`isNewDay && !todayClaimed` → 跳 `DailyCheckInModal` 自動。
+
+### 簽到 modal
+
+7 日進度格用 `((currentStreak - 1) % 7) + 1` 算「目前在本週第幾天」。
+streak=8 → 第 1 格(進入下週)。
+
+點「領取今日修煉」呼叫 `claimTodayLogin()`:
+  1. `earnCultivation(10, 'daily_login', ...)` — 基礎簽到
+  2. 命中里程碑(7/14/30/60/100)→ 額外 `earnCultivation(reward, 'streak_milestone', ...)`
+     用 `milestoneRewards.milestoneDay` 唯一索引防重領,
+     race 時 db.add 第二筆 throw catch 跳過
+  3. todayClaimed = true
+
+### 連登中斷 UX
+顯示「歷史最長 N 日」當激勵,不羞辱玩家。
+
+### 里程碑全螢幕慶祝
+`MilestoneCelebration` 訂閱 `eventBus 'cultivation:earn'` 過濾 reason='streak_milestone',
+3 秒全螢幕:黑幕(0.6 alpha)+ 金色光柱(從下往上)+ 中央 🎉 + 文字。
+跟 CultivationFloater 平行 emit,飄字在 HUD 旁、慶祝在中央,不打架。
+
+### 任務池與生成
+
+| 池 | 數量 | 重置時機 | 抽幾個 |
+|---|---|---|---|
+| `DAILY_TASK_POOL` | 8 | 每日凌晨 0:00 | 3 |
+| `WEEKLY_TASK_POOL` | 7 | 每週日凌晨 0:00 | 4 |
+
+App.tsx 啟動 await `checkAndGenerateDailyTasks()` + `checkAndGenerateWeeklyTasks()`:
+  - 拉現有 taskType,若有 generatedAt >= 本期 start → 不重抽
+  - 否則清舊 + shuffle pool 抽 N 個寫進 db.userTasks
+
+`getThisWeekStart` 退到上一個週日 0:00,週日當天就是今天 0:00。
+
+### 統一 task:trigger event
+
+11 個業務點 emit `'task:trigger'` { triggerEvent, delta },
+1 個訂閱者(`taskService.attachTaskListeners`)接 → `incrementTaskProgress`。
+sugar fn `emitTaskTrigger(triggerEvent, delta=1)`,呼叫端不需碰 eventBus 細節。
+
+11 個 emit 點:
+  - `portfolio.buyOrFeed` 新檔 → `pet_buy_new` + `pet_buy_amount`
+  - `portfolio.buyOrFeed` 加碼 → `pet_feed` + `pet_buy_amount`
+  - `portfolio.buyOrFeed` 升級 → `pet_level_up`(levelsGained)
+  - `portfolio.sell` 該次獲利 → `pet_sell_profit`
+  - `PhaserMap` realm 升級 → `realm_breakthrough`
+  - `PhaserMap` effect 升級 → `effect_unlock`
+  - `RecordsModal` overview/bestiary/transactions tab → `view_chart`/`view_codex`/`view_records`
+  - `PetInfoModal` open(pet)→ `open_pet_info`
+  - `App.tsx` 新一天 → `login`
+
+### 任務完成 UX
+
+`TaskCompletedToast` 訂閱 `'task:completed'`,右上角 emerald-500 卡片滑入 3 秒。
+連續多任務完成 stack 往下,各自 3s 自動消失。
+
+`BottomBar` 紀錄按鈕 badge:`useLiveQuery` 拉全 userTasks,memory filter completed && !claimed count。
+Dexie 不索引 boolean,直接 toArray + filter(任務量小)。
+
+### 雲端同步
+`CloudBlob` 加 3 欄(`userLoginStreak` / `userTasks` / `milestoneRewards`)。
+SCHEMA_VERSION 2 → 3。沿用既有 blob 模式不開新 Supabase 表。
+
+`App.tsx` useLiveQuery 訂閱 3 表:
+  - `userLoginStreak.get('main')`
+  - **`userTasks.toArray()`**(用 toArray 不用 count,Dexie liveQuery 對 count 在 update 時不 retrigger,任務 progress 推進也要 push)
+  - `milestoneRewards.count()`(append-only)
+
+useEffect deps 加進去,任何變動 → pushDebounced 1s。
 
 ---
 
@@ -257,6 +344,8 @@ Phaser sprite 視覺:
 - **constructor 內 prev/curr 偵測 first-time skip 陷阱**：PetSprite constructor 先 `this.data = data` 然後 call `this.applyData(data)`,applyData 內 `const prev = this.data` 拿到的就是同一個 `data`,**任何 `prev !== data` 比對全 false → first-time render 被跳過**。階段 1.2 的 9 顆魂環 graphics 整個沒被 draw,在 production 看不到任何環(PR #28 修)。**正解**:constructor 末尾手動 call `ringRenderer.render(realm, effect)` 補第一次。其他「prev !== data 才做」的偵測(flashPnL / levelUp 飄字)維持 skip 是正確的(出生不該閃 / 不該飄)
 - **scene step() 每 frame setDepth 蓋外部 setDepth**:PetSprite.step() 每 tick `setDepth(container.y)` 排序。慶祝動畫想把 sprite 拉到 overlay 之上 `setDepth(9200)` 會立刻被下一 frame 蓋掉,sprite 反而被埋在黑幕下(PR #29 修)。**正解**:用 `sprite.lockDepthAt(value, durationMs)` API,step() 內檢查 `scene.time.now < depthLockUntil` 就 skip 一陣子,讓 setDepth 能維持。
 - **修為 earnCultivation 不能在 db.transaction 內 await**:`earnCultivation` 自己會寫 db.userCultivation + db.cultivationLog,如果包進外層 portfolio 的 `db.transaction` 會 Dexie scope 衝突卡住。**正解**:transaction 內收集獎勵 array(in scope 之外 declare),tx commit 後才 `for ... await earnCultivation(...)` 順發。飄字事件也應該 tx commit 後才出,讓玩家看到的數字跟 DB 狀態一致
+- **Dexie liveQuery 對 count() 在 update 時不 retrigger**:`useLiveQuery(() => db.X.count())` 只在新增/刪除時變,update(同一筆改欄位)不 trigger。如果要偵測「進度推進」這種 update,改用 `toArray()` 拉整 array 當 deps。階段 3.8 雲端同步 userTasks 用 toArray 而非 count 就是這個原因
+- **task:trigger event 設計取捨**:不開 11 個 event 各對應 11 種 trigger,而是用一個統一 `'task:trigger'` event payload `{ triggerEvent, delta }`。1 個訂閱者(`taskService.attachTaskListeners`)attach 一次,11 個業務點 emit 同 channel。優點維護成本低 + 未來改機制只動兩處;缺點每個 emit 要寫 `triggerEvent` 字串(但 TaskTriggerEvent union 確保打字錯誤被 TS 抓)
 
 ---
 
