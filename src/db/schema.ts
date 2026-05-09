@@ -10,7 +10,10 @@ import type {
   Settings,
   MarketIndexBar,
   UserCultivation,
-  CultivationLog
+  CultivationLog,
+  LoginStreak,
+  UserTask,
+  MilestoneReward
 } from '@/types';
 
 /**
@@ -39,6 +42,12 @@ export class StockGameDB extends Dexie {
   userCultivation!: Table<UserCultivation, string>;
   /** 修為變動歷史(階段 2.1,append-only) */
   cultivationLog!: Table<CultivationLog, number>;
+  /** 連登紀錄(階段 3.1,單一 row id='main') */
+  userLoginStreak!: Table<LoginStreak, string>;
+  /** 任務進度(階段 3.1) */
+  userTasks!: Table<UserTask, number>;
+  /** 連登里程碑領取紀錄(階段 3.1) */
+  milestoneRewards!: Table<MilestoneReward, number>;
 
   constructor() {
     super('StockGameDB');
@@ -166,6 +175,18 @@ export class StockGameDB extends Dexie {
      *  - 純粹 bump version 釘死「我們開始用這欄位」
      */
     this.version(8).stores({});
+
+    /**
+     * v9:每日簽到 + 任務系統(階段 3.1)— 加 3 張表:
+     *   userLoginStreak  — 連登紀錄,id='main' 單例
+     *   userTasks        — 任務進度,++id auto + indexed by taskKey/taskType/completed/claimed
+     *   milestoneRewards — 連登里程碑領取紀錄,milestoneDay 唯一索引(&)防重領
+     */
+    this.version(9).stores({
+      userLoginStreak: 'id',
+      userTasks: '++id, taskKey, taskType, completed, claimed',
+      milestoneRewards: '++id, &milestoneDay'
+    });
   }
 }
 

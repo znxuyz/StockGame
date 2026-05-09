@@ -50,4 +50,20 @@ export {
 export type { CultivationDetail, SpendResult } from './cultivationService';
 
 export { eventBus } from './eventBus';
-export type { CultivationEarnEvent, CultivationSpendEvent, EventMap } from './eventBus';
+export type {
+  CultivationEarnEvent,
+  CultivationSpendEvent,
+  TaskCompletedEvent,
+  EventMap
+} from './eventBus';
+
+export {
+  checkAndUpdateStreak,
+  claimTodayLogin,
+  getLoginStreak,
+  STREAK_MILESTONES
+} from './loginStreakService';
+export type { CheckResult, ClaimResult, MilestoneDef } from './loginStreakService';
+
+export { incrementTaskProgress, claimTaskReward, getActiveTasks } from './taskService';
+export type { ClaimTaskResult, ActiveTasks } from './taskService';

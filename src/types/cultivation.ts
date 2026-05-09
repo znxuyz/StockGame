@@ -18,13 +18,12 @@ export type CultivationReason =
   | 'effect_unlock'
   | 'pet_added_codex'
   | 'sell_profit'
-  // ── 賺取(階段 3 預留) ─────────
-  | 'daily_login'
-  | 'streak_7'
-  | 'streak_30'
-  | 'daily_task'
-  | 'weekly_task'
-  | 'achievement'
+  // ── 賺取(階段 3) ─────────────
+  | 'daily_login'         // 每日簽到基礎獎勵
+  | 'streak_milestone'    // 連登里程碑(7/14/30/60/100 共用一個代碼,reasonText 帶天數)
+  | 'daily_task'          // 完成每日任務
+  | 'weekly_task'         // 完成週任務
+  | 'achievement'         // 解鎖成就(階段 3 預留,目前不實作)
   // ── 消耗(階段 4 預留) ─────────
   | 'rename'
   | 'realm_boost'
