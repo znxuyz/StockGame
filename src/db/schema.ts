@@ -158,6 +158,14 @@ export class StockGameDB extends Dexie {
       userCultivation: 'id',
       cultivationLog: '++id, createdAt, reason, relatedPetId'
     });
+
+    /**
+     * v8:Pet 加 lastEffectCheck optional 欄位(階段 2.3)。
+     *  - 對 effect_unlock 修為獎勵做去抖
+     *  - 跟 v6 加 lastRealmCheck 一樣,IndexedDB document store 不需 schema 改
+     *  - 純粹 bump version 釘死「我們開始用這欄位」
+     */
+    this.version(8).stores({});
   }
 }
 

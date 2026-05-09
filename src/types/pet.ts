@@ -29,4 +29,9 @@ export interface Pet {
    * 防止「同一境界突破」反覆觸發動畫。
    */
   lastRealmCheck?: import('@/services/petTier').SoulRealm;
+  /**
+   * 上次魂環特效檢查值(階段 2.3)。effect 升級才 earn 修為,
+   * 從低升高才獎勵,從高降低不扣。防報酬率震盪洗修為。
+   */
+  lastEffectCheck?: import('@/services/petTier').RingEffect;
 }

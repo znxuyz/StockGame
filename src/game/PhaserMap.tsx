@@ -3,7 +3,14 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Phaser from 'phaser';
 import { db } from '@/db';
 import { getCreature } from '@/data/creatures';
-import { getPetStatus, realmRank, type SoulRealm } from '@/services';
+import {
+  getPetStatus,
+  realmRank,
+  realmLabel,
+  EFFECT_ORDER,
+  earnCultivation,
+  type SoulRealm
+} from '@/services';
 import { WorldScene } from './scene';
 import type { PetSpriteData } from './petSprite';
 
@@ -147,9 +154,40 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
               newRealm: status.realm,
               speciesName: species?.name ?? '神獸'
             });
+            // 階段 2.3:升境 +200 修為
+            earnCultivation(
+              200,
+              'realm_breakthrough',
+              `${species?.name ?? '神獸'} 突破至${realmLabel(status.realm)}境`,
+              pet.id
+            );
           }
           // 升級 / 第一次初始化 / 降級 都寫回(下次跑不再觸發)
           db.pets.update(pet.id, { lastRealmCheck: status.realm });
+        }
+
+        // 階段 2.3:報酬率特效升級偵測(從低升高才獎勵,從高降低不扣,防震盪洗修為)
+        if (pet.lastEffectCheck !== status.effect) {
+          if (pet.lastEffectCheck !== undefined) {
+            const oldRank = EFFECT_ORDER.indexOf(pet.lastEffectCheck);
+            const newRank = EFFECT_ORDER.indexOf(status.effect);
+            if (newRank > oldRank) {
+              // pulsing(>20%) / rotating(>50%) → 50;erupting(>100%) → 100
+              const reward = status.effect === 'erupting' ? 100 : 50;
+              const labels: Record<string, string> = {
+                pulsing: '魂環開始脈動(+20%)',
+                rotating: '魂環開始旋轉(+50%)',
+                erupting: '魂環噴發金光(+100%)'
+              };
+              earnCultivation(
+                reward,
+                'effect_unlock',
+                `${species?.name ?? '神獸'} ${labels[status.effect] ?? '魂環升級'}`,
+                pet.id
+              );
+            }
+          }
+          db.pets.update(pet.id, { lastEffectCheck: status.effect });
         }
 
         return {
