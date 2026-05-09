@@ -332,7 +332,9 @@ useEffect deps 加進去,任何變動 → pushDebounced 1s。
 - **既有測試資料 schema mismatch**：早期山海經 ID（青龍/白虎...）的 pet record，refactor 後找不到對應物種 → UI 顯示 ❓ emoji。User 已知用 `indexedDB.deleteDatabase('StockGameDB')` 清資料
 - **achievement `four-symbols` id 保留**：DB 層用 'four-symbols' 當 key 不能改（舊 user 已存），只把名稱改「天罡四極」、target 4 隻改成 鴻鈞道祖 / 玄黃地母 / 滄溟海尊 / 紫微天樞
 - **Vite env var build-time bake**：改 env var **必須** retry deploy 才生效；dev 啟動後改 `.env.local` 也要重啟 dev server
-- **Magic link redirect**：Supabase 設定的 Site URL + Redirect URLs 是 hard-coded，新增部署環境（例如 staging）要去 Supabase dashboard 加
+- **Auth redirect**：Supabase 設定的 Site URL + Redirect URLs 是 hard-coded，新增部署環境（例如 staging）要去 Supabase dashboard 加。OAuth (Apple/Google) 跟密碼重設信都用同一份 redirect allowlist
+- **Apple / Google OAuth provider 沒啟用就點按鈕** → Supabase 會回 `provider is not enabled`。前端 `SignInModal` 仍把按鈕渲染（沒 feature flag），錯誤訊息會直接顯示給玩家。要藏可在 `SignInModal.tsx` 用 env 條件渲染（目前未做）
+- **Email confirm 預設開**：Supabase 預設 signUp 後要點 email 確認連結才能登入。SETUP.md 建議關掉（Authentication → Providers → Email → Confirm email），不然 `signUp` 完 session 不會立刻 fire,使用者以為註冊失敗
 - **iOS Safari `navigator.vibrate`**：iOS 不支援，**寫了不會錯但只 Android Chrome / 桌機 Chromium 會震**
 - **Phaser Container + pixelPerfect**：`makePixelPerfect` 必須掛在有 texture 的 GameObject（Image / Sprite）。Container 沒 texture，要把 hit 對象從 container 改到內部 image / emoji
 - **Phaser tween 跟手動位移衝突**：tween 進行中時手動 `container.x = ...` 會被下一 tick 覆蓋。要修改位置必須先 `scene.tweens.killTweensOf(container)` 再設
