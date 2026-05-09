@@ -35,6 +35,8 @@ export default function DailyCheckInModal({ open, onClose, streak }: DailyCheckI
   const [claiming, setClaiming] = useState(false);
   /** 本地鏡像 todayClaimed,讓「領取後立刻變灰」不必等 useLiveQuery 回流 */
   const [claimedLocal, setClaimedLocal] = useState(streak.todayClaimed);
+  /** 領取失敗時的錯誤訊息(顯示在按鈕下方紅字,玩家可重試) */
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /** 領取後的自動關閉 timer ref,unmount / 手動關時清掉避免 stale onClose 觸發 */
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -63,17 +65,29 @@ export default function DailyCheckInModal({ open, onClose, streak }: DailyCheckI
   const handleClaim = async () => {
     if (claiming || isClaimed) return;
     setClaiming(true);
-    const result = await claimTodayLogin();
-    if (result.success) {
-      // 立刻反映 UI(飄字由 eventBus 自動觸發,不用這裡 emit)
-      setClaimedLocal(true);
-      // 2s 後自動關,給玩家看完飄字。timer 存 ref 讓 unmount 時可清
-      autoCloseTimerRef.current = setTimeout(() => {
-        autoCloseTimerRef.current = null;
-        onClose();
-      }, AUTO_CLOSE_MS);
+    setErrorMsg(null);
+    try {
+      const result = await claimTodayLogin();
+      if (result.success) {
+        // 立刻反映 UI(飄字由 eventBus 自動觸發,不用這裡 emit)
+        setClaimedLocal(true);
+        // 2s 後自動關,給玩家看完飄字。timer 存 ref 讓 unmount 時可清
+        autoCloseTimerRef.current = setTimeout(() => {
+          autoCloseTimerRef.current = null;
+          onClose();
+        }, AUTO_CLOSE_MS);
+      } else if (result.reason === 'already_claimed') {
+        // 後端說已領 → 鏡像本地 state,讓按鈕變灰
+        setClaimedLocal(true);
+      }
+    } catch (e) {
+      // 防 freeze:任何 throw(IndexedDB / Dexie 錯)show 錯誤訊息讓玩家可重試
+      console.error('[DailyCheckInModal] claim failed:', e);
+      setErrorMsg(e instanceof Error ? e.message : '領取失敗,請稍後再試');
+    } finally {
+      // 不論成功失敗都解鎖 button
+      setClaiming(false);
     }
-    setClaiming(false);
   };
 
   return (
@@ -153,6 +167,9 @@ export default function DailyCheckInModal({ open, onClose, streak }: DailyCheckI
         >
           {isClaimed ? '今日已領取 ✓' : claiming ? '領取中⋯' : '領取今日修煉'}
         </button>
+        {errorMsg && (
+          <p className="text-xs text-red-600 text-center -mt-2">⚠️ {errorMsg}</p>
+        )}
       </div>
     </Modal>
   );
