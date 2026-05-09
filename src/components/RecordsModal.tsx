@@ -12,27 +12,31 @@ import HoldTimeDistribution from './charts/HoldTimeDistribution';
 import AdvancedMetrics from './charts/AdvancedMetrics';
 import MarketCompareChart from './charts/MarketCompareChart';
 import Bestiary from './Bestiary';
+import CultivationTab from './CultivationTab';
 
 interface RecordsModalProps {
   open: boolean;
   onClose: () => void;
+  /** 點修為紀錄行(有 relatedPetId)→ caller 可選實作跳 PetInfoModal */
+  onPetClick?: (petId: string) => void;
 }
 
-type Tab = 'overview' | 'compare' | 'achievements' | 'bestiary' | 'transactions';
+type Tab = 'overview' | 'compare' | 'achievements' | 'bestiary' | 'transactions' | 'cultivation';
 
 const TAB_LABEL: Record<Tab, string> = {
   overview: '圖表',
   compare: '對比',
   achievements: '成就',
   bestiary: '圖鑑',
-  transactions: '交易'
+  transactions: '交易',
+  cultivation: '修為'
 };
 
 /**
  * 紀錄頁主入口（modal sheet 變體，最大 95vh、可滾動）。
- * 用 tab 分區：圖表 / 成就 / 圖鑑 / 交易明細。
+ * 用 tab 分區：圖表 / 對比 / 成就 / 圖鑑 / 交易明細 / 修為。
  */
-export default function RecordsModal({ open, onClose }: RecordsModalProps) {
+export default function RecordsModal({ open, onClose, onPetClick }: RecordsModalProps) {
   const [tab, setTab] = useState<Tab>('overview');
 
   return (
@@ -40,7 +44,7 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
       <div className="flex flex-col -mx-5 -mt-4">
         {/* Tabs(sticky 玻璃)— -mx/-mt 拉到 glass-popup-content padding 邊以滿版 */}
         <div
-          className="grid grid-cols-5 sticky top-0 z-10 border-b"
+          className="grid grid-cols-6 sticky top-0 z-10 border-b"
           style={{
             background: 'rgba(250, 246, 232, 0.55)',
             backdropFilter: 'blur(10px)',
@@ -79,6 +83,7 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
           {tab === 'achievements' && <AchievementsList />}
           {tab === 'bestiary' && <Bestiary />}
           {tab === 'transactions' && <TransactionsList />}
+          {tab === 'cultivation' && <CultivationTab onPetClick={onPetClick} />}
         </div>
       </div>
     </Modal>
