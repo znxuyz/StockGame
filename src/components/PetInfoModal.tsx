@@ -1,7 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Modal from './Modal';
 import { getCreature } from '@/data/creatures';
-import { getHoldingDetail, type HoldingDetail } from '@/services';
+import {
+  getHoldingDetail,
+  getPetStatus,
+  realmProgress,
+  realmLabel,
+  effectLabel,
+  type HoldingDetail,
+  type SoulRealm,
+  type RingEffect
+} from '@/services';
 import { formatInt, formatPrice, formatSigned, formatPercent, daysBetween } from '@/utils';
 import type { Pet, Stock } from '@/types';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -13,6 +22,35 @@ interface PetInfoModalProps {
   pet: Pet | null;
   stock: Stock | null;
 }
+
+/** 魂環境界顯示用 emoji + 文字色,跟魂環顏色對齊 */
+const REALM_EMOJI: Record<SoulRealm, string> = {
+  fan: '⚪',
+  ling: '🟡',
+  yao: '🟣',
+  shen: '⚫',
+  sheng: '🔴',
+  xian: '🌈'
+};
+
+/** 魂環境界進度條的填色(Tailwind class) */
+const REALM_BAR_COLOR: Record<SoulRealm, string> = {
+  fan: 'bg-gray-300',
+  ling: 'bg-amber-400',
+  yao: 'bg-purple-500',
+  shen: 'bg-gray-800',
+  sheng: 'bg-red-500',
+  xian: 'bg-gradient-to-r from-red-400 via-yellow-300 to-purple-500'
+};
+
+/** 報酬率特效對應 emoji */
+const EFFECT_EMOJI: Record<RingEffect, string> = {
+  dim: '💤',
+  normal: '⚪',
+  pulsing: '💓',
+  rotating: '🔄',
+  erupting: '✨'
+};
 
 export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModalProps) {
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
@@ -51,6 +89,12 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
     }
   }, [open]);
 
+  // 三維度狀態(階段 1.1) — 需要 detail (有 holding+price) 才能算
+  const status = useMemo(() => {
+    if (!pet || !detail) return null;
+    return getPetStatus(pet, detail.holding, detail.price);
+  }, [pet, detail]);
+
   if (!pet || !stock) return null;
   const species = getCreature(pet.speciesId);
   const daysHeld = detail ? daysBetween(detail.holding.firstPurchasedAt, Date.now()) : 0;
@@ -59,7 +103,7 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
   return (
     <Modal open={open} onClose={onClose} title={species?.name ?? '神獸資訊'}>
       <div className="p-4 space-y-3">
-        {/* 神獸頭像 + 修為 */}
+        {/* 神獸頭像 + 名稱 + 描述 */}
         <div className="flex items-center gap-4">
           <div className="w-28 h-28 flex items-center justify-center shrink-0">
             {species?.art ? (
@@ -84,10 +128,48 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-xl font-bold break-words">{species?.name}</h3>
-            <p className="text-sm text-gray-700">修為 Lv.{pet.level}</p>
             <p className="text-xs text-gray-500 italic mt-1">{species?.description}</p>
           </div>
         </div>
+
+        {/* 養成資訊三段(階段 1.5) — Lv / 境界 / 特效 */}
+        {status && detail && (
+          <div className="data-card p-3 space-y-3 text-sm">
+            {/* 等級 */}
+            <div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-base font-bold text-amber-600">
+                  🆙 Lv.{status.level}
+                </span>
+                <span className="text-xs text-gray-500">
+                  累積投入 NT$ {formatInt(status.totalInvested)}
+                </span>
+              </div>
+            </div>
+
+            {/* 魂環境界 + 進度條 */}
+            <RealmRow status={status} />
+
+            {/* 報酬率特效 */}
+            <div>
+              <div className="flex items-baseline justify-between">
+                <span className="font-bold">
+                  {EFFECT_EMOJI[status.effect]} 魂環特效:{effectLabel(status.effect)}
+                </span>
+                <span
+                  className={
+                    status.returnRate >= 0
+                      ? 'text-tw-up font-bold'
+                      : 'text-tw-down font-bold'
+                  }
+                >
+                  {status.returnRate >= 0 ? '+' : ''}
+                  {formatPercent(status.returnRate)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 對應股票資訊 */}
         <div className={`bg-sand-50 rounded-lg p-3 ${flashClass}`}>
@@ -152,6 +234,43 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
         )}
       </div>
     </Modal>
+  );
+}
+
+/**
+ * 魂環境界 row:emoji + 名稱 / 持有月數 / 距下個境界月數 / 進度條
+ * xian 仙境沒下個境界,不顯示「距 X 還需」+ 進度條 fill 100%
+ */
+function RealmRow({ status }: { status: ReturnType<typeof getPetStatus> }) {
+  const prog = realmProgress(status.monthsHeld);
+  const months = status.monthsHeld.toFixed(1);
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <span className="font-bold">
+          {REALM_EMOJI[prog.current]} {realmLabel(prog.current)}境
+        </span>
+        <span className="text-xs text-gray-500">持有 {months} 個月</span>
+      </div>
+      {prog.next ? (
+        <>
+          <div className="text-xs text-gray-500 mt-0.5">
+            距 {realmLabel(prog.next)}境 還需 {prog.monthsToNext.toFixed(1)} 個月
+          </div>
+          <div className="mt-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${REALM_BAR_COLOR[prog.current]} transition-all duration-500`}
+              style={{ width: `${(prog.progress * 100).toFixed(1)}%` }}
+            />
+          </div>
+          <div className="text-xs text-gray-400 mt-0.5 text-right">
+            {(prog.progress * 100).toFixed(0)}%
+          </div>
+        </>
+      ) : (
+        <div className="mt-1 h-2 bg-gradient-to-r from-red-400 via-yellow-300 to-purple-500 rounded-full" />
+      )}
+    </div>
   );
 }
 
