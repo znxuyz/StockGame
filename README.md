@@ -21,10 +21,11 @@
 
 ## 特色
 
-- 🐾 **20 隻原創上古神祇** — 鴻鈞道祖、玄黃地母、滄溟海尊、紫微天樞⋯ 搭配 AI 立繪，無立繪自動 fallback emoji
+- 🐾 **50 隻原創上古神祇** — 鴻鈞道祖、玄黃地母、滄溟海尊、紫微天樞⋯ 搭配 AI 立繪，無立繪自動 fallback emoji
+- 🗺️ **2400×1600 大地圖** — 神獸散布整個世界，玩家拖曳 camera 探索（公主連結家園感）
 - 📈 **真實台股報價** — 上市 / 上櫃 / ETF。盤中 9:05–13:30 每 30 秒自動更新，盤後用最新收盤
 - ✨ **境界進化系統** — 凡 → 靈 → 妖 → 神 → 聖 → 仙 六階；長期虧損黑化成凶獸（一/二/三階），淨化可變回
-- 🏆 **成就 + 圖鑑** — 50+ 成就（7 類）、20 隻神祇圖鑑、交易明細、跟大盤比 Alpha
+- 🏆 **成就 + 圖鑑** — 50+ 成就（7 類）、50 隻神祇圖鑑、交易明細、跟大盤比 Alpha
 - ☁ **雲端帳號** — Supabase Magic Link 登入，換手機無痛接續，可整帳號刪除
 - 📱 **PWA** — 加到桌面變 App，離線可用（不上 App Store）
 - 🪞 **毛玻璃 UI** — HUD / BottomBar / 抽屜彈窗統一玻璃擬態語言，半透明 + backdrop-blur
@@ -39,7 +40,8 @@
 | **淨化** | 凶獸回正報酬可變回原境界 |
 | **退役** | 全數賣出進歷史圖鑑 |
 | **互動** | 點任一神獸開個股資訊（hit area = 立繪不透明像素，點哪到哪） |
-| **動作** | tween-based 全地圖自由漫遊，距離邊界 30/40px buffer 不會擋到 HUD/BottomBar |
+| **活動範圍** | 散布整個 2400×1600 world，不再黏 viewport 中央。玩家拖 camera + zoom 才能看到所有神獸 |
+| **動作** | tween-based 自由漫遊，目標選 world-relative 矩形 (40,120) → (2360,1460) 內 |
 | **碰撞** | 多圓形 body shape 反彈（3 圓覆蓋立繪輪廓，碰到才彈，不是中心距離） |
 
 ## UI 設計
@@ -125,9 +127,13 @@ npm run typecheck    # 型別檢查
 ```bash
 npm run build:icons         # public/app-icon-source.JPG → public/icons/*.png（PWA / favicon）
 npm run process:ui-assets   # public/assets/btn/*.JPG → 去背 PNG（5 顆底部按鈕）
-npm run download:sprites    # docs/art-prompts.md → public/sprites/*.png（20 隻立繪 / MJ）
+npm run download:sprites    # docs/art-prompts.md → public/sprites/*.png（50 隻立繪 / MJ）
 npm run fetch:industries    # 月跑：證交所 OpenAPI → src/data/industries.json
 npm run fetch:holidays      # 月跑：TaiwanCalendar → src/data/holidays.json
+
+# 立繪去背修補（沒 npm wrapper，直接跑）
+node scripts/flood-fill-sprite-bg.mjs --auto      # BFS flood-fill 修 4 角殘留 / halo
+node scripts/flood-fill-sprite-bg.mjs file1.png   # 指定單檔
 ```
 
 > `download:sprites` **必須本機跑**，sandbox / CI 會被 MJ CDN 擋 403。
@@ -165,9 +171,9 @@ StockGame/
 │   ├── app-icon-source.JPG       ← favicon 原圖（九尾狐）
 │   ├── icons/                    ← PWA icons（npm run build:icons 產出）
 │   ├── assets/btn/*.JPG / *.png  ← 5 顆底部按鈕原圖 + 去背 PNG
-│   ├── assets/bg/main.JPG        ← Phaser 場景背景（櫻花太極）
+│   ├── assets/bg/main.JPG        ← Phaser 場景背景（粉紅雲紋庭院 1344×896）
 │   ├── assets/particles/         ← 櫻花 / 金光粒子
-│   └── sprites/<id>.png          ← 20 隻神祇立繪
+│   └── sprites/<id>.png          ← 50 隻神祇立繪
 ├── src/
 │   ├── components/               ← React UI
 │   │   ├── Modal.tsx             ← 抽屜 Modal（.glass-popup）
@@ -179,7 +185,7 @@ StockGame/
 │   │   ├── scene.ts              ← WorldScene + playableArea + 碰撞
 │   │   └── petSprite.ts          ← PetSprite（pixelPerfect + tween wander + body collision）
 │   ├── data/
-│   │   ├── creatures.ts          ← 20 神祇定義
+│   │   ├── creatures.ts          ← 50 神祇定義
 │   │   ├── achievements.ts       ← 50+ 成就
 │   │   ├── industries.json       ← npm run fetch:industries 產出
 │   │   └── holidays.json         ← npm run fetch:holidays 產出

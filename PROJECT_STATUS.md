@@ -26,12 +26,13 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 20 隻神獸（含立繪 art:true） | ✅（`creatures.ts`） |
-| 立繪 PNG 抓進 repo | ⚠️ 需 user 本機跑 `npm run download:sprites` |
+| 50 隻神獸（含立繪 art:true） | ✅（`creatures.ts`） |
+| 50 隻立繪 PNG（背景全去乾淨） | ✅（`public/sprites/`，flood-fill 修過 17 隻殘留） |
+| 2400×1600 大地圖（橫向 3:2） | ✅（`WORLD_WIDTH` / `WORLD_HEIGHT` in `scene.ts`） |
+| 神獸散布整個 world（拖 camera 探索） | ✅（`playableArea` world-relative） |
 | 攝影機可拖可縮（pinch / wheel） | ✅ |
 | 神獸 hit area = 立繪不透明像素（pixelPerfect） | ✅ |
-| 神獸 tween-based 全地圖自由漫遊 | ✅ |
-| playableArea 約束（避開 HUD / BottomBar） | ✅ |
+| 神獸 tween-based 自由漫遊 | ✅ |
 | 多圓形 body shape 碰撞反彈 | ✅ |
 | 點擊縮放回饋 + Android vibrate | ✅ |
 | 櫻花 + 金光粒子 | ✅ |
@@ -119,9 +120,11 @@ Bundle (production gzip 估值):
 ```
 
 ```
-docs/art-prompts.md（20 個 MJ URL）
+docs/art-prompts.md（50 個 MJ URL）
     ↓ npm run download:sprites（user 本機）
 public/sprites/<id>.png
+    ↓（如有殘留 / halo）node scripts/flood-fill-sprite-bg.mjs --auto
+public/sprites/<id>.png（4 角 alpha 全乾淨）
     ↓ Phaser preload
 立繪上場
 ```
@@ -140,7 +143,7 @@ PWA / favicon 上線
 
 ### 阻塞
 
-- **20 隻神獸立繪**：`npm run download:sprites` 需 user 本機跑（sandbox 被 MJ CDN 擋 403），跑完 commit `public/sprites/` 進 repo
+無。50 隻立繪已全進 repo，背景已清乾淨。
 
 ### 非阻塞 / 設計取捨
 

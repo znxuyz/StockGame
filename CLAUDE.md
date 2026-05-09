@@ -93,17 +93,25 @@ npm run process:ui-assets # public/assets/btn/*.JPG → 去背 PNG
 npm run download:sprites  # MJ 立繪 → public/sprites/*.png（必須本機跑，CDN 擋 sandbox）
 npm run fetch:industries  # TWSE OpenAPI → src/data/industries.json
 npm run fetch:holidays    # TaiwanCalendar → src/data/holidays.json
+
+# 沒 npm wrapper，需要時直接跑：
+node scripts/flood-fill-sprite-bg.mjs --auto      # BFS flood-fill 修立繪 4 角殘留 / halo
+node scripts/flood-fill-sprite-bg.mjs file1.png   # 指定單檔
 ```
 
 ---
 
 ## 美術立繪流程
 
-- 20 隻角色立繪 URL 列在 `docs/art-prompts.md` §1 表
+- 50 隻角色立繪 URL 列在 `docs/art-prompts.md` §1 表
 - `npm run download:sprites` 把 PNG 抓到 `public/sprites/<id>.png`
   - **必須在使用者本機跑**，sandbox / CI / Cloudflare Function 都會被 cdn.midjourney.com 擋 403
   - 跑完 commit `public/sprites/` 進 repo
 - `creatures.ts` 每隻 `art: true`，Phaser 自動載 `/sprites/<id>.png`，沒檔 fallback emoji
+- **若 PNG 有殘留背景 / halo**（user 上傳 iOS Lift Subject 漏切的圖會出現方框 / 邊白）→ 跑 `node scripts/flood-fill-sprite-bg.mjs --auto`
+  - 自動掃 4 角 alpha > 15 的 sprite
+  - BFS 從 8 個邊緣點蔓延，跟 4 角 RGB seed 接近的清成透明，遠離的停（不吃主體）
+  - 對「整片殘留」+「邊框 halo」都有效；對「主體跟 bg 顏色相近」會吃進主體一點，要肉眼確認
 
 ---
 
@@ -113,7 +121,7 @@ npm run fetch:holidays    # TaiwanCalendar → src/data/holidays.json
 |---|---|---|
 | 1 | 初始 8 張表 | — |
 | 2 | + marketIndices | 加新表 |
-| 3 | Pet 拿掉 `position` / `territory`（神獸座標改 game scene 內管理） | upgrade callback 走訪 pets 刪兩欄位，**保留所有用戶資料** |
+| 3 | Pet 拿掉 `position` / `territory`（神獸座標改 game scene 內管理；後改為 world-relative playableArea） | upgrade callback 走訪 pets 刪兩欄位，**保留所有用戶資料** |
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 
@@ -143,8 +151,11 @@ npm run fetch:holidays    # TaiwanCalendar → src/data/holidays.json
 
 ## Phaser 場景約定
 
-- `WORLD_SIZE = 1400`（世界 1400×1400，camera 可拖可縮）
-- `playableArea` = viewport - HUD 90 - BottomBar 110 - 上下 30 padding - 左右 40 padding
+- `WORLD_WIDTH = 2400` × `WORLD_HEIGHT = 1600`（橫向 3:2 大地圖，camera 可拖可縮，類公主連結家園）
+- `playableArea` = **world-relative 固定矩形** (40, 120) → (2360, 1460)
+  - 不再隨 viewport 變動 — 神獸散布整個 world，玩家拖 camera 才看得到所有神獸
+  - 從 world 邊緣保留 HUD 90 + buffer 30 / BottomBar 110 + buffer 30 / 兩側 40，避免 camera 拖到角落時神獸被 UI 完全蓋住
+- 背景圖 `assets/bg/main.JPG` 1344×896（3:2）對 world 2400×1600 做 cover-fit，scale 1.786x 兩軸無裁切
 - 神獸 hit area = `image.setInteractive(scene.input.makePixelPerfect(1))`（pixel-perfect，點哪到哪）
 - 神獸 wandering = `scene.tweens` 拉到 `playableArea` 內隨機目標，停 1-5 秒再下一輪
 - 神獸碰撞 = 多圓形 body shape（3 圓覆蓋立繪輪廓）→ 圓-圓相交 → 雙方 `bounceTo` 反方向 60px tween 200ms + 300ms 恢復期
@@ -162,6 +173,8 @@ npm run fetch:holidays    # TaiwanCalendar → src/data/holidays.json
 - **Phaser Container + pixelPerfect**：`makePixelPerfect` 必須掛在有 texture 的 GameObject（Image / Sprite）。Container 沒 texture，要把 hit 對象從 container 改到內部 image / emoji
 - **Phaser tween 跟手動位移衝突**：tween 進行中時手動 `container.x = ...` 會被下一 tick 覆蓋。要修改位置必須先 `scene.tweens.killTweensOf(container)` 再設
 - **iOS PWA 全螢幕安全區**：`env(safe-area-inset-top/bottom)` 在桌機 = 0，iOS PWA = 44 / 34。HUD / BottomBar 都要把 padding 加 safe-area 才不會被瀏海 / home indicator 蓋
+- **MJ sprite 整片殘留純白閾值修不了**：`download-sprites.mjs --remove-bg` 用 RGB > 245 → 透明，但 MJ 直接吐的 JPG 背景常是漸變色 / 米黃 / 不純白，主體周圍 halo 也清不掉。改用 `flood-fill-sprite-bg.mjs --auto` BFS 從 4 角 seed 蔓延，能修整片殘留 + halo
+- **flood-fill seed 採樣要過濾全透明像素**：早期版本從角落 RGB 平均當 seed，但全透明像素的 RGB 是 garbage，會把 seed 染成非殘留色，BFS 失準。改用「4 角各取 24×24，僅 alpha>50 的像素平均」
 
 ---
 
