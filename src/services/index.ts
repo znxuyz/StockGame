@@ -65,5 +65,10 @@ export {
 } from './loginStreakService';
 export type { CheckResult, ClaimResult, MilestoneDef } from './loginStreakService';
 
-export { incrementTaskProgress, claimTaskReward, getActiveTasks } from './taskService';
+export {
+  incrementTaskProgress,
+  claimTaskReward,
+  getActiveTasks,
+  checkAndGenerateDailyTasks
+} from './taskService';
 export type { ClaimTaskResult, ActiveTasks } from './taskService';
