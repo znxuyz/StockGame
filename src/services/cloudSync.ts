@@ -18,10 +18,13 @@ import type {
   Transaction,
   AchievementProgress,
   DailySnapshot,
-  Settings
+  Settings,
+  UserCultivation,
+  CultivationLog
 } from '@/types';
 
-const SCHEMA_VERSION = 1;
+/** SCHEMA_VERSION 2(階段 2.6 加 cultivation 兩表) */
+const SCHEMA_VERSION = 2;
 const PUSH_DEBOUNCE_MS = 1000;
 
 export interface CloudBlob {
@@ -33,6 +36,10 @@ export interface CloudBlob {
   achievements: AchievementProgress[];
   snapshots: DailySnapshot[];
   settings: Settings | null;
+  /** 階段 2.6:玩家修為總額(singleton row) */
+  userCultivation?: UserCultivation | null;
+  /** 階段 2.6:修為變動歷史(append-only) */
+  cultivationLog?: CultivationLog[];
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
@@ -61,16 +68,27 @@ export function subscribeSyncStatus(fn: (s: SyncStatus, err: string | null) => v
 
 /** 把所有要同步的 Dexie 表讀進 blob */
 async function readAllForSync(): Promise<CloudBlob> {
-  const [stocks, holdings, pets, transactions, achievements, snapshots, settings] =
-    await Promise.all([
-      db.stocks.toArray(),
-      db.holdings.toArray(),
-      db.pets.toArray(),
-      db.transactions.toArray(),
-      db.achievements.toArray(),
-      db.snapshots.toArray(),
-      db.settings.get('singleton')
-    ]);
+  const [
+    stocks,
+    holdings,
+    pets,
+    transactions,
+    achievements,
+    snapshots,
+    settings,
+    userCultivation,
+    cultivationLog
+  ] = await Promise.all([
+    db.stocks.toArray(),
+    db.holdings.toArray(),
+    db.pets.toArray(),
+    db.transactions.toArray(),
+    db.achievements.toArray(),
+    db.snapshots.toArray(),
+    db.settings.get('singleton'),
+    db.userCultivation.get('main'),
+    db.cultivationLog.toArray()
+  ]);
 
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -80,18 +98,34 @@ async function readAllForSync(): Promise<CloudBlob> {
     transactions,
     achievements,
     snapshots,
-    settings: settings ?? null
+    settings: settings ?? null,
+    userCultivation: userCultivation ?? null,
+    cultivationLog
   };
 }
 
 /**
  * 把雲端 blob 寫回本地。整個交易內先 clear 再 bulkPut,確保沒有殘留。
  * `prices` 表不動(它是 API 抓的,沒在 sync 範圍)。
+ *
+ * 對舊版 blob(schemaVersion === 1,沒 userCultivation/cultivationLog 欄位)
+ * 兩個 cultivation 表的 clear 仍會跑(本地清空),但 bulkPut 因 array 為 undefined 跳過,
+ * 結果:本地修為歸零。對 user 來說等於「換手機才登入,雲端還沒有 v2 資料」可接受。
  */
 async function writeAllFromSync(blob: CloudBlob): Promise<void> {
   await db.transaction(
     'rw',
-    [db.stocks, db.holdings, db.pets, db.transactions, db.achievements, db.snapshots, db.settings],
+    [
+      db.stocks,
+      db.holdings,
+      db.pets,
+      db.transactions,
+      db.achievements,
+      db.snapshots,
+      db.settings,
+      db.userCultivation,
+      db.cultivationLog
+    ],
     async () => {
       await db.stocks.clear();
       if (blob.stocks?.length) await db.stocks.bulkPut(blob.stocks);
@@ -112,6 +146,13 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       if (blob.snapshots?.length) await db.snapshots.bulkPut(blob.snapshots);
 
       if (blob.settings) await db.settings.put(blob.settings);
+
+      // 階段 2.6:cultivation 兩表
+      await db.userCultivation.clear();
+      if (blob.userCultivation) await db.userCultivation.put(blob.userCultivation);
+
+      await db.cultivationLog.clear();
+      if (blob.cultivationLog?.length) await db.cultivationLog.bulkPut(blob.cultivationLog);
     }
   );
 }

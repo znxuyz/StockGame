@@ -126,6 +126,9 @@ function Game() {
   const transactions = useLiveQuery(() => db.transactions.toArray(), []);
   const snapshots = useLiveQuery(() => db.snapshots.toArray(), []);
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
+  // 階段 2.6:訂閱 cultivation 兩表,任何 earn/spend 觸發 push debounce
+  const userCultivation = useLiveQuery(() => db.userCultivation.get('main'), []);
+  const cultivationLog = useLiveQuery(() => db.cultivationLog.count(), []);
 
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   useEffect(() => {
@@ -304,7 +307,18 @@ function Game() {
     if (!userId) return;
     if (!allowAutoPushRef.current) return; // 初始 sync 還沒完成,不能 push 把雲端清掉
     pushDebounced(userId);
-  }, [userId, holdings, pets, transactions, snapshots, stocks, achievements, settings]);
+  }, [
+    userId,
+    holdings,
+    pets,
+    transactions,
+    snapshots,
+    stocks,
+    achievements,
+    settings,
+    userCultivation,
+    cultivationLog
+  ]);
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
   async function handlePetClickById(petId: string) {
