@@ -103,6 +103,12 @@ export class PetSprite {
   private facingLeft = false;
   /** 抵達目標後排程的「下一輪 wander」timer,relocate/destroy 要取消 */
   private pendingTimer: Phaser.Time.TimerEvent | null = null;
+  /**
+   * 暫時鎖死 depth(unix ms,過了就解鎖)。
+   * step() 每 frame setDepth(container.y),會清掉外部 setDepth。
+   * 慶祝動畫等需要把 sprite 拉到上層,用 lockDepthAt(value, ms) 暫鎖。
+   */
+  private depthLockUntil = 0;
   /** 9 顆魂環半圓渲染器(階段 1.2) */
   private ringRenderer: SoulRingRenderer;
 
@@ -459,7 +465,19 @@ export class PetSprite {
 
   /** 每 tick 呼叫:只剩 depth 排序(走動由 tween 處理) */
   step() {
+    // depth 暫鎖期間不動,讓慶祝動畫等外部設的高 depth 能維持
+    if (this.scene.time.now < this.depthLockUntil) return;
     this.container.setDepth(this.container.y);
+  }
+
+  /**
+   * 暫時把 container.depth 鎖在指定值,持續 durationMs ms,期間 step() 不動 depth。
+   * 用於慶祝動畫等需要把 sprite 浮到 overlay/光柱之上的場景。
+   * 結束後 step() 會自然恢復 depth = container.y。
+   */
+  lockDepthAt(depth: number, durationMs: number) {
+    this.container.setDepth(depth);
+    this.depthLockUntil = this.scene.time.now + durationMs;
   }
 
   destroy() {
