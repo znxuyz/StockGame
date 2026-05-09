@@ -128,6 +128,9 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 | 3 | Pet 拿掉 `position` / `territory`（神獸座標改 game scene 內管理；後改為 world-relative playableArea） | upgrade callback 走訪 pets 刪兩欄位，**保留所有用戶資料** |
 | 4 | tier / 黑化 / 淨化 系統移除 step 1：cursed1/2/3 tier → 'normal'。順便 bulkDelete 9 個 corruption / tier 進化成就紀錄 | upgrade callback 改 tier 字串、刪 achievement |
 | 5 | Pet 拔掉 `tier` / `maxNormalTier` / `evolutionCount` / `firstCorruptedAt` / `purificationCount` 五個欄位 + 拔 tier 主鍵索引。新版 Pet 只剩 id / code / speciesId / level / bornAt / retiredAt | stores 改 `'id, code, retiredAt'`(無 tier index) + upgrade callback delete 五欄位 |
+| 6 | Pet 加 `customName?` / `lastRealmCheck?` optional 欄位(三維度養成系統用) | no-op upgrade(IndexedDB document store 不需 schema 改) |
+| 7 | 修為點數系統 — 加 2 張表 | `userCultivation: 'id'`(singleton 'main')+ `cultivationLog: '++id, createdAt, reason, relatedPetId'` |
+| 8 | Pet 加 `lastEffectCheck?: RingEffect` optional(防報酬率震盪洗修為) | no-op upgrade |
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 
@@ -152,6 +155,74 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 | 統一輸入欄位 | `.input-field` | 白 0.6 | — |
 
 新增彈窗 / 卡片時優先沿用以上 class，不要自寫 inline style。完整定義在 `src/index.css` `@layer components`。
+
+---
+
+## 三維度養成系統(階段 1)
+
+每隻神獸 derived 三個獨立維度,**全部從 holding + price 即時算,不存 DB**:
+
+| 維度 | 來源 | 範圍 |
+|---|---|---|
+| 等級 Lv.1-999 | `holding.totalCost / 1000 + 1` | 1-999 |
+| 魂環境界 | `monthsHeld`(從 holding.firstPurchasedAt 算) | fan 0 / ling 3 / yao 12 / shen 36 / sheng 60 / xian 120 月 |
+| 魂環特效 | `returnRate` | dim < 0 / normal < 0.2 / pulsing < 0.5 / rotating < 1.0 / erupting ≥ 1.0 |
+
+魂環顏色:fan #FFFFFF / ling #FFD700 / yao #9C27B0 / shen #1A1A1A(銀邊) / sheng #E63946 / xian rainbow
+
+API:
+- `getRealm(monthsHeld)` / `getRingEffect(returnRate)` / `getPetStatus(pet, holding, price)`
+- `realmProgress(monthsHeld)` 算「距下境界還幾月 + 0-1 progress」(進度條用)
+
+Pet 表 derived 不存的欄位:level / monthsHeld / returnRate / realm / effect。
+Pet 表存的:`customName?`(階段 4 改名用)、`lastRealmCheck?`(防境界突破動畫重複觸發)、`lastEffectCheck?`(防報酬率震盪洗修為)。
+
+Phaser sprite 視覺:
+- 9 顆魂環半圓在腳下(`SoulRingRenderer`),addAt(0) 進 PetSprite.container 最底層
+- effect 5 種動畫:dim alpha 0.3 / normal 靜態 / pulsing alpha tween / rotating angle 360° 8s / erupting 4s + 粒子噴發
+- sprite 下方獨立 `levelText`(amber-400 金 + bold 黑邊)
+- 升級綠色 +N 飄字 + sprite amber-200 黃光閃 0.5s
+- 升境界 3 秒慶祝動畫:全螢幕黑幕 + 對應顏色光柱 + 全螢幕中央文字 + sprite scale 1.2x bounce
+  - **慶祝期間 sprite.lockDepthAt(9200, 3000)** 鎖 depth 避免 step() 蓋掉(踩過的雷,見下方雷區)
+
+---
+
+## 修為點數系統(階段 2)
+
+統一貨幣 `cultivation`,跨全 app 行為的回饋系統。
+
+### 賺取來源(階段 2 已上線 5 個)
+| 來源 | reason 代碼 | 金額 |
+|---|---|---|
+| 神獸升級 | `pet_level_up` | (newLv - oldLv) × 5 |
+| 境界突破 | `realm_breakthrough` | +200 |
+| 報酬率特效升級 pulsing/rotating/erupting | `effect_unlock` | +50 / +50 / +100 |
+| 第一次召喚某 species | `pet_added_codex` | +20 |
+| 賣出該次有獲利 | `sell_profit` | floor(realizedPnL / 1000) |
+
+### 消耗來源(階段 4 才會接,reason 代碼已預留)
+`rename` / `realm_boost` / `effect_boost` / `recolor` / `background` / `theme` / `eternal` / `unlock_story`
+
+### 防重複觸發
+- **levelUp**:newLevel > oldLevel 才發,寫入新 level 後下次比對自然 = 不重發
+- **firstSummon**:`db.pets.where('speciesId').count() === 0` 才發,**包括 retired pet 也算 count**,所以賣光重買不會重發 +20
+- **realm/effect**:寫回 `pet.lastRealmCheck` / `pet.lastEffectCheck`,新值跟舊值不同才進判斷,只有 rank 升才發,降級不扣修為(但仍寫回)
+- **報酬率震盪 pulsing → normal → pulsing**:第一次 +50,跌回不扣,再升又 +50(算重新解鎖,符合 spec)
+
+### 視覺
+- HUD 💎 數字 count-up 動畫(`CultivationCounter`,800ms easeOutCubic,連續變動 cleanup flag 避免 race)
+- 綠色 +N 飄字(`CultivationFloater`,1.5s 漸入上飄漸出,amount ≥ 100 加 18px 金色光圈三層 text-shadow)
+- stagger 300ms 排隊,連續觸發不重疊(`useRef nextEmitAtRef`)
+- 紀錄頁第 6 個 tab(`CultivationTab`):當前餘額 + 累計 + 歷史(50 筆 + 載入更多)+ 點擊跳該 pet 詳細頁
+
+### Cloud sync
+沿用既有 `user_data.blob` 不開新表,擴充 `CloudBlob.userCultivation` + `cultivationLog`,**SCHEMA_VERSION 1→2**。
+
+衝突解決限制:blob-level pull-overwrites-local,沒做 field-level merge。多裝置同時操作可能互蓋,做 cross-device 即時同步要加 polling + lifetime_earned max merge(現有 7 表都這個限制)。
+
+### eventBus
+`src/services/eventBus.ts` 50 行輕量 type-safe event bus,EventMap 集中註冊事件 payload。
+事件:`'cultivation:earn'` / `'cultivation:spend'`,飄字元件訂閱 emit 觸發。
 
 ---
 
@@ -183,6 +254,9 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 - **flood-fill seed 採樣要過濾全透明像素**：早期版本從角落 RGB 平均當 seed，但全透明像素的 RGB 是 garbage，會把 seed 染成非殘留色，BFS 失準。改用「4 角各取 24×24，僅 alpha>50 的像素平均」
 - **flood-fill 不可跨 transparent gap（最痛的雷）**：早期版本 BFS 在 `alpha < 5` 時繼續向 4 鄰擴散，理由是「讓 BFS 走過已透明邊界帶抵達內側殘留」。**錯**。原始 sprite 通常已被 iOS Lift Subject 處理過、主體被一圈透明 gap 包圍。BFS 跨越這圈 gap 進到主體內部，把跟 bg 顏色相近的淺色細節（白骨、白翼、淺色高光）誤殺。`gu-hun-ku-shou` 從 74% opaque 被啃到 31%（PR #16 修正）。**正解**：BFS 遇 `alpha < 5` 就停，只走「跟 edge 經 opaque 路徑連通」的 bg。主體被透明 gap 完整保護
 - **不要對已被去背的 sprite 跑 flood-fill**：transparent > 5% 的 sprite 視為「已處理」，重跑 flood-fill 沒好處（BFS 在邊界停下）但有風險（一旦 gap 不完整就鑽進主體）。`--auto` 模式預先過濾，但若手動指定檔案要先看 `transp%`
+- **constructor 內 prev/curr 偵測 first-time skip 陷阱**：PetSprite constructor 先 `this.data = data` 然後 call `this.applyData(data)`,applyData 內 `const prev = this.data` 拿到的就是同一個 `data`,**任何 `prev !== data` 比對全 false → first-time render 被跳過**。階段 1.2 的 9 顆魂環 graphics 整個沒被 draw,在 production 看不到任何環(PR #28 修)。**正解**:constructor 末尾手動 call `ringRenderer.render(realm, effect)` 補第一次。其他「prev !== data 才做」的偵測(flashPnL / levelUp 飄字)維持 skip 是正確的(出生不該閃 / 不該飄)
+- **scene step() 每 frame setDepth 蓋外部 setDepth**:PetSprite.step() 每 tick `setDepth(container.y)` 排序。慶祝動畫想把 sprite 拉到 overlay 之上 `setDepth(9200)` 會立刻被下一 frame 蓋掉,sprite 反而被埋在黑幕下(PR #29 修)。**正解**:用 `sprite.lockDepthAt(value, durationMs)` API,step() 內檢查 `scene.time.now < depthLockUntil` 就 skip 一陣子,讓 setDepth 能維持。
+- **修為 earnCultivation 不能在 db.transaction 內 await**:`earnCultivation` 自己會寫 db.userCultivation + db.cultivationLog,如果包進外層 portfolio 的 `db.transaction` 會 Dexie scope 衝突卡住。**正解**:transaction 內收集獎勵 array(in scope 之外 declare),tx commit 後才 `for ... await earnCultivation(...)` 順發。飄字事件也應該 tx commit 後才出,讓玩家看到的數字跟 DB 狀態一致
 
 ---
 
