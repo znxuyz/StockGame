@@ -370,7 +370,15 @@ function Game() {
       />
       <Suspense fallback={null}>
         {modal === 'records' && (
-          <RecordsModal open onClose={() => setModal(null)} />
+          <RecordsModal
+            open
+            onClose={() => setModal(null)}
+            onPetClick={(petId) => {
+              // 修為紀錄行(有 relatedPetId)點擊 → 關紀錄彈窗開該 pet 詳細頁
+              setModal(null);
+              handlePetClickById(petId);
+            }}
+          />
         )}
       </Suspense>
       <SettingsModal
