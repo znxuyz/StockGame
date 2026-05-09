@@ -316,6 +316,18 @@ function Game() {
             });
             return;
           }
+          // 階段 3.8 修:雲端覆蓋本地後重新初始化「純本地」狀態:
+          //   - checkAndUpdateStreak 根據雲端來的 lastLoginDate 重算今日 todayClaimed
+          //   - checkAndGenerate{Daily,Weekly}Tasks 確保今日 / 本週有任務
+          //     (任務不從雲端拉,登入後本地若無就重抽)
+          // 不能放任 pullNow 把本地任務清空變成空 tab。
+          try {
+            await checkAndUpdateStreak();
+            await checkAndGenerateDailyTasks();
+            await checkAndGenerateWeeklyTasks();
+          } catch (e) {
+            console.warn('[cloud] post-pull task re-init failed:', e);
+          }
           setToast({ message: '☁ 已從雲端載入資料', variant: 'info' });
         } else {
           // 雲端是空的(全新帳號)→ 第一次把本機資料推上去當初始備份
