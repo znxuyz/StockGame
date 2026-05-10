@@ -206,6 +206,32 @@ export class StockGameDB extends Dexie {
     this.version(10).stores({
       userTasks: '++id, taskKey, taskType'
     });
+
+    /**
+     * v11:Pet 加 `boostedDays?` / `effectBoostUntil?` 兩個 optional 欄位
+     * (階段 4A.3 境界催熟 + 4A.4 魂環淬煉,修為消耗管道)。
+     *
+     *  - boostedDays:累積催熟天數,monthsHeld 計算時加上去。
+     *    既有 pet 不需 backfill — undefined 在 petTier 層當 0 處理 — 但
+     *    為了符合「migration 把舊資料設為 0」的設計慣例,這裡顯式 backfill。
+     *  - effectBoostUntil:淬煉到期 unix ms。undefined / <= now = 沒 boost。
+     *    既有 pet 一律沒 boost,不 backfill。
+     *
+     * IndexedDB document store 對新增 optional 欄位本來就不需要 schema 改,
+     * 純粹 bump version 釘死「我們開始用這兩個欄位」。stores 不變。
+     */
+    this.version(11)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('pets')
+          .toCollection()
+          .modify((pet) => {
+            const p = pet as Record<string, unknown>;
+            if (p.boostedDays === undefined) p.boostedDays = 0;
+            // effectBoostUntil 不 backfill,undefined = 沒 boost(預設值)
+          });
+      });
   }
 }
 
