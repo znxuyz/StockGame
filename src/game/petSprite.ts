@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import type { WorldScene } from './scene';
 import { SoulRingRenderer } from './soulRing';
 import type { SoulRealm, RingEffect } from '@/services/petTier';
+import { COLOR_VARIANT_TINT } from '@/services/petColor';
+import type { PetColorVariant } from '@/types';
 
 /**
  * 一隻寵物的視覺單位（立繪 / emoji + 損益標籤 + 名稱）。
@@ -41,6 +43,8 @@ export interface PetSpriteData {
   realm: SoulRealm;
   /** 魂環特效(暗/普通/脈動/旋轉/噴光)— 由 services/petTier.getRingEffect 算 */
   effect: RingEffect;
+  /** 配色淬煉(階段 4B.2):default 不套 tint,其餘套 COLOR_VARIANT_TINT 對應整數 */
+  colorVariant: PetColorVariant;
 }
 
 /** 自由漫遊速度(px/sec) */
@@ -199,6 +203,9 @@ export class PetSprite {
     // realm/effect 偵測認為「沒變」會 skip ringRenderer.render — 9 顆魂環就永遠不會被畫。
     // 補手動 render 一次,確保 sprite 出生就有環。
     this.ringRenderer.render(data.realm, data.effect);
+    // 階段 4B.2:首次套 colorVariant tint(applyData 用 prev !== data 偵測,
+    // 但 constructor 內 prev === data 跳過,跟 ringRenderer 同樣手動補)
+    this.applyBaseTint();
   }
 
   /** 把 hover / down 事件綁到 hitTarget;hitTarget 改變時(applyData 換 art)要重綁 */
@@ -210,7 +217,8 @@ export class PetSprite {
     });
     this.hitTarget.on('pointerout', () => {
       this.scene.input.setDefaultCursor('default');
-      this.image.clearTint();
+      // 階段 4B.2:不要直接 clearTint,要還原玩家設定的 colorVariant tint
+      this.applyBaseTint();
       this.image.setDisplaySize(SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
       this.image.setFlipX(this.facingLeft);
     });
@@ -273,6 +281,14 @@ export class PetSprite {
       this.ringRenderer.applyEffect(data.effect);
     }
 
+    // 階段 4B.2:配色變動 → 重套 colorVariant tint
+    // 注意 constructor 內 prev === data,首次 init tint 不會在這裡套(false case),
+    // 由 constructor 結尾的 applyBaseTint() 補(跟 ringRenderer.render 同模式,
+    // 見雷區「constructor 內 prev/curr 偵測 first-time skip 陷阱」)
+    if (prev && prev.colorVariant !== data.colorVariant) {
+      this.applyBaseTint();
+    }
+
     // 加碼升級:level 上升 → 綠色飄字 + sprite 黃光閃 0.5s(階段 1.6)
     if (prev && data.level > prev.level) {
       this.spawnLevelUpFloater(prev.level, data.level);
@@ -324,9 +340,26 @@ export class PetSprite {
     this.image.setTint(0xfde68a);
     this.emoji.setTint(0xfde68a);
     this.scene.time.delayedCall(500, () => {
+      // 階段 4B.2:還原玩家 colorVariant tint(不要直接 clear 把配色淬煉吃掉)
+      this.applyBaseTint();
+    });
+  }
+
+  /**
+   * 套用 colorVariant 對應的 tint(階段 4B.2 配色淬煉用)。
+   * default → clearTint();其他 → setTint(COLOR_VARIANT_TINT[variant])。
+   * 在三個地方呼叫:applyData 結尾、pointerout、flashLevelUp 結束。
+   * 不影響升境慶祝動畫(那個是 scene 層的全螢幕黑幕 + 光柱,不動 sprite tint)。
+   */
+  private applyBaseTint() {
+    const tint = COLOR_VARIANT_TINT[this.data.colorVariant];
+    if (tint == null) {
       this.image.clearTint();
       this.emoji.clearTint();
-    });
+    } else {
+      this.image.setTint(tint);
+      this.emoji.setTint(tint);
+    }
   }
 
   /** scene 在 sprite 加進來後呼叫,啟動全地圖自由漫遊 */
