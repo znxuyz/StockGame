@@ -205,14 +205,17 @@ Phaser sprite 視覺:
 | 賣出該次有獲利 | `sell_profit` | floor(realizedPnL / 1000) |
 
 ### 消耗來源
-階段 4A 已實作 3 個(`PetInfoModal` 底部三顆 button → 對應 modal):
-| 按鈕 | reason | 金額 | 效果 |
+階段 4A + 4B 已實作 6 個。階段 4A 三顆 button 在 `PetInfoModal` 底部(每隻神獸獨立花費);階段 4B 三項在 `SettingsModal`(全域設定)。
+| 按鈕位置 | reason | 金額 | 效果 |
 |---|---|---|---|
-| 改名 | `rename` | 50 | 寫 `pet.customName`,1-10 字限中英數,不可同原名 |
-| 催熟 | `realm_boost` | 100 | `pet.boostedDays += 30`,monthsHeld 跳 1 月,可能跨境界 |
-| 淬煉 | `effect_boost` | 500 | `pet.effectBoostUntil = now + 7d`,魂環特效強制升一階 |
+| PetInfoModal:改名 | `rename` | 50 | 寫 `pet.customName`,1-10 字限中英數,不可同原名 |
+| PetInfoModal:催熟 | `realm_boost` | 100 | `pet.boostedDays += 30`,monthsHeld 跳 1 月,可能跨境界 |
+| PetInfoModal:淬煉 | `effect_boost` | 500 | `pet.effectBoostUntil = now + 7d`,魂環特效強制升一階 |
+| PetInfoModal:換色 | `recolor` | 300 | `pet.colorVariant` 5 選 1,Phaser sprite 套對應 tint |
+| SettingsModal:HUD 主題 | `theme` | 200 | 解鎖一次永久持有;切換時 `<html data-theme>` 即時切 CSS 變數 |
+| SettingsModal:家園背景 | `background` | 500 | 解鎖一次永久持有;切換時 `WorldScene.setBackgroundId` 動態載入 texture |
 
-階段 4B / 4C 預留 5 個 reason 代碼:`recolor` / `background` / `theme` / `eternal` / `unlock_story`。
+階段 4C 預留 2 個 reason 代碼:`eternal` / `unlock_story`。
 
 **淬煉雙重給付防護**:`PetStatus` 拆 `effect`(渲染用,boost 套用後)/ `naturalEffect`(報酬率原值);`PhaserMap` 的 `effect_unlock` 比對改用 `naturalEffect`,玩家花 500 淬煉不會拿回 +50 自然 reward。`pet.lastEffectCheck` 永遠存 naturalEffect。
 
