@@ -132,6 +132,8 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 | 7 | 修為點數系統 — 加 2 張表 | `userCultivation: 'id'`(singleton 'main')+ `cultivationLog: '++id, createdAt, reason, relatedPetId'` |
 | 8 | Pet 加 `lastEffectCheck?: RingEffect` optional(防報酬率震盪洗修為) | no-op upgrade |
 | 9 | 簽到任務系統 — 加 3 張表:`userLoginStreak`(id 'main' singleton)、`userTasks`(++id auto, indexed by taskKey/taskType/completed/claimed)、`milestoneRewards`(++id, **&milestoneDay 唯一索引**防重領) |
+| 10 | **重大修正** userTasks 拿掉 boolean index — IndexedDB 不接受 boolean 當 valid key,完成寫不進去 → 任務 tab 永遠空。stores 改 `'++id, taskKey, taskType'` | no-op data upgrade(只重建 indexes) |
+| 11 | Pet 加 `boostedDays?: number` / `effectBoostUntil?: number` optional 欄位(階段 4A.3 催熟 + 4A.4 淬煉,修為消耗管道) | upgrade callback 把舊資料 `boostedDays` backfill 為 0;`effectBoostUntil` 不 backfill(undefined = 沒 boost) |
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 
