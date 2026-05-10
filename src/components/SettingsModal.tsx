@@ -5,6 +5,7 @@ import type { Settings } from '@/types';
 import { isCloudConfigured, supabase } from '@/lib/supabase';
 import { useAuth, signOut } from '@/lib/auth';
 import { cancelPendingPush } from '@/services/cloudSync';
+import HudThemeModal from './HudThemeModal';
 
 interface SettingsModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export default function SettingsModal({
   /** 雙擊確認刪帳號:第一擊 → confirmingDelete = true 並 5 秒後自動 reset */
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [hudThemeOpen, setHudThemeOpen] = useState(false);
   useEffect(() => {
     if (!confirmingDelete) return;
     const id = setTimeout(() => setConfirmingDelete(false), 5000);
@@ -186,6 +188,19 @@ export default function SettingsModal({
           />
         </label>
 
+        {/* 階段 4B.3:HUD 主題色入口。設定保存獨立(不需按「儲存設定」),
+            modal 內選擇即時 db.settings.put 寫入,App.tsx useEffect 同步 data-theme */}
+        <button
+          type="button"
+          onClick={() => setHudThemeOpen(true)}
+          className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
+        >
+          <span className="text-sm text-gray-700">🎨 HUD 主題色</span>
+          <span className="text-xs text-gray-500">
+            {hudThemeLabel(settings.hudTheme ?? 'default')} ›
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={handleSave}
@@ -264,6 +279,22 @@ export default function SettingsModal({
           清除所有資料
         </button>
       </div>
+
+      <HudThemeModal open={hudThemeOpen} onClose={() => setHudThemeOpen(false)} />
     </Modal>
   );
+}
+
+/** 設定頁右側顯示「米粉 ›」用,跟 HudThemeModal 內的 THEMES 表保持一致 */
+function hudThemeLabel(id: string): string {
+  switch (id) {
+    case 'jade':
+      return '玉藍';
+    case 'purple':
+      return '紫金';
+    case 'red':
+      return '朱紅';
+    default:
+      return '米粉';
+  }
 }

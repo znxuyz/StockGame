@@ -200,6 +200,12 @@ function Game() {
     if (settings) audio.setMuted(!settings.soundEnabled);
   }, [settings?.soundEnabled]);
 
+  // 階段 4B.3:同步 settings.hudTheme → <html data-theme>,index.css CSS 變數即時生效
+  useEffect(() => {
+    const theme = settings?.hudTheme ?? 'default';
+    document.documentElement.dataset.theme = theme;
+  }, [settings?.hudTheme]);
+
   const unlockedCount = useMemo(
     () => (achievements ?? []).filter((a) => a.unlockedAt).length,
     [achievements]
