@@ -17,6 +17,7 @@ import type { Pet, Stock } from '@/types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import RenameModal from './RenameModal';
+import BoostRealmModal from './BoostRealmModal';
 
 interface PetInfoModalProps {
   open: boolean;
@@ -58,6 +59,7 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [boostOpen, setBoostOpen] = useState(false);
   const prevPriceRef = useRef<number | null>(null);
 
   // 訂閱該檔的即時價(背景 silentRefresh 寫入 db.prices 後 modal 會自動重抓 detail)
@@ -254,9 +256,8 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
         )}
 
         {/*
-          階段 4A.2 加 [改名] 按鈕。階段 4A.3 / 4A.4 會在這列補
-          [催熟] / [淬煉];4A.5 統一加上修為不足 / 已達上限 等狀態。
-          目前只有改名 wired,其他按鈕在後續 phase 補。
+          階段 4A 修為消耗管道。4A.5 會統一加上修為不足 / 已達上限 等視覺狀態。
+          目前 [改名]、[催熟] 已 wired;[淬煉] 在 4A.4 補。
         */}
         <div className="grid grid-cols-2 gap-2 pt-1">
           <button
@@ -266,10 +267,24 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
           >
             改名 💎50
           </button>
+          <button
+            type="button"
+            onClick={() => setBoostOpen(true)}
+            disabled={!status}
+            className="rounded-lg bg-amber-500 text-white font-bold py-2 text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
+          >
+            催熟 💎100
+          </button>
         </div>
       </div>
 
       <RenameModal open={renameOpen} onClose={() => setRenameOpen(false)} pet={pet} />
+      <BoostRealmModal
+        open={boostOpen}
+        onClose={() => setBoostOpen(false)}
+        pet={pet}
+        status={status}
+      />
     </Modal>
   );
 }
