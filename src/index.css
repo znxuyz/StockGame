@@ -28,6 +28,23 @@
   }
 
   /**
+   * HUD 第二排狀態列(合併原 row 2+3):
+   *  - 單行 nowrap,內容超寬時可橫拉(scrollbar 隱藏)
+   *  - padding-right 給浮動刷新鈕(48px 圓鈕 + 12px 邊距)留空間,
+   *    避免內容被 z-10 的浮動鈕蓋住
+   */
+  .hud-status-row {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 56px;
+    -ms-overflow-style: none; /* IE/Edge legacy */
+    scrollbar-width: none; /* Firefox */
+  }
+  .hud-status-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /**
    * 玻璃擬態 BottomBar:對稱 HUD,bottom 鋪到 viewport 底(iOS home indicator 下面)。
    *  - bottom: 0 + padding-bottom: calc(6px + safe-bottom) full-bleed
    *  - border-top 替代 HUD 的 border-bottom,形成上下對稱金線

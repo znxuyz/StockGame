@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatInt, formatSigned, formatPercent } from '@/utils';
+import { formatCount, formatSigned, formatPercent } from '@/utils';
 import type { PortfolioSummary } from '@/services';
 import { subscribeSyncStatus, type SyncStatus } from '@/services/cloudSync';
 import { isCloudConfigured } from '@/lib/supabase';
@@ -130,7 +130,7 @@ export default function TopBar({
 
   return (
     <div className="hud">
-      {/* 主資料:badge(row-span-2) + 2x2 stats */}
+      {/* 主資料:badge(row-span-2) + 2x2 stats(NT$ 大數用 K/M 縮寫省空間) */}
       <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-3 gap-y-0.5 leading-tight">
         <img
           src="/assets/ui/badge_pet.png"
@@ -140,8 +140,8 @@ export default function TopBar({
           className="row-span-2 w-9 h-9 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
         />
         <Stat label="神獸" value={`${summary.holdingCount}`} suffix="隻" />
-        <Stat label="總市值" value={formatInt(summary.totalMarketValue)} />
-        <Stat label="投入" value={formatInt(summary.totalCost)} />
+        <Stat label="投入" value={formatCount(summary.totalCost)} />
+        <Stat label="總市值" value={formatCount(summary.totalMarketValue)} />
         {/* 報酬 cell:flex-wrap 讓 (+%) 太擠時換行,但 +35,503 永不截斷 */}
         <div className="flex items-baseline gap-1 flex-wrap">
           <span className="text-[11px] text-mythic-jade-400 font-zh whitespace-nowrap shrink-0">
@@ -156,35 +156,45 @@ export default function TopBar({
         </div>
       </div>
 
-      {/* 狀態列:虛線分隔由 border-top 實作,無多餘 div */}
+      {/*
+        合併狀態列(原本 row 2+3 因 flex-wrap 在窄螢幕被切兩行 → 第 3 行被
+        浮動刷新鈕 z-10 蓋掉)。改用單行 nowrap + 橫向 overflow scroll(隱藏
+        scrollbar),極端情況可橫拉看完。padding-right: 56px 預留浮動鈕半徑 +
+        margin,即使 hud-height 因內容變動,也不會被刷新鈕擋住。
+      */}
       <div
-        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 text-[11px] leading-tight font-zh opacity-70"
+        className="hud-status-row mt-1.5 pt-1.5 text-[11px] leading-tight font-zh opacity-70"
         style={{ borderTop: '1px dashed rgba(212, 175, 55, 0.35)' }}
       >
-        <span className="whitespace-nowrap">
-          {market.icon} {market.label}
-          <span className={stale ? 'text-red-600' : ''}> · {updateRel}</span>
-          <span className={todayClass}>
-            {' · 今 '}
-            {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
+        <div className="hud-status-inline flex items-center gap-x-2 whitespace-nowrap">
+          <span className="whitespace-nowrap shrink-0">
+            {market.icon} {market.label}
           </span>
-        </span>
-        <span className="flex items-center gap-2 whitespace-nowrap shrink-0">
+          <span className={`whitespace-nowrap shrink-0 ${stale ? 'text-red-600' : ''}`}>
+            · {updateRel}
+          </span>
+          <span className={`whitespace-nowrap shrink-0 ${todayClass}`}>
+            · 今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
+          </span>
           {cloudSignedIn && (
-            <span className={sync.cls} title={syncErr ?? sync.label}>
-              {sync.icon}
+            <span className={`whitespace-nowrap shrink-0 ${sync.cls}`} title={syncErr ?? sync.label}>
+              · {sync.icon}
             </span>
           )}
-          <span>
-            💎{' '}
+          <span className="whitespace-nowrap shrink-0">
+            · 💎{' '}
             <CultivationCounter
               value={cultivation.amount}
               className="text-mythic-gold-500 font-bold"
             />
-            {' · 🏆 '}
-            {unlockedAchievements}/{totalAchievements} · 🔥 {consecutiveDays}d
           </span>
-        </span>
+          <span className="whitespace-nowrap shrink-0">
+            · 🏆 {unlockedAchievements}/{totalAchievements}
+          </span>
+          <span className="whitespace-nowrap shrink-0">
+            · 🔥 {consecutiveDays}d
+          </span>
+        </div>
       </div>
     </div>
   );
