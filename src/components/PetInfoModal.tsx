@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Modal from './Modal';
-import { getCreature } from '@/data/creatures';
+import { getCreature, getPetDisplayName } from '@/data/creatures';
 import {
   getHoldingDetail,
   getPetStatus,
@@ -16,6 +16,7 @@ import { formatInt, formatPrice, formatSigned, formatPercent, daysBetween } from
 import type { Pet, Stock } from '@/types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import RenameModal from './RenameModal';
 
 interface PetInfoModalProps {
   open: boolean;
@@ -53,16 +54,24 @@ const EFFECT_EMOJI: Record<RingEffect, string> = {
   erupting: '✨'
 };
 
-export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModalProps) {
+export default function PetInfoModal({ open, onClose, pet: petProp, stock }: PetInfoModalProps) {
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
   const prevPriceRef = useRef<number | null>(null);
 
   // 訂閱該檔的即時價(背景 silentRefresh 寫入 db.prices 後 modal 會自動重抓 detail)
   const livePrice = useLiveQuery(
-    () => (pet ? db.prices.get(pet.code) : undefined),
-    [pet?.code]
+    () => (petProp ? db.prices.get(petProp.code) : undefined),
+    [petProp?.code]
   );
+
+  // 訂閱當前 pet 的最新版本(階段 4A.2 改名 / 4A.3 催熟 / 4A.4 淬煉 寫 db 後即時更新)
+  const livePet = useLiveQuery(
+    () => (petProp?.id ? db.pets.get(petProp.id) : undefined),
+    [petProp?.id]
+  );
+  const pet = livePet ?? petProp;
 
   useEffect(() => {
     if (!open || !pet) return;
@@ -103,11 +112,13 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
 
   if (!pet || !stock) return null;
   const species = getCreature(pet.speciesId);
+  const displayName = getPetDisplayName(pet, species);
+  const hasCustomName = !!pet.customName?.trim();
   const daysHeld = detail ? daysBetween(detail.holding.firstPurchasedAt, Date.now()) : 0;
   const flashClass = priceFlash === 'up' ? 'flash-up' : priceFlash === 'down' ? 'flash-down' : '';
 
   return (
-    <Modal open={open} onClose={onClose} title={species?.name ?? '神獸資訊'}>
+    <Modal open={open} onClose={onClose} title={displayName}>
       <div className="p-4 space-y-3">
         {/* 神獸頭像 + 名稱 + 描述 */}
         <div className="flex items-center gap-4">
@@ -133,7 +144,10 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-bold break-words">{species?.name}</h3>
+            <h3 className="text-xl font-bold break-words">{displayName}</h3>
+            {hasCustomName && species?.name && (
+              <p className="text-xs text-gray-500 mt-0.5">原名 {species.name}</p>
+            )}
             <p className="text-xs text-gray-500 italic mt-1">{species?.description}</p>
           </div>
         </div>
@@ -238,7 +252,24 @@ export default function PetInfoModal({ open, onClose, pet, stock }: PetInfoModal
             <Row label="持有天數">{daysHeld} 天</Row>
           </div>
         )}
+
+        {/*
+          階段 4A.2 加 [改名] 按鈕。階段 4A.3 / 4A.4 會在這列補
+          [催熟] / [淬煉];4A.5 統一加上修為不足 / 已達上限 等狀態。
+          目前只有改名 wired,其他按鈕在後續 phase 補。
+        */}
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setRenameOpen(true)}
+            className="rounded-lg bg-amber-500 text-white font-bold py-2 text-sm active:scale-95 transition-transform"
+          >
+            改名 💎50
+          </button>
+        </div>
       </div>
+
+      <RenameModal open={renameOpen} onClose={() => setRenameOpen(false)} pet={pet} />
     </Modal>
   );
 }

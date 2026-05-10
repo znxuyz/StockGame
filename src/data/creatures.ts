@@ -1,4 +1,4 @@
-import type { CreatureSpecies } from '@/types';
+import type { CreatureSpecies, Pet } from '@/types';
 
 /**
  * 50 隻原創上古神祇 — 涵蓋 14 個陣營(天界 / 魔界 / 自然界 / 冥界 / 佛界 等)。
@@ -424,4 +424,19 @@ export function getCreature(id: string): CreatureSpecies | undefined {
 export function pickRandomCreature(): CreatureSpecies {
   const idx = Math.floor(Math.random() * CREATURES.length);
   return CREATURES[idx];
+}
+
+/**
+ * 神獸顯示用名稱(階段 4A.2 改名儀式)。
+ *  - 玩家有 `customName`(非空字串)→ 用 customName
+ *  - 沒設 → 用 species.name(原名)
+ *  - 連 species 都拿不到(資料 mismatch)→ '神獸' 兜底
+ *
+ * caller 慣例:在 PetInfoModal / Bestiary / log 等任何顯示神獸名字的地方,
+ * 統一走這個 helper,不要直接用 species.name,避免某些地方忘記套 customName。
+ */
+export function getPetDisplayName(pet: Pet, species: CreatureSpecies | undefined): string {
+  const trimmed = pet.customName?.trim();
+  if (trimmed) return trimmed;
+  return species?.name ?? '神獸';
 }
