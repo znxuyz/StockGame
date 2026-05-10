@@ -153,6 +153,7 @@ export interface PetStatus {
 }
 
 const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 /**
  * 給一隻 pet + 對應 holding + 當前 price,算三維度狀態。
@@ -164,6 +165,10 @@ const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30;
  * 持有月數基準 = `holding.firstPurchasedAt` → fallback `pet.bornAt`。
  * 賣光重買時 holding 被刪除重建,firstPurchasedAt 重設為重買日,
  * **歷史持有時間不累積** — 設計如此(user 決議)。
+ *
+ * 階段 4A.3:`pet.boostedDays`(累積催熟天數)會加進 monthsHeld,等同神獸提早出生。
+ *   monthsHeld = max(0, (now - firstBuy + boostedDays * MS_PER_DAY) / MS_PER_MONTH)
+ *   undefined / 0 → 不影響(預設行為)。
  */
 export function getPetStatus(
   pet: Pet,
@@ -177,7 +182,8 @@ export function getPetStatus(
   const returnRate = totalInvested > 0 ? (currentValue - totalInvested) / totalInvested : 0;
 
   const firstBuy = holding?.firstPurchasedAt ?? pet.bornAt;
-  const monthsHeld = Math.max(0, (now - firstBuy) / MS_PER_MONTH);
+  const boostMs = (pet.boostedDays ?? 0) * MS_PER_DAY;
+  const monthsHeld = Math.max(0, (now - firstBuy + boostMs) / MS_PER_MONTH);
 
   return {
     level: calculateLevel(totalInvested),
