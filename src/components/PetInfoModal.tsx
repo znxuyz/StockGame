@@ -16,6 +16,7 @@ import { formatInt, formatPrice, formatSigned, formatPercent, daysBetween } from
 import type { Pet, Stock } from '@/types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { useCultivation } from '@/hooks/useCultivation';
 import RenameModal from './RenameModal';
 import BoostRealmModal from './BoostRealmModal';
 import TemperRingModal from './TemperRingModal';
@@ -114,12 +115,55 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
     return getPetStatus(pet, detail.holding, detail.price);
   }, [pet, detail]);
 
+  // 修為餘額(階段 4A.5:讓主 button 反映「💎不足」)
+  const cultivation = useCultivation();
+  const balance = cultivation.amount;
+
   if (!pet || !stock) return null;
   const species = getCreature(pet.speciesId);
   const displayName = getPetDisplayName(pet, species);
   const hasCustomName = !!pet.customName?.trim();
   const daysHeld = detail ? daysBetween(detail.holding.firstPurchasedAt, Date.now()) : 0;
   const flashClass = priceFlash === 'up' ? 'flash-up' : priceFlash === 'down' ? 'flash-down' : '';
+
+  // 階段 4A.5:三顆主 button 的狀態(label + 是否變灰)
+  // 點下去仍然開 modal,讓玩家在 modal 內看完整說明 + 確認鈕內已 disable
+  const RENAME_COST = 50;
+  const BOOST_COST = 100;
+  const TEMPER_COST = 500;
+  const tempering =
+    pet.effectBoostUntil != null && pet.effectBoostUntil > Date.now();
+  const temperDaysLeft = tempering
+    ? Math.ceil((pet.effectBoostUntil! - Date.now()) / 86_400_000)
+    : 0;
+
+  const renameDim = balance < RENAME_COST;
+  const renameLabel = renameDim ? '改名 💎不足' : `改名 💎${RENAME_COST}`;
+
+  const boostAtMax = status?.realm === 'xian';
+  const boostInsufficient = balance < BOOST_COST;
+  const boostDim = boostAtMax || boostInsufficient;
+  const boostLabel = boostAtMax
+    ? '催熟 已達上限'
+    : boostInsufficient
+      ? '催熟 💎不足'
+      : `催熟 💎${BOOST_COST}`;
+
+  const temperAtMax = status?.naturalEffect === 'erupting';
+  const temperInsufficient = balance < TEMPER_COST;
+  const temperDim = temperAtMax || temperInsufficient;
+  const temperLabel = temperAtMax
+    ? '淬煉 已達上限'
+    : temperInsufficient
+      ? '淬煉 💎不足'
+      : tempering
+        ? `淬煉中 ${temperDaysLeft}d`
+        : `淬煉 💎${TEMPER_COST}`;
+
+  const buttonBase =
+    'rounded-lg font-bold py-2 text-xs active:scale-95 transition-transform';
+  const buttonActive = 'bg-amber-500 text-white';
+  const buttonDim = 'bg-gray-300 text-gray-500';
 
   return (
     <Modal open={open} onClose={onClose} title={displayName}>
@@ -265,32 +309,37 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
         )}
 
         {/*
-          階段 4A 修為消耗管道。4A.5 會統一加上修為不足 / 已達上限 等視覺狀態。
-          目前 [改名]、[催熟]、[淬煉] 三顆 wired;每顆內部 modal 自己處理 disabled 狀態。
+          階段 4A.5 修為消耗 button row。三顆都在每隻神獸詳細頁。
+          按鈕仍可點(進 modal 看完整說明),變灰只是視覺提示「不能執行」。
+          modal 內的「確認」鈕才是真正的 hard guard(disabled + spendCultivation race-safe)。
         */}
         <div className="grid grid-cols-3 gap-2 pt-1">
           <button
             type="button"
             onClick={() => setRenameOpen(true)}
-            className="rounded-lg bg-amber-500 text-white font-bold py-2 text-sm active:scale-95 transition-transform"
+            className={`${buttonBase} ${renameDim ? buttonDim : buttonActive}`}
           >
-            改名 💎50
+            {renameLabel}
           </button>
           <button
             type="button"
             onClick={() => setBoostOpen(true)}
             disabled={!status}
-            className="rounded-lg bg-amber-500 text-white font-bold py-2 text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
+            className={`${buttonBase} ${
+              boostDim || !status ? buttonDim : buttonActive
+            } disabled:active:scale-100`}
           >
-            催熟 💎100
+            {boostLabel}
           </button>
           <button
             type="button"
             onClick={() => setTemperOpen(true)}
             disabled={!status}
-            className="rounded-lg bg-amber-500 text-white font-bold py-2 text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
+            className={`${buttonBase} ${
+              temperDim || !status ? buttonDim : buttonActive
+            } disabled:active:scale-100 ${tempering && !temperAtMax && !temperInsufficient ? '!bg-amber-100 !text-amber-700' : ''}`}
           >
-            淬煉 💎500
+            {temperLabel}
           </button>
         </div>
       </div>
