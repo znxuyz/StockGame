@@ -55,8 +55,12 @@
 | stagger 0.3s 排隊,連續觸發不重疊 | ✅ |
 | 紀錄頁第 6 個 tab「修為」: 餘額 + 累計 + 歷史 + 載入更多 + 點擊跳神獸 | ✅（`CultivationTab`） |
 | Supabase 雲端同步(沿用 user_data blob 擴充 schemaVersion 1→3) | ✅ |
-| 19 種 reason 代碼 | ✅(階段 2 用 5、階段 3 用 4、階段 4 預留 8) |
-| 消耗管道(改名 / 催熟 / 換配色) | ❌ 階段 4 開放 |
+| 19 種 reason 代碼 | ✅(階段 2 用 5、階段 3 用 4、階段 4A 用 3、階段 4B/4C 預留 5) |
+| 消耗管道:改名 💎50 | ✅（`RenameModal`，階段 4A.2） |
+| 消耗管道:境界催熟 💎100 | ✅（`BoostRealmModal` + `pet.boostedDays`，階段 4A.3） |
+| 消耗管道:魂環淬煉 💎500 / 7 天 | ✅（`TemperRingModal` + `pet.effectBoostUntil` + `naturalEffect` 防雙重給付,階段 4A.4） |
+| 消耗管道:換配色 / 背景換皮 / HUD 主題 | ❌ 階段 4B 開放 |
+| 消耗管道:永恆紀念 / 圖鑑解鎖故事 | ❌ 階段 4C 開放 |
 
 ### 每日簽到 + 任務系統(階段 3)
 

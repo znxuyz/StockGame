@@ -203,8 +203,17 @@ Phaser sprite 視覺:
 | 第一次召喚某 species | `pet_added_codex` | +20 |
 | 賣出該次有獲利 | `sell_profit` | floor(realizedPnL / 1000) |
 
-### 消耗來源(階段 4 才會接,reason 代碼已預留)
-`rename` / `realm_boost` / `effect_boost` / `recolor` / `background` / `theme` / `eternal` / `unlock_story`
+### 消耗來源
+階段 4A 已實作 3 個(`PetInfoModal` 底部三顆 button → 對應 modal):
+| 按鈕 | reason | 金額 | 效果 |
+|---|---|---|---|
+| 改名 | `rename` | 50 | 寫 `pet.customName`,1-10 字限中英數,不可同原名 |
+| 催熟 | `realm_boost` | 100 | `pet.boostedDays += 30`,monthsHeld 跳 1 月,可能跨境界 |
+| 淬煉 | `effect_boost` | 500 | `pet.effectBoostUntil = now + 7d`,魂環特效強制升一階 |
+
+階段 4B / 4C 預留 5 個 reason 代碼:`recolor` / `background` / `theme` / `eternal` / `unlock_story`。
+
+**淬煉雙重給付防護**:`PetStatus` 拆 `effect`(渲染用,boost 套用後)/ `naturalEffect`(報酬率原值);`PhaserMap` 的 `effect_unlock` 比對改用 `naturalEffect`,玩家花 500 淬煉不會拿回 +50 自然 reward。`pet.lastEffectCheck` 永遠存 naturalEffect。
 
 ### 防重複觸發
 - **levelUp**:newLevel > oldLevel 才發,寫入新 level 後下次比對自然 = 不重發
