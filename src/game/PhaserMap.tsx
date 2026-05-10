@@ -108,6 +108,19 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
   const pets = useLiveQuery(() => db.pets.filter((p) => !p.retiredAt).toArray(), []);
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
   const prices = useLiveQuery(() => db.prices.toArray(), []);
+  // 階段 4B.4:訂閱 currentBackground,變動時通知 scene 動態 swap 背景
+  const currentBackground = useLiveQuery(
+    async () => (await db.settings.get('singleton'))?.currentBackground ?? 'default',
+    []
+  );
+
+  // settings.currentBackground 變 → scene.setBackgroundId(id) 動態載入 + swap
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const game = gameRef.current;
+    if (!scene || !game || !currentBackground) return;
+    waitForSceneReady(game, scene, () => scene.setBackgroundId(currentBackground));
+  }, [currentBackground]);
 
   useEffect(() => {
     const scene = sceneRef.current;

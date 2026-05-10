@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { PetSprite, spriteKey, type PetSpriteData } from './petSprite';
 import { CREATURES } from '@/data/creatures';
 import { REALM_COLOR, realmLabel, type SoulRealm } from '@/services/petTier';
+import { bgTextureKey, getBackgroundDef } from '@/services/background';
 
 /**
  * 水墨世界場景。
@@ -67,9 +68,11 @@ export class WorldScene extends Phaser.Scene {
   }
 
   preload() {
-    // 載入主背景 + 兩種粒子(JPG 黑底 spark 用 ADD blend 直接吃黑)
+    // 載入預設家園背景 + 兩種粒子(JPG 黑底 spark 用 ADD blend 直接吃黑)
+    // 階段 4B.4:其他背景(snow/night/lava)由 setBackgroundId 動態載入,
+    // 沒有美術檔的話 FILE_LOAD_ERROR fallback 維持原 bg
     const base = import.meta.env.BASE_URL ?? '/';
-    this.load.image('world-bg', `${base}assets/bg/main.JPG`);
+    this.load.image(bgTextureKey('default'), `${base}assets/bg/main.JPG`);
     this.load.image('petal', `${base}assets/particles/petal.png`);
     this.load.image('spark', `${base}assets/particles/spark.JPG`);
 
@@ -248,15 +251,75 @@ export class WorldScene extends Phaser.Scene {
     cam.setZoom(Phaser.Math.Clamp(cam.zoom * factor, ZOOM_MIN, ZOOM_MAX));
   }
 
+  /** 當前 bg 圖物件,setBackgroundId 切換時 destroy 舊 + 加新 */
+  private bgImage: Phaser.GameObjects.Image | null = null;
+  /** 當前 bg id,避免重複切同一張 */
+  private currentBgId = 'default';
+
   /**
-   * 鋪滿世界的主背景圖(bg/main.JPG 粉紅雲紋庭院)。
-   * cover-fit 縮放:bg 1344×896 與 world 2400×1600 同 3:2 比例,scale ≈ 1.79x 完全覆蓋無裁切。
+   * 鋪滿世界的主背景圖。預設用 bg/main.JPG(粉紅雲紋庭院);
+   * 階段 4B.4 玩家可在設定切換成 snow/night/lava(若已解鎖且檔案存在)。
+   * cover-fit 縮放:bg 1344×896 與 world 2400×1600 同 3:2,scale ≈ 1.79x 完全覆蓋。
    */
   private drawBackground() {
-    if (!this.textures.exists('world-bg')) return;
-    const bg = this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 'world-bg');
+    this.applyBackground(bgTextureKey('default'));
+  }
+
+  /** 套用指定 texture key 為背景。共用給 drawBackground / setBackgroundId */
+  private applyBackground(key: string) {
+    if (!this.textures.exists(key)) return;
+    if (this.bgImage) this.bgImage.destroy();
+    const bg = this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, key);
     const scale = Math.max(WORLD_WIDTH / bg.width, WORLD_HEIGHT / bg.height);
     bg.setScale(scale).setDepth(-100);
+    this.bgImage = bg;
+  }
+
+  /**
+   * 動態切背景(階段 4B.4)。React 端 settings.currentBackground 變動時 call。
+   *  - 同 id → no-op
+   *  - texture 已 load → 直接 swap
+   *  - 沒 load → 動態 this.load.image + start;成功 swap,FILE_LOAD_ERROR fallback default
+   */
+  setBackgroundId(id: string): void {
+    if (this.currentBgId === id) return;
+    const def = getBackgroundDef(id);
+    if (!def) {
+      console.warn('[scene] 未知背景 id,fallback default:', id);
+      this.setBackgroundId('default');
+      return;
+    }
+    const key = bgTextureKey(id);
+
+    if (this.textures.exists(key)) {
+      this.currentBgId = id;
+      this.applyBackground(key);
+      return;
+    }
+
+    const base = import.meta.env.BASE_URL ?? '/';
+    const url = `${base}assets/bg/${def.filename}`;
+
+    // 監聽載入錯誤(檔案不存在)— 用 once,避免之後其他 load 也誤觸
+    const onError = (file: Phaser.Loader.File) => {
+      if (file.key !== key) return;
+      this.load.off(Phaser.Loader.Events.FILE_LOAD_ERROR, onError);
+      this.load.off(Phaser.Loader.Events.COMPLETE, onComplete);
+      console.warn('[scene] 背景檔案不存在,維持當前 bg:', def.filename);
+    };
+    const onComplete = () => {
+      this.load.off(Phaser.Loader.Events.FILE_LOAD_ERROR, onError);
+      this.load.off(Phaser.Loader.Events.COMPLETE, onComplete);
+      if (this.textures.exists(key)) {
+        this.currentBgId = id;
+        this.applyBackground(key);
+      }
+    };
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, onError);
+    this.load.on(Phaser.Loader.Events.COMPLETE, onComplete);
+
+    this.load.image(key, url);
+    this.load.start();
   }
 
   /**
