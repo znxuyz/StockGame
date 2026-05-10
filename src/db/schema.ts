@@ -232,6 +232,44 @@ export class StockGameDB extends Dexie {
             // effectBoostUntil 不 backfill,undefined = 沒 boost(預設值)
           });
       });
+
+    /**
+     * v12:進階消耗管道(階段 4B)資料層。
+     *
+     * pets 表加 `colorVariant?: PetColorVariant`(階段 4B.2 配色淬煉,
+     *   tint 在 Phaser scene 套用)— 預設 'default' 不套 tint。
+     *
+     * settings 表加 4 個 optional 欄位:
+     *   - unlockedBackgrounds: string[](階段 4B.4 家園背景解鎖清單)— 預設 ['default']
+     *   - currentBackground: string(當前背景 id)— 預設 'default'
+     *   - hudTheme: HudTheme(階段 4B.3 HUD 主題色)— 預設 'default'
+     *   - unlockedHudThemes: HudTheme[](已解鎖的 HUD 主題清單)— 預設 ['default']
+     *
+     * stores 不變(IndexedDB document store 對新欄位不需 schema 改)。
+     * upgrade 顯式 backfill 上面所有預設值,讓 DB 跟新邏輯一致,避免 caller
+     * 每處 `?? 'default'` 防呆,集中在 migration 處理一次。
+     */
+    this.version(12)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('pets')
+          .toCollection()
+          .modify((pet) => {
+            const p = pet as Record<string, unknown>;
+            if (p.colorVariant === undefined) p.colorVariant = 'default';
+          });
+        await tx
+          .table('settings')
+          .toCollection()
+          .modify((s) => {
+            const r = s as Record<string, unknown>;
+            if (r.unlockedBackgrounds === undefined) r.unlockedBackgrounds = ['default'];
+            if (r.currentBackground === undefined) r.currentBackground = 'default';
+            if (r.hudTheme === undefined) r.hudTheme = 'default';
+            if (r.unlockedHudThemes === undefined) r.unlockedHudThemes = ['default'];
+          });
+      });
   }
 }
 

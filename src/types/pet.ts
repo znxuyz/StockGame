@@ -49,4 +49,14 @@ export interface Pet {
    * 一次淬煉持續 7 天(消耗 500 修為);重複淬煉 = 重新計時 7 天。
    */
   effectBoostUntil?: number;
+  /**
+   * 神獸配色(階段 4B.2 配色淬煉)。Phaser sprite 套對應 tint 顏色。
+   *  default → 不套 tint(原始立繪顏色)
+   *  cyan / gold / purple / rose → 套對應 tint
+   * 每次換色花 300 修為,可反覆換。預設 'default'。
+   */
+  colorVariant?: PetColorVariant;
 }
+
+/** 神獸配色 5 選 1(階段 4B.2)。tint 對應顏色在 services/pets/petColor.ts */
+export type PetColorVariant = 'default' | 'cyan' | 'gold' | 'purple' | 'rose';

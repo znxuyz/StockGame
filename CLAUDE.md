@@ -134,6 +134,7 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cle
 | 9 | 簽到任務系統 — 加 3 張表:`userLoginStreak`(id 'main' singleton)、`userTasks`(++id auto, indexed by taskKey/taskType/completed/claimed)、`milestoneRewards`(++id, **&milestoneDay 唯一索引**防重領) |
 | 10 | **重大修正** userTasks 拿掉 boolean index — IndexedDB 不接受 boolean 當 valid key,完成寫不進去 → 任務 tab 永遠空。stores 改 `'++id, taskKey, taskType'` | no-op data upgrade(只重建 indexes) |
 | 11 | Pet 加 `boostedDays?: number` / `effectBoostUntil?: number` optional 欄位(階段 4A.3 催熟 + 4A.4 淬煉,修為消耗管道) | upgrade callback 把舊資料 `boostedDays` backfill 為 0;`effectBoostUntil` 不 backfill(undefined = 沒 boost) |
+| 12 | 進階消耗管道(階段 4B)資料層:Pet 加 `colorVariant?: PetColorVariant`(配色 5 選 1);Settings 加 `unlockedBackgrounds` / `currentBackground` / `hudTheme` / `unlockedHudThemes` 4 個 optional 欄位 | upgrade callback backfill 全部預設值:pet.colorVariant='default';settings.unlockedBackgrounds=['default'] / currentBackground='default' / hudTheme='default' / unlockedHudThemes=['default'] |
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 

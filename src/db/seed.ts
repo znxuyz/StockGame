@@ -18,7 +18,12 @@ export async function seedIfEmpty(): Promise<void> {
       soundEnabled: true,
       createdAt: Date.now(),
       consecutiveDays: 0,
-      maxConsecutiveDays: 0
+      maxConsecutiveDays: 0,
+      // 階段 4B 預設值(跟 schema v12 migration 對齊)
+      unlockedBackgrounds: ['default'],
+      currentBackground: 'default',
+      hudTheme: 'default',
+      unlockedHudThemes: ['default']
     };
     await db.settings.put(initial);
   }

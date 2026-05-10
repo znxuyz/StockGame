@@ -22,4 +22,24 @@ export interface Settings {
   consecutiveDays: number;
   /** 歷史最高連續登入天數 */
   maxConsecutiveDays: number;
+  /**
+   * 階段 4B.4:已解鎖的家園背景 id 清單。預設 ['default'],
+   * 每張新背景花 500 修為解鎖一次,append 進此 array,後續切換不再扣費。
+   */
+  unlockedBackgrounds?: string[];
+  /** 階段 4B.4:當前選用的家園背景 id。預設 'default' */
+  currentBackground?: string;
+  /**
+   * 階段 4B.3:HUD 主題色 id。每解一個新主題花 200 修為,切換不重複扣費。
+   * data-theme 屬性同步到 <html>,index.css 用 CSS variables 對應。
+   */
+  hudTheme?: HudTheme;
+  /**
+   * 階段 4B.3:已解鎖的 HUD 主題 id 清單。預設 ['default'],
+   * 解鎖後 append 進此 array,可隨時切換不再扣費。
+   */
+  unlockedHudThemes?: HudTheme[];
 }
+
+/** HUD 主題 4 選 1(階段 4B.3)。CSS variables 在 index.css [data-theme="..."] 區段 */
+export type HudTheme = 'default' | 'jade' | 'purple' | 'red';
