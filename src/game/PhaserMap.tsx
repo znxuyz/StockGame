@@ -170,13 +170,15 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         }
 
         // 階段 2.3:報酬率特效升級偵測(從低升高才獎勵,從高降低不扣,防震盪洗修為)
-        if (pet.lastEffectCheck !== status.effect) {
+        // 階段 4A.4 修:用 naturalEffect 比對(無淬煉 boost),避免玩家花 500
+        // 修為淬煉後拿回 +50 effect_unlock 雙重給付
+        if (pet.lastEffectCheck !== status.naturalEffect) {
           if (pet.lastEffectCheck !== undefined) {
             const oldRank = EFFECT_ORDER.indexOf(pet.lastEffectCheck);
-            const newRank = EFFECT_ORDER.indexOf(status.effect);
+            const newRank = EFFECT_ORDER.indexOf(status.naturalEffect);
             if (newRank > oldRank) {
               // pulsing(>20%) / rotating(>50%) → 50;erupting(>100%) → 100
-              const reward = status.effect === 'erupting' ? 100 : 50;
+              const reward = status.naturalEffect === 'erupting' ? 100 : 50;
               const labels: Record<string, string> = {
                 pulsing: '魂環開始脈動(+20%)',
                 rotating: '魂環開始旋轉(+50%)',
@@ -185,14 +187,14 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
               earnCultivation(
                 reward,
                 'effect_unlock',
-                `${species?.name ?? '神獸'} ${labels[status.effect] ?? '魂環升級'}`,
+                `${species?.name ?? '神獸'} ${labels[status.naturalEffect] ?? '魂環升級'}`,
                 pet.id
               );
               // 階段 3.7:任務 trigger 計次(只升才發,降級不發)
               emitTaskTrigger('effect_unlock', 1);
             }
           }
-          db.pets.update(pet.id, { lastEffectCheck: status.effect });
+          db.pets.update(pet.id, { lastEffectCheck: status.naturalEffect });
         }
 
         return {

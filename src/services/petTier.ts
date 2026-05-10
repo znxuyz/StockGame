@@ -133,6 +133,17 @@ export function effectLabel(effect: RingEffect): string {
   return EFFECT_LABELS[effect];
 }
 
+/**
+ * 把 ring effect 升一階(階段 4A.4 魂環淬煉用)。
+ *  dim → normal, normal → pulsing, pulsing → rotating, rotating → erupting,
+ *  erupting → erupting(已最高,不變)
+ */
+export function upgradeEffect(eff: RingEffect): RingEffect {
+  const idx = EFFECT_ORDER.indexOf(eff);
+  if (idx < 0) return eff;
+  return EFFECT_ORDER[Math.min(idx + 1, EFFECT_ORDER.length - 1)];
+}
+
 // ─── 三維度狀態計算器 ──────────────────────────────────────────────────────
 
 export interface PetStatus {
@@ -140,9 +151,18 @@ export interface PetStatus {
   level: number;
   /** 凡/靈/妖/神/聖/仙 */
   realm: SoulRealm;
-  /** 暗/普通/脈動/旋轉/噴光 */
+  /**
+   * 暗/普通/脈動/旋轉/噴光 — 經淬煉 boost 後的「可見」特效(渲染用)。
+   * 階段 4A.4 後若 `pet.effectBoostUntil > now`,= upgradeEffect(naturalEffect)。
+   */
   effect: RingEffect;
-  /** 持有月數(浮點) */
+  /**
+   * 純靠 returnRate 算出的「自然」特效(無淬煉 boost)。
+   * cultivation effect_unlock 獎勵的 lastEffectCheck 比較用 — 不應該因為
+   * 玩家花 500 修為淬煉就拿回 +50 effect_unlock 修為(雙重給付)。
+   */
+  naturalEffect: RingEffect;
+  /** 持有月數(浮點,已含 boostedDays) */
   monthsHeld: number;
   /** 累積投入 NT$(holding.totalCost) */
   totalInvested: number;
@@ -185,10 +205,17 @@ export function getPetStatus(
   const boostMs = (pet.boostedDays ?? 0) * MS_PER_DAY;
   const monthsHeld = Math.max(0, (now - firstBuy + boostMs) / MS_PER_MONTH);
 
+  // 階段 4A.4:effectBoostUntil > now 時把自然 effect 升一階,
+  // naturalEffect 留給 cultivation reward 比較,effect 給渲染
+  const naturalEffect = getRingEffect(returnRate);
+  const tempering = pet.effectBoostUntil != null && pet.effectBoostUntil > now;
+  const effect = tempering ? upgradeEffect(naturalEffect) : naturalEffect;
+
   return {
     level: calculateLevel(totalInvested),
     realm: getRealm(monthsHeld),
-    effect: getRingEffect(returnRate),
+    effect,
+    naturalEffect,
     monthsHeld,
     totalInvested,
     currentValue,
