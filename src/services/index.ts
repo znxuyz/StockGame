@@ -14,6 +14,7 @@ export {
   REALM_COLOR,
   getRingEffect,
   effectLabel,
+  upgradeEffect,
   EFFECT_ORDER,
   EFFECT_THRESHOLD,
   getPetStatus

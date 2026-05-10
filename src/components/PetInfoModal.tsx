@@ -18,6 +18,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import RenameModal from './RenameModal';
 import BoostRealmModal from './BoostRealmModal';
+import TemperRingModal from './TemperRingModal';
 
 interface PetInfoModalProps {
   open: boolean;
@@ -60,6 +61,7 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [boostOpen, setBoostOpen] = useState(false);
+  const [temperOpen, setTemperOpen] = useState(false);
   const prevPriceRef = useRef<number | null>(null);
 
   // 訂閱該檔的即時價(背景 silentRefresh 寫入 db.prices 後 modal 會自動重抓 detail)
@@ -172,11 +174,18 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
             {/* 魂環境界 + 進度條 */}
             <RealmRow status={status} />
 
-            {/* 報酬率特效 */}
+            {/* 報酬率特效(淬煉中會顯示「淬煉中(剩 X 天)」) */}
             <div>
               <div className="flex items-baseline justify-between">
                 <span className="font-bold">
                   {EFFECT_EMOJI[status.effect]} 魂環特效:{effectLabel(status.effect)}
+                  {pet.effectBoostUntil != null && pet.effectBoostUntil > Date.now() && (
+                    <span className="ml-1 text-[11px] text-amber-600 font-normal">
+                      (淬煉中,剩{' '}
+                      {Math.ceil((pet.effectBoostUntil - Date.now()) / 86_400_000)}{' '}
+                      天)
+                    </span>
+                  )}
                 </span>
                 <span
                   className={
@@ -257,9 +266,9 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
 
         {/*
           階段 4A 修為消耗管道。4A.5 會統一加上修為不足 / 已達上限 等視覺狀態。
-          目前 [改名]、[催熟] 已 wired;[淬煉] 在 4A.4 補。
+          目前 [改名]、[催熟]、[淬煉] 三顆 wired;每顆內部 modal 自己處理 disabled 狀態。
         */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        <div className="grid grid-cols-3 gap-2 pt-1">
           <button
             type="button"
             onClick={() => setRenameOpen(true)}
@@ -275,6 +284,14 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
           >
             催熟 💎100
           </button>
+          <button
+            type="button"
+            onClick={() => setTemperOpen(true)}
+            disabled={!status}
+            className="rounded-lg bg-amber-500 text-white font-bold py-2 text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
+          >
+            淬煉 💎500
+          </button>
         </div>
       </div>
 
@@ -282,6 +299,12 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
       <BoostRealmModal
         open={boostOpen}
         onClose={() => setBoostOpen(false)}
+        pet={pet}
+        status={status}
+      />
+      <TemperRingModal
+        open={temperOpen}
+        onClose={() => setTemperOpen(false)}
         pet={pet}
         status={status}
       />
