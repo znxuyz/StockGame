@@ -28,6 +28,9 @@ export {
   COLOR_VARIANT_CSS
 } from './petColor';
 
+export { BACKGROUNDS, getBackgroundDef, bgTextureKey } from './background';
+export type { BackgroundDef } from './background';
+
 export { runPriceUpdate, describePriceUpdateError } from './priceUpdate';
 export type { PriceUpdateResult } from './priceUpdate';
 

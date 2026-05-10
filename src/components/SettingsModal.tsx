@@ -6,6 +6,8 @@ import { isCloudConfigured, supabase } from '@/lib/supabase';
 import { useAuth, signOut } from '@/lib/auth';
 import { cancelPendingPush } from '@/services/cloudSync';
 import HudThemeModal from './HudThemeModal';
+import BackgroundModal from './BackgroundModal';
+import { BACKGROUNDS } from '@/services';
 
 interface SettingsModalProps {
   open: boolean;
@@ -39,6 +41,7 @@ export default function SettingsModal({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [hudThemeOpen, setHudThemeOpen] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
   useEffect(() => {
     if (!confirmingDelete) return;
     const id = setTimeout(() => setConfirmingDelete(false), 5000);
@@ -201,6 +204,18 @@ export default function SettingsModal({
           </span>
         </button>
 
+        {/* 階段 4B.4:家園背景入口。同 HudTheme 模式,modal 內 db.settings.put 即時生效 */}
+        <button
+          type="button"
+          onClick={() => setBackgroundOpen(true)}
+          className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
+        >
+          <span className="text-sm text-gray-700">🖼️ 家園背景</span>
+          <span className="text-xs text-gray-500">
+            {bgLabel(settings.currentBackground ?? 'default')} ›
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={handleSave}
@@ -281,6 +296,7 @@ export default function SettingsModal({
       </div>
 
       <HudThemeModal open={hudThemeOpen} onClose={() => setHudThemeOpen(false)} />
+      <BackgroundModal open={backgroundOpen} onClose={() => setBackgroundOpen(false)} />
     </Modal>
   );
 }
@@ -297,4 +313,9 @@ function hudThemeLabel(id: string): string {
     default:
       return '米粉';
   }
+}
+
+/** 設定頁右側顯示「粉紅雲紋 ›」用,從 BACKGROUNDS catalog 拿 label */
+function bgLabel(id: string): string {
+  return BACKGROUNDS.find((b) => b.id === id)?.label ?? '粉紅雲紋';
 }
