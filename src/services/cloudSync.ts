@@ -35,11 +35,12 @@ export interface CloudBlob {
   stocks: Stock[];
   holdings: Holding[];
   /**
-   * 神獸列表。階段 4A 新增 3 個 optional 欄位都自動隨 JSON 序列化同步,
+   * 神獸列表。階段 4A/4B 新增 4 個 optional 欄位都自動隨 JSON 序列化同步,
    * 不需要 cloudSync 程式碼動:
    *   - customName(階段 4A.2 改名)
    *   - boostedDays(階段 4A.3 催熟累積天數)
    *   - effectBoostUntil(階段 4A.4 淬煉到期 unix ms)
+   *   - colorVariant(階段 4B.2 配色淬煉)
    * 跨裝置 race 已驗證:effectBoostUntil 是時間戳,B 裝置拉到後仍以 now 比對,
    * 過期就自動降回自然 effect,不會卡狀態。
    */
@@ -47,6 +48,15 @@ export interface CloudBlob {
   transactions: Transaction[];
   achievements: AchievementProgress[];
   snapshots: DailySnapshot[];
+  /**
+   * 全域設定 singleton。階段 4B 新增 4 個 optional 欄位都自動隨 JSON 同步:
+   *   - unlockedBackgrounds(4B.4 家園背景解鎖清單)
+   *   - currentBackground(4B.4 當前家園背景 id)
+   *   - hudTheme(4B.3 HUD 主題色 id)
+   *   - unlockedHudThemes(4B.3 HUD 主題解鎖清單)
+   * 跨裝置:A 解鎖玉藍 → push → B pull → HUD 立刻變綠調(useEffect 同步
+   * data-theme)。沒 race issue 因為解鎖是 append-only。
+   */
   settings: Settings | null;
   /** 階段 2.6:玩家修為總額(singleton row) */
   userCultivation?: UserCultivation | null;
