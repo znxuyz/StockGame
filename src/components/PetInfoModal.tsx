@@ -20,6 +20,8 @@ import { useCultivation } from '@/hooks/useCultivation';
 import RenameModal from './RenameModal';
 import BoostRealmModal from './BoostRealmModal';
 import TemperRingModal from './TemperRingModal';
+import ColorVariantModal from './ColorVariantModal';
+import { COLOR_VARIANT_LABEL } from '@/services';
 
 interface PetInfoModalProps {
   open: boolean;
@@ -63,6 +65,7 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
   const [renameOpen, setRenameOpen] = useState(false);
   const [boostOpen, setBoostOpen] = useState(false);
   const [temperOpen, setTemperOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
   const prevPriceRef = useRef<number | null>(null);
 
   // 訂閱該檔的即時價(背景 silentRefresh 寫入 db.prices 後 modal 會自動重抓 detail)
@@ -131,6 +134,7 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
   const RENAME_COST = 50;
   const BOOST_COST = 100;
   const TEMPER_COST = 500;
+  const COLOR_COST = 300;
   const tempering =
     pet.effectBoostUntil != null && pet.effectBoostUntil > Date.now();
   const temperDaysLeft = tempering
@@ -159,6 +163,11 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
       : tempering
         ? `淬煉中 ${temperDaysLeft}d`
         : `淬煉 💎${TEMPER_COST}`;
+
+  const colorInsufficient = balance < COLOR_COST;
+  const colorDim = colorInsufficient;
+  const colorLabel = colorInsufficient ? '換色 💎不足' : `換色 💎${COLOR_COST}`;
+  const currentVariantLabel = COLOR_VARIANT_LABEL[pet.colorVariant ?? 'default'];
 
   const buttonBase =
     'rounded-lg font-bold py-2 text-xs active:scale-95 transition-transform';
@@ -309,11 +318,11 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
         )}
 
         {/*
-          階段 4A.5 修為消耗 button row。三顆都在每隻神獸詳細頁。
+          階段 4A.5 + 4B.2 修為消耗 button row。四顆都在每隻神獸詳細頁。
           按鈕仍可點(進 modal 看完整說明),變灰只是視覺提示「不能執行」。
           modal 內的「確認」鈕才是真正的 hard guard(disabled + spendCultivation race-safe)。
         */}
-        <div className="grid grid-cols-3 gap-2 pt-1">
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <button
             type="button"
             onClick={() => setRenameOpen(true)}
@@ -341,6 +350,14 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
           >
             {temperLabel}
           </button>
+          <button
+            type="button"
+            onClick={() => setColorOpen(true)}
+            className={`${buttonBase} ${colorDim ? buttonDim : buttonActive}`}
+            title={`目前 ${currentVariantLabel}`}
+          >
+            {colorLabel}
+          </button>
         </div>
       </div>
 
@@ -356,6 +373,11 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
         onClose={() => setTemperOpen(false)}
         pet={pet}
         status={status}
+      />
+      <ColorVariantModal
+        open={colorOpen}
+        onClose={() => setColorOpen(false)}
+        pet={pet}
       />
     </Modal>
   );

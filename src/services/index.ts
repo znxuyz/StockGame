@@ -21,6 +21,13 @@ export {
 } from './petTier';
 export type { SoulRealm, RingEffect, PetStatus } from './petTier';
 
+export {
+  COLOR_VARIANT_TINT,
+  COLOR_VARIANT_LABEL,
+  COLOR_VARIANT_ORDER,
+  COLOR_VARIANT_CSS
+} from './petColor';
+
 export { runPriceUpdate, describePriceUpdateError } from './priceUpdate';
 export type { PriceUpdateResult } from './priceUpdate';
 

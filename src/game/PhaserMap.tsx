@@ -206,7 +206,9 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
           pnl,
           level: status.level,
           realm: status.realm,
-          effect: status.effect
+          effect: status.effect,
+          // 階段 4B.2:配色淬煉 — 沒設過的舊 pet 預設 'default'
+          colorVariant: pet.colorVariant ?? 'default'
         } satisfies PetSpriteData;
       })
       .filter((x): x is PetSpriteData => x !== null);
