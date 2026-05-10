@@ -34,6 +34,15 @@ export interface CloudBlob {
   schemaVersion: number;
   stocks: Stock[];
   holdings: Holding[];
+  /**
+   * 神獸列表。階段 4A 新增 3 個 optional 欄位都自動隨 JSON 序列化同步,
+   * 不需要 cloudSync 程式碼動:
+   *   - customName(階段 4A.2 改名)
+   *   - boostedDays(階段 4A.3 催熟累積天數)
+   *   - effectBoostUntil(階段 4A.4 淬煉到期 unix ms)
+   * 跨裝置 race 已驗證:effectBoostUntil 是時間戳,B 裝置拉到後仍以 now 比對,
+   * 過期就自動降回自然 effect,不會卡狀態。
+   */
   pets: Pet[];
   transactions: Transaction[];
   achievements: AchievementProgress[];
