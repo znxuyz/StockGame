@@ -25,9 +25,9 @@ export interface BackgroundDef {
 
 export const BACKGROUNDS: BackgroundDef[] = [
   { id: 'default', label: '粉紅雲紋', filename: 'main.JPG', cost: 0, hasAsset: true },
-  { id: 'snow', label: '雪白冰原', filename: 'snow.jpg', cost: 500, hasAsset: false },
-  { id: 'night', label: '夜晚星空', filename: 'night.jpg', cost: 500, hasAsset: false },
-  { id: 'lava', label: '火紅熔岩', filename: 'lava.jpg', cost: 500, hasAsset: false }
+  { id: 'snow', label: '雪白冰原', filename: 'snow.png', cost: 500, hasAsset: true },
+  { id: 'night', label: '夜晚星空', filename: 'night.png', cost: 500, hasAsset: true },
+  { id: 'lava', label: '火紅熔岩', filename: 'lava.png', cost: 500, hasAsset: true }
 ];
 
 export function getBackgroundDef(id: string): BackgroundDef | undefined {

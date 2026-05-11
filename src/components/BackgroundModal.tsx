@@ -73,8 +73,7 @@ export default function BackgroundModal({ open, onClose }: BackgroundModalProps)
     <Modal open={open} onClose={busy ? () => {} : onClose} title="家園背景" hideClose={!!busy}>
       <div className="space-y-3 text-sm">
         <p className="text-xs text-gray-600 leading-relaxed">
-          解鎖一次 💎 500 修為,之後可隨時免費切換。其他三張背景的美術尚未上線,
-          解鎖後仍維持原圖,等美術補上即可看到。
+          解鎖一次 💎 500 修為,之後可隨時免費切換。Phaser scene 動態載入,切換不重整。
         </p>
 
         <div className="space-y-2">
