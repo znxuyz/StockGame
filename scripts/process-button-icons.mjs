@@ -20,12 +20,18 @@ import sharp from 'sharp';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
-const ICONS = [
-  // BottomBar 新功能(舊的 records / settings 不重跑,已 256×256 去背完成)
+/**
+ * 預設清單(無 CLI args 時跑全部)。
+ * 補新 icon 時加進來,跑 `node scripts/process-button-icons.mjs <file...>` 重做指定的。
+ */
+const DEFAULT_ICONS = [
+  // BottomBar
   'public/assets/btn/game.png',
   'public/assets/btn/friends.png',
   'public/assets/btn/trade.png',
-  // tab icons(GameModal + RecordsModal 用)
+  'public/assets/btn/records.png',
+  'public/assets/btn/settings.png',
+  // tab icons
   'public/assets/btn/tab/task.png',
   'public/assets/btn/tab/achievement.png',
   'public/assets/btn/tab/codex.png',
@@ -34,6 +40,9 @@ const ICONS = [
   'public/assets/btn/tab/compare.png',
   'public/assets/btn/tab/transactions.png'
 ];
+
+const cliArgs = process.argv.slice(2);
+const ICONS = cliArgs.length > 0 ? cliArgs : DEFAULT_ICONS;
 
 const TARGET_SIZE = 256;
 const SEED_BLOCK = 16;

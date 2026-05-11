@@ -89,7 +89,7 @@ npm run preview           # 預覽 build
 
 # 資產處理（本機跑）
 npm run build:icons       # public/app-icon-source.JPG → public/icons/*.png
-npm run process:ui-assets # public/assets/btn/*.JPG → 去背 PNG
+npm run process:ui-assets # public/assets/particles/*.JPG → 去背 PNG(MJ 直接 PNG 上傳的 btn icon 走 process-button-icons.mjs)
 npm run download:sprites  # MJ 立繪 → public/sprites/*.png（必須本機跑，CDN 擋 sandbox）
 npm run fetch:industries  # TWSE OpenAPI → src/data/industries.json
 npm run fetch:holidays    # TaiwanCalendar → src/data/holidays.json
