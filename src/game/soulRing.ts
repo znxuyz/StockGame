@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { REALM_COLOR, type SoulRealm, type RingEffect } from '@/services/petTier';
+import { REALM_ORDER, type SoulRealm, type RingEffect } from '@/services/petTier';
 
 /**
- * 魂環渲染器(階段 1.2 + 1.3)。
+ * 魂環渲染器(階段 1.2/1.3 建構,階段 4B 美術後改用精美 PNG sprite)。
  *
- * 9 顆 ring graphic 半圓排列在神獸腳下,顏色對應魂環境界:
+ * 9 顆 ring image 半圓排列在神獸腳下,texture 對應魂環境界:
  *   fan(凡)  ⚪ 白         ling(靈) 🟡 黃
- *   yao(妖)  🟣 紫         shen(神) ⚫ 黑(銀邊光暈)
+ *   yao(妖)  🟣 紫         shen(神) ⚫ 黑帶銀邊光暈
  *   sheng(聖) 🔴 紅         xian(仙) 🌈 彩虹漸層
  *
  * 排列:半圓在神獸腳下,index 0(左) → index 8(右),弧形微笑狀。
@@ -14,26 +14,29 @@ import { REALM_COLOR, type SoulRealm, type RingEffect } from '@/services/petTier
  * 進 PetSprite.container 最底層。對 ringContainer 做 alpha / angle tween
  * 讓 9 顆環一起動。
  *
- * 特效(applyEffect,階段 1.3):
+ * 特效(applyEffect):
  *   dim       alpha 0.3 靜態
  *   normal    alpha 1.0 靜態
  *   pulsing   alpha tween 0.5 ↔ 1.0,週期 1.5s
  *   rotating  angle 360° tween 8s/圈
  *   erupting  angle 360° tween 4s/圈 + 每顆 ring 800ms 噴小金光點向上飛 1s 淡出
+ *
+ * 階段 4B 改用 sprite 後:
+ *   - drawRing 改成 scene.add.image(0,0, ringTextureKey(realm)) + setDisplaySize(20,20)
+ *   - 仙境彩虹 / 神境銀邊 等視覺都已 bake 在 PNG 美術裡,不再需要 Graphics 重畫
+ *   - tween 跟粒子噴發邏輯完全沒動(對 container 操作,Image / Graphics 都吃)
+ *   - 縮小尺寸從 16px → 20px 提升辨識度(retina sprite 128px 縮 20 仍清晰)
  */
 
 const RING_COUNT = 9;
-/** 每顆 ring 的圓周半徑 — 直徑 ~16 px */
-const RING_RADIUS = 8;
+/** 每顆 ring image 顯示尺寸(retina sprite 128px 縮 20px 仍清晰) */
+const RING_DISPLAY_SIZE = 20;
 /** 半圓水平半徑(相對 sprite 寬度) */
 const ARC_RADIUS_X_RATIO = 0.55;
 /** 半圓垂直半徑(相對 sprite 高度,壓扁形成弧線) */
 const ARC_RADIUS_Y_RATIO = 0.18;
 /** 半圓中心 y 偏移(相對 sprite 高度,把弧推到腳下) */
 const ARC_OFFSET_Y_RATIO = 0.45;
-
-/** 彩虹色順序 — xian 仙境用,每環疊 6 圈不同色形成漸層 */
-const RAINBOW_COLORS = [0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x0000ff, 0x9400d3];
 
 /** 噴光粒子:每顆 ring 每 N ms 噴一個 */
 const ERUPTION_INTERVAL = 800;
@@ -46,12 +49,24 @@ const ERUPTION_RADIUS = 2;
 /** 粒子顏色(金色) */
 const ERUPTION_COLOR = 0xffd700;
 
+/** Phaser texture key,跟 WorldScene.preload 註冊對齊 */
+export function ringTextureKey(realm: SoulRealm): string {
+  return `ring-${realm}`;
+}
+
+/** WorldScene.preload 呼叫一次,把 6 個境界 PNG 一次載完 */
+export function preloadRingTextures(scene: Phaser.Scene, base: string): void {
+  for (const realm of REALM_ORDER) {
+    scene.load.image(ringTextureKey(realm), `${base}assets/rings/ring-${realm}.png`);
+  }
+}
+
 export class SoulRingRenderer {
   private scene: Phaser.Scene;
   /** sub-container 包 9 顆 ring + erupting particles。對 container 做 tween,9 顆一起動 */
   private container: Phaser.GameObjects.Container;
-  /** 9 顆 ring graphic,destroy / re-render 時清空 */
-  private rings: Phaser.GameObjects.Graphics[] = [];
+  /** 9 顆 ring image,destroy / re-render 時清空 */
+  private rings: Phaser.GameObjects.Image[] = [];
   /** Sprite 顯示尺寸,計算半圓座標用 */
   private spriteSize: number;
   /** 最近一次的 effect,destroy 時用來清 tween */
@@ -96,39 +111,21 @@ export class SoulRingRenderer {
   }
 
   /**
-   * 畫單一 ring 在 (x, y) 位置。realm 決定顏色 + 是否加裝飾(銀邊 / 彩虹)。
+   * 畫單一 ring image 在 (x, y) 位置。texture 跟著 realm,沒載到 fallback 不畫
+   * (console.warn 一次,玩家不會白屏,等下次 render 重試)。
    */
-  private drawRing(x: number, y: number, realm: SoulRealm): Phaser.GameObjects.Graphics {
-    const ring = this.scene.add.graphics();
-    ring.x = x;
-    ring.y = y;
-
-    if (realm === 'xian') {
-      // 仙境:6 色彩虹同心環疊加,從內到外漸大
-      RAINBOW_COLORS.forEach((c, layer) => {
-        ring.lineStyle(1.5, c, 0.85);
-        ring.strokeCircle(0, 0, RING_RADIUS + layer * 0.6);
-      });
-      return ring;
+  private drawRing(x: number, y: number, realm: SoulRealm): Phaser.GameObjects.Image {
+    const key = ringTextureKey(realm);
+    if (!this.scene.textures.exists(key)) {
+      console.warn('[soulRing] 缺 texture:', key);
     }
-
-    const color = REALM_COLOR[realm];
-    if (color !== null) {
-      ring.lineStyle(3, color, 0.85);
-      ring.strokeCircle(0, 0, RING_RADIUS);
-    }
-
-    if (realm === 'shen') {
-      // 神境黑環外加銀色光暈,讓黑色不會在深色背景消失
-      ring.lineStyle(1, 0xcccccc, 0.6);
-      ring.strokeCircle(0, 0, RING_RADIUS + 3);
-    }
-
+    const ring = this.scene.add.image(x, y, key);
+    ring.setDisplaySize(RING_DISPLAY_SIZE, RING_DISPLAY_SIZE);
     return ring;
   }
 
   /**
-   * 套用 effect 視覺。階段 1.3 完整實作 5 種特效:
+   * 套用 effect 視覺。5 種特效:
    *   dim      alpha 0.3 靜態
    *   normal   alpha 1.0 靜態
    *   pulsing  alpha tween 0.5↔1.0(1.5s 週期 yoyo)
