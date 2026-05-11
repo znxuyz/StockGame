@@ -56,6 +56,20 @@ export interface Pet {
    * 每次換色花 300 修為,可反覆換。預設 'default'。
    */
   colorVariant?: PetColorVariant;
+  /**
+   * 永恆紀念旗標(階段 4C.2)。退役神獸花 2000 修為「永恆封印」,
+   * 圖鑑卡的魂環從靜態變回退役當下的動態特效。
+   * true 後不可逆,沒「取消紀念」操作。
+   */
+  isEternal?: boolean;
+  /** 永恆紀念時間(unix ms),配合 isEternal=true 才有意義 */
+  eternalDate?: number;
+  /**
+   * 退役當下的魂環特效快照(階段 4C.2)。
+   * 賣光神獸時 portfolio.sell 寫入,圖鑑卡用這個還原原本動態效果
+   * (不再依賴 holding/price 即時算,因為已退役沒持倉資料)。
+   */
+  finalEffect?: import('@/services/petTier').RingEffect;
 }
 
 /** 神獸配色 5 選 1(階段 4B.2)。tint 對應顏色在 services/pets/petColor.ts */
