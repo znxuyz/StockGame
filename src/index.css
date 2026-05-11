@@ -48,14 +48,16 @@
    * 玻璃擬態 BottomBar:對稱 HUD,bottom 鋪到 viewport 底(iOS home indicator 下面)。
    *  - bottom: 0 + padding-bottom: calc(6px + safe-bottom) full-bleed
    *  - border-top 替代 HUD 的 border-bottom,形成上下對稱金線
-   *  - z-30 同層,modal 仍然蓋過
+   *  - z-index 60 蓋過 .modal-backdrop(z-50),Modal 開啟時 BottomBar 仍清晰可見
+   *    (避免 modal 跟 BottomBar 之間出現 "popup 飄在 BottomBar 上方" 的小縫,
+   *    現在 popup 延伸到 viewport bottom: 0,讓 BottomBar 直接覆蓋於上)
    */
   .hud-bottom {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 30;
+    z-index: 60;
     padding: 8px 8px calc(6px + env(safe-area-inset-bottom));
     background: var(--hud-bg);
     backdrop-filter: blur(20px) saturate(140%);
@@ -124,14 +126,18 @@
 
   .glass-popup {
     position: fixed;
-    /* bottom 留 BottomBar 高度,popup 不疊 BottomBar(避免半透明 0.75 透出 BottomBar 邊緣) */
-    bottom: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
+    /*
+      Popup 從 HUD 底下(top: 140px)一路延伸到 viewport bottom: 0,
+      不再用 height: calc(100vh - ...) 因為 iOS PWA 模式下 vh 計算
+      在某些 viewport 切換時會差 5-10px,導致 BottomBar 上方出現
+      「神獸/主畫面透出來」的小縫。改用 top + bottom 自動撐高,
+      .hud-bottom 拉到 z-60 蓋在 popup 之上;popup 內 padding-bottom
+      預留 BottomBar 高度,確保內容不被遮。
+    */
+    top: 140px;
+    bottom: 0;
     left: 0;
     right: 0;
-    width: 100vw;
-    /* HUD 140px + BottomBar var + safe-area = 完整可見高度,popup 填剩餘 */
-    height: calc(100vh - 140px - var(--bottom-bar-height) - env(safe-area-inset-bottom));
-    max-height: calc(100vh - 140px - var(--bottom-bar-height) - env(safe-area-inset-bottom));
     border-radius: 24px 24px 0 0;
     background: var(--popup-bg);
     backdrop-filter: blur(24px) saturate(150%);
@@ -144,6 +150,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding-bottom: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -196,12 +203,13 @@
    *  - flex: 1 填滿剩餘高度
    *  - overflow-y: auto 內容超出時垂直捲
    *  - -webkit-overflow-scrolling: touch iOS 慣性捲
+   *  - padding-bottom 不再加 BottomBar(已由 .glass-popup padding-bottom 承擔),
+   *    只保留 safe-area 給 iOS PWA home indicator 防呆
    */
   .glass-popup-content {
     flex: 1;
     overflow-y: auto;
-    /* 底部 padding 加 safe-area,iOS PWA home indicator 不會吃掉最後一個 item */
-    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+    padding: 16px 20px;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -209,6 +217,11 @@
    * 階段 4C 圖鑑詳細頁填滿容器(Bug 修):
    * 把 BestiaryPetDetail 的根 div 撐到 glass-popup-content 的 min-height,
    * 內部 data-card 用 flex-1 把空白填掉,卡片不再「飄在空中」。
+   *
+   * 不全域套 .glass-popup-content > * 因為 PetInfoModal 等 caller 內
+   * 有多個 direct child(主 div + 內嵌 Modal 元件 wrapper),強制 flex column
+   * 會打架。需要填滿的 sub-view(BestiaryPetDetail / HudThemeSection /
+   * BackgroundSection)各自掛 .bestiary-detail-fill 或 min-h-full,精準控制。
    */
   .bestiary-detail-fill {
     min-height: 100%;

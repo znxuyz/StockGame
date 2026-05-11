@@ -5,9 +5,21 @@ import type { Settings } from '@/types';
 import { isCloudConfigured, supabase } from '@/lib/supabase';
 import { useAuth, signOut } from '@/lib/auth';
 import { cancelPendingPush } from '@/services/cloudSync';
-import HudThemeModal from './HudThemeModal';
-import BackgroundModal from './BackgroundModal';
+import HudThemeSection from './HudThemeSection';
+import BackgroundSection from './BackgroundSection';
 import { BACKGROUNDS } from '@/services';
+
+/**
+ * 設定彈窗 sub-view 切換。
+ * 'main' = 設定主頁(玩家名、手續費、雲端同步等);
+ * 'hudTheme' / 'background' 是子頁。
+ *
+ * 不用 nested Modal 因為 iOS Safari 的 backdrop-filter 包含區塊 bug
+ * 會讓 nested .glass-popup 鎖進 outer popup 範圍,出現「子頁底部沒貼齊
+ * BottomBar」(同 BestiaryPetDetail 之前的 bug)。改 state 切換,sub-view
+ * 直接取代 main 渲染在同一個 .glass-popup-content 內。
+ */
+type SubView = 'main' | 'hudTheme' | 'background';
 
 interface SettingsModalProps {
   open: boolean;
@@ -40,19 +52,20 @@ export default function SettingsModal({
   /** 雙擊確認刪帳號:第一擊 → confirmingDelete = true 並 5 秒後自動 reset */
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const [hudThemeOpen, setHudThemeOpen] = useState(false);
-  const [backgroundOpen, setBackgroundOpen] = useState(false);
+  /** 子頁切換(取代之前的 nested Modal) */
+  const [subView, setSubView] = useState<SubView>('main');
   useEffect(() => {
     if (!confirmingDelete) return;
     const id = setTimeout(() => setConfirmingDelete(false), 5000);
     return () => clearTimeout(id);
   }, [confirmingDelete]);
 
-  // modal 關掉時重置確認狀態,避免下次打開仍是 confirming 狀態
+  // modal 關掉時重置確認狀態 + sub-view,避免下次打開仍是 confirming / 子頁狀態
   useEffect(() => {
     if (!open) {
       setConfirmingDelete(false);
       setDeletingAccount(false);
+      setSubView('main');
     }
   }, [open]);
 
@@ -135,6 +148,22 @@ export default function SettingsModal({
     }
   }
 
+  // 子頁:沒有自己的 Modal 殼,直接 render 進 SettingsModal 的 .glass-popup-content
+  if (subView === 'hudTheme') {
+    return (
+      <Modal open={open} onClose={onClose} title="設定">
+        <HudThemeSection onBack={() => setSubView('main')} />
+      </Modal>
+    );
+  }
+  if (subView === 'background') {
+    return (
+      <Modal open={open} onClose={onClose} title="設定">
+        <BackgroundSection onBack={() => setSubView('main')} />
+      </Modal>
+    );
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="設定">
       <div className="space-y-3">
@@ -191,11 +220,10 @@ export default function SettingsModal({
           />
         </label>
 
-        {/* 階段 4B.3:HUD 主題色入口。設定保存獨立(不需按「儲存設定」),
-            modal 內選擇即時 db.settings.put 寫入,App.tsx useEffect 同步 data-theme */}
+        {/* 階段 4B.3:HUD 主題色入口。state 切換到 'hudTheme' sub-view */}
         <button
           type="button"
-          onClick={() => setHudThemeOpen(true)}
+          onClick={() => setSubView('hudTheme')}
           className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
         >
           <span className="text-sm text-gray-700">🎨 HUD 主題色</span>
@@ -204,10 +232,10 @@ export default function SettingsModal({
           </span>
         </button>
 
-        {/* 階段 4B.4:家園背景入口。同 HudTheme 模式,modal 內 db.settings.put 即時生效 */}
+        {/* 階段 4B.4:家園背景入口。state 切換到 'background' sub-view */}
         <button
           type="button"
-          onClick={() => setBackgroundOpen(true)}
+          onClick={() => setSubView('background')}
           className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
         >
           <span className="text-sm text-gray-700">🖼️ 家園背景</span>
@@ -294,9 +322,6 @@ export default function SettingsModal({
           清除所有資料
         </button>
       </div>
-
-      <HudThemeModal open={hudThemeOpen} onClose={() => setHudThemeOpen(false)} />
-      <BackgroundModal open={backgroundOpen} onClose={() => setBackgroundOpen(false)} />
     </Modal>
   );
 }
