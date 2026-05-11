@@ -47,6 +47,9 @@ import FeedModal from '@/components/FeedModal';
 import SellModal from '@/components/SellModal';
 // 紀錄頁靠 Recharts，500KB+，按下「紀錄」才載入
 const RecordsModal = lazy(() => import('@/components/RecordsModal'));
+import GameModal from '@/components/GameModal';
+import FriendsModal from '@/components/FriendsModal';
+import TradeModal from '@/components/TradeModal';
 import SettingsModal from '@/components/SettingsModal';
 import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
@@ -56,7 +59,18 @@ import PasswordRecoveryModal from '@/components/PasswordRecoveryModal';
 import SignInModal from '@/components/SignInModal';
 import type { Pet, Stock } from '@/types';
 
-type ModalKind = 'buy' | 'feed' | 'sell' | 'records' | 'settings' | 'pet' | 'signin' | null;
+type ModalKind =
+  | 'buy'
+  | 'feed'
+  | 'sell'
+  | 'records'
+  | 'settings'
+  | 'pet'
+  | 'signin'
+  | 'game'
+  | 'friends'
+  | 'trade'
+  | null;
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -463,12 +477,11 @@ function Game() {
       />
 
       <BottomBar
-        onBuy={() => setModal('buy')}
-        onFeed={() => setModal('feed')}
-        onSell={() => setModal('sell')}
+        onGame={() => setModal('game')}
+        onFriends={() => setModal('friends')}
+        onTrade={() => setModal('trade')}
         onRecords={() => setModal('records')}
         onSettings={() => setModal('settings')}
-        hasHoldings={hasHoldings}
       />
 
       {/* 彈窗們 */}
@@ -492,17 +505,27 @@ function Game() {
       />
       <Suspense fallback={null}>
         {modal === 'records' && (
-          <RecordsModal
-            open
-            onClose={() => setModal(null)}
-            onPetClick={(petId) => {
-              // 修為紀錄行(有 relatedPetId)點擊 → 關紀錄彈窗開該 pet 詳細頁
-              setModal(null);
-              handlePetClickById(petId);
-            }}
-          />
+          <RecordsModal open onClose={() => setModal(null)} />
         )}
       </Suspense>
+      <GameModal
+        open={modal === 'game'}
+        onClose={() => setModal(null)}
+        onPetClick={(petId) => {
+          // 修為 tab 內點 pet → 關遊戲彈窗開該 pet 詳細頁
+          setModal(null);
+          handlePetClickById(petId);
+        }}
+      />
+      <FriendsModal open={modal === 'friends'} onClose={() => setModal(null)} />
+      <TradeModal
+        open={modal === 'trade'}
+        onClose={() => setModal(null)}
+        onBuy={() => setModal('buy')}
+        onFeed={() => setModal('feed')}
+        onSell={() => setModal('sell')}
+        hasHoldings={hasHoldings}
+      />
       <SettingsModal
         open={modal === 'settings'}
         onClose={() => setModal(null)}

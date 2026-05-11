@@ -12,57 +12,46 @@ import TopHoldings from './charts/TopHoldings';
 import HoldTimeDistribution from './charts/HoldTimeDistribution';
 import AdvancedMetrics from './charts/AdvancedMetrics';
 import MarketCompareChart from './charts/MarketCompareChart';
-import Bestiary from './Bestiary';
-import CultivationTab from './CultivationTab';
-import TasksTab from './TasksTab';
-import AchievementsList from './AchievementsList';
-import ErrorBoundary from './ErrorBoundary';
 
 interface RecordsModalProps {
   open: boolean;
   onClose: () => void;
-  /** 點修為紀錄行(有 relatedPetId)→ caller 可選實作跳 PetInfoModal */
-  onPetClick?: (petId: string) => void;
 }
 
-type Tab = 'tasks' | 'overview' | 'compare' | 'achievements' | 'bestiary' | 'transactions' | 'cultivation';
+type Tab = 'overview' | 'compare' | 'transactions';
 
 const TAB_LABEL: Record<Tab, string> = {
-  tasks: '任務',
-  overview: '圖表',
-  compare: '對比',
-  achievements: '成就',
-  bestiary: '圖鑑',
-  transactions: '交易',
-  cultivation: '修為'
+  overview: '📊 圖表',
+  compare: '📈 對比',
+  transactions: '📜 交易紀錄'
 };
 
 /**
- * 紀錄頁主入口（modal sheet 變體，最大 95vh、可滾動）。
- * 用 tab 分區:任務 / 圖表 / 對比 / 成就 / 圖鑑 / 交易明細 / 修為。
- * 任務放第 1 個讓玩家最快看到(階段 3.6)。
+ * 紀錄彈窗(階段 R.3 精簡)。
+ *
+ * 原本 7 個 tab 移除遊戲類 4 個(任務 / 成就 / 圖鑑 / 修為,已搬到 GameModal),
+ * 剩 3 個工具類 tab:圖表 / 對比 / 交易紀錄。預設 tab 'overview'(圖表)。
+ *
+ * onPetClick prop 拿掉了 — 修為 tab 已遷到 GameModal,點 pet 邏輯也跟過去。
  */
-/** tab → task trigger 對應(階段 3.7),沒對應的 tab 不 emit */
 const TAB_TASK_TRIGGER: Partial<Record<Tab, TaskTriggerEvent>> = {
   overview: 'view_chart',
-  bestiary: 'view_codex',
   transactions: 'view_records'
 };
 
-export default function RecordsModal({ open, onClose, onPetClick }: RecordsModalProps) {
-  const [tab, setTab] = useState<Tab>('tasks');
+export default function RecordsModal({ open, onClose }: RecordsModalProps) {
+  const [tab, setTab] = useState<Tab>('overview');
 
-  // 階段 3.7:tab 切換 → emit task trigger(view_chart / view_codex / view_records)
   useEffect(() => {
     if (!open) return;
     const trigger = TAB_TASK_TRIGGER[tab];
     if (trigger) emitTaskTrigger(trigger, 1);
   }, [open, tab]);
 
-  /** Tab 列(headerExtra)— 渲染進 popup-header 內,完全貼齊標題下方無空白 */
+  /** Tab 列(headerExtra)— 渲染進 popup-header 內 */
   const tabBar = (
     <div
-      className="grid grid-cols-7 border-b"
+      className="grid grid-cols-3 border-b"
       style={{ borderColor: 'rgba(212, 175, 55, 0.25)' }}
     >
       {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
@@ -85,7 +74,6 @@ export default function RecordsModal({ open, onClose, onPetClick }: RecordsModal
   return (
     <Modal open={open} onClose={onClose} title="紀錄" headerExtra={tabBar}>
       <div className="space-y-3">
-        {tab === 'tasks' && <TasksTab />}
         {tab === 'overview' && (
           <>
             <ReturnCurve />
@@ -97,14 +85,7 @@ export default function RecordsModal({ open, onClose, onPetClick }: RecordsModal
           </>
         )}
         {tab === 'compare' && <MarketCompareChart />}
-        {tab === 'achievements' && <AchievementsList />}
-        {tab === 'bestiary' && (
-          <ErrorBoundary label="Bestiary">
-            <Bestiary />
-          </ErrorBoundary>
-        )}
         {tab === 'transactions' && <TransactionsList />}
-        {tab === 'cultivation' && <CultivationTab onPetClick={onPetClick} />}
       </div>
     </Modal>
   );
