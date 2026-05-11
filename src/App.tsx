@@ -190,6 +190,8 @@ function Game() {
   const userLoginStreak = useLiveQuery(() => db.userLoginStreak.get('main'), []);
   const userTasksArr = useLiveQuery(() => db.userTasks.toArray(), []);
   const milestoneCount = useLiveQuery(() => db.milestoneRewards.count(), []);
+  // 階段 4C.5:訂閱 creatureUnlocks count,任何故事解鎖觸發 push debounce
+  const creatureUnlocksCount = useLiveQuery(() => db.creatureUnlocks.count(), []);
 
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   useEffect(() => {
@@ -404,7 +406,8 @@ function Game() {
     cultivationLog,
     userLoginStreak,
     userTasksArr,
-    milestoneCount
+    milestoneCount,
+    creatureUnlocksCount
   ]);
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
