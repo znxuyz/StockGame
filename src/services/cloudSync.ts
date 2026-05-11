@@ -141,7 +141,11 @@ async function readAllForSync(): Promise<CloudBlob> {
     db.userCultivation.get('main'),
     db.cultivationLog.toArray(),
     db.userLoginStreak.get('main'),
-    db.creatureUnlocks.toArray()
+    // 防呆:極早期 v12 → v13 過渡,creatureUnlocks 表可能還沒就緒;吞錯誤當空陣列
+    db.creatureUnlocks.toArray().catch((e) => {
+      console.warn('[cloudSync] creatureUnlocks toArray failed:', e);
+      return [] as CreatureUnlock[];
+    })
   ]);
 
   return {
@@ -228,8 +232,15 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
 
       // 階段 4C.5:圖鑑故事解鎖紀錄。append-only,clear + bulkPut 同步即可。
       // 舊版 blob 沒這欄位 → 等於從零開始解鎖(換手機才登入可接受)。
-      await db.creatureUnlocks.clear();
-      if (blob.creatureUnlocks?.length) await db.creatureUnlocks.bulkPut(blob.creatureUnlocks);
+      // 防呆:若舊版 client 連上、creatureUnlocks 表還沒就緒,吞錯誤不中斷 tx
+      try {
+        await db.creatureUnlocks.clear();
+        if (blob.creatureUnlocks?.length) {
+          await db.creatureUnlocks.bulkPut(blob.creatureUnlocks);
+        }
+      } catch (e) {
+        console.warn('[cloudSync] creatureUnlocks restore failed:', e);
+      }
 
       // 注意:userTasks / milestoneRewards 不 clear、不 write(純本地狀態)。
       // caller 在 pullNow 後跑 checkAndGenerateTasks 確保任務存在。

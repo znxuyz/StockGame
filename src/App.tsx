@@ -191,7 +191,15 @@ function Game() {
   const userTasksArr = useLiveQuery(() => db.userTasks.toArray(), []);
   const milestoneCount = useLiveQuery(() => db.milestoneRewards.count(), []);
   // 階段 4C.5:訂閱 creatureUnlocks count,任何故事解鎖觸發 push debounce
-  const creatureUnlocksCount = useLiveQuery(() => db.creatureUnlocks.count(), []);
+  // 防呆:若表還沒 migrate 完(v12 → v13 過渡)當 0 處理,不讓錯誤把整個 App 炸掉
+  const creatureUnlocksCount = useLiveQuery(async () => {
+    try {
+      return await db.creatureUnlocks.count();
+    } catch (e) {
+      console.warn('[App] creatureUnlocks count failed:', e);
+      return 0;
+    }
+  }, []);
 
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   useEffect(() => {

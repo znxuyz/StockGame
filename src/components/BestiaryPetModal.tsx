@@ -66,21 +66,32 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
   const [error, setError] = useState<string | null>(null);
 
   // 訂閱該 species 所有 pet,改名/退役/紀念都即時反映
+  // 修復白屏 bug:`speciesId` 不在 pets 索引內(schema v5: 'id, code, retiredAt'),
+  // 用 .where('speciesId') 會 throw SchemaError → useLiveQuery rethrow render →
+  // 整個 modal 樹炸掉。改用 toArray + memory filter(50 隻 pet 量級毫無壓力)。
   const pets = useLiveQuery<Pet[]>(
     async () => {
       if (!speciesId) return [];
-      return db.pets.where('speciesId').equals(speciesId).toArray();
+      const all = await db.pets.toArray();
+      return all.filter((p) => p.speciesId === speciesId);
     },
     [speciesId]
   );
 
   // 階段 4C.3:訂閱該 creature 的故事解鎖紀錄
+  // creatureId 在 stores('++id, &creatureId') 是唯一索引,可用 .where
   const unlock = useLiveQuery(
     async () => {
       if (!speciesId) return null;
-      return (
-        (await db.creatureUnlocks.where('creatureId').equals(speciesId).first()) ?? null
-      );
+      try {
+        return (
+          (await db.creatureUnlocks.where('creatureId').equals(speciesId).first()) ?? null
+        );
+      } catch (e) {
+        // 防呆:若 creatureUnlocks 表還沒 migrate(極早期 v12 → v13 過渡)直接當未解鎖
+        console.warn('[BestiaryPetModal] creatureUnlocks query failed:', e);
+        return null;
+      }
     },
     [speciesId]
   );

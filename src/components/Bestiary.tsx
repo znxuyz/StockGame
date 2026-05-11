@@ -22,11 +22,22 @@ export default function Bestiary() {
   const allPets = useLiveQuery(() => db.pets.toArray(), []);
   const ownedSpecies = new Set((allPets ?? []).map((p) => p.speciesId));
   // 階段 4C.2:該 species 任一 pet isEternal 就標金邊
+  // 防呆 ?? false:舊資料沒 isEternal 欄位時當 false 處理(已有 v13 backfill,
+  // 但雙重保險避免 race / 雲端拉到舊版 blob 等情況)
   const eternalSpecies = new Set(
-    (allPets ?? []).filter((p) => p.isEternal).map((p) => p.speciesId)
+    (allPets ?? []).filter((p) => p.isEternal ?? false).map((p) => p.speciesId)
   );
   // 階段 4C.4:已解鎖修仙傳說的 species(creatureUnlocks 表)
-  const unlocks = useLiveQuery(() => db.creatureUnlocks.toArray(), []);
+  // 防呆:若表還沒 migrate 完(v12 → v13 過渡)或其他錯誤,當作沒解鎖過,
+  // 不要讓 useLiveQuery 把錯 rethrow 出去整個 Bestiary 白屏。
+  const unlocks = useLiveQuery(async () => {
+    try {
+      return await db.creatureUnlocks.toArray();
+    } catch (e) {
+      console.warn('[Bestiary] creatureUnlocks query failed:', e);
+      return [];
+    }
+  }, []);
   const storyUnlockedSpecies = new Set((unlocks ?? []).map((u) => u.creatureId));
 
   const [openSpeciesId, setOpenSpeciesId] = useState<string | null>(null);

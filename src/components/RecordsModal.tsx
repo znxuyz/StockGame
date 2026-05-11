@@ -16,6 +16,7 @@ import MarketCompareChart from './charts/MarketCompareChart';
 import Bestiary from './Bestiary';
 import CultivationTab from './CultivationTab';
 import TasksTab from './TasksTab';
+import ErrorBoundary from './ErrorBoundary';
 
 interface RecordsModalProps {
   open: boolean;
@@ -97,7 +98,11 @@ export default function RecordsModal({ open, onClose, onPetClick }: RecordsModal
         )}
         {tab === 'compare' && <MarketCompareChart />}
         {tab === 'achievements' && <AchievementsList />}
-        {tab === 'bestiary' && <Bestiary />}
+        {tab === 'bestiary' && (
+          <ErrorBoundary label="Bestiary">
+            <Bestiary />
+          </ErrorBoundary>
+        )}
         {tab === 'transactions' && <TransactionsList />}
         {tab === 'cultivation' && <CultivationTab onPetClick={onPetClick} />}
       </div>
