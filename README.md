@@ -78,38 +78,40 @@
 | **每日任務** | 8 個任務池每天凌晨抽 3 個（買 / 加碼 / 看圖表 / 看圖鑑 / 看交易 / 看神獸 / 升級 / 投資金額） |
 | **週任務** | 7 個任務池每週日凌晨抽 4 個（連登 / 大額投資 / 賣出獲利 / 突破 / 召喚 / 升級 / 報酬突破） |
 | **完成提示** | 任務完成右上角滑入綠色 toast 3 秒 |
-| **紀錄紅點** | 紀錄按鈕右上角紅色 badge 顯示可領任務數（>9 顯「9+」） |
+| **遊戲紅點** | BottomBar 第 1 顆「遊戲」按鈕右上角紅色 badge 顯示可領任務數（>9 顯「9+」） |
 
-任務 tab 為紀錄彈窗第 1 個（預設打開），進度條 + 倒數計時 + 領取按鈕（金色 animate-pulse）。
+任務 tab 是 GameModal 第 1 個（預設打開），進度條 + 倒數計時 + 領取按鈕（金色 animate-pulse）。階段 R 改版後從紀錄頁搬到 GameModal。
 
 ## UI 設計
 
-整個 app 統一玻璃擬態語言（Glass morphism），靈感是 iOS 控制中心 + 手遊家園抽屜：
+整個 app 統一玻璃擬態語言（Glass morphism），靈感是 iOS 控制中心 + 手遊家園抽屜。階段 R 重構後 BottomBar 改 5 顆 [遊戲][好友][交易][紀錄][設定]，原本散在紀錄頁的養成內容（任務/成就/圖鑑/修為）拆到 GameModal，交易合進中介 TradeModal：
 
 ```
 ┌── HUD（fixed top, glass）─────────────────────┐
 │ 🐾 神獸 N · 投入 NN · 總市值 NN · 報酬 NN    │
 │ ─────────────────────                          │
-│ 盤中 · 更新 2h前 · 今 ±NN · 🏆 12/50 · 🔥 1d │
+│ 盤中 · 更新 2h前 · 今 ±NN · 💎 1,234 修為    │
 └────────────────────────────────────────────────┘
 
          ┌──  Phaser 2400×1600 大地圖  ──┐
          │  50 隻神獸散布全 world          │
          │  櫻花飄落 + 金光粒子            │
          │  拖曳 camera + 雙指 zoom 探索   │
-         └────────────────────────┘
+         │  4 套家園背景（4B.4 解鎖切換）  │
+         └────────────────────────────────┘
 
-╔══ Bottom Sheet Drawer（fixed bottom, glass）═══╗
-║ 紀錄                                  × 鈕    ║
-║ ─────────金漸層分隔─────────                  ║
-║ tabs(玻璃 sticky) │ 圖表 對比 成就 圖鑑 交易  ║
-║ ─────────────────────────────────────         ║
-║ [data-card 半透明] [achievement-card]         ║
-╚════════════════════════════════════════════════╝
+╔══ Bottom Sheet Drawer（fixed bottom, glass，top:140+bottom:0）═══╗
+║ GameModal                                          × 鈕         ║
+║ ─────────金漸層分隔─────────                                    ║
+║ tabs(玻璃 sticky) │ 任務 ⦁ 成就 ⦁ 圖鑑 ⦁ 修為                ║
+║ ─────────────────────────────────────                          ║
+║ [task-card] [achievement-card] [bestiary-grid] [cultivation]   ║
+╚═════════════════════════════════════════════════════════════════╝
 
-┌── BottomBar（fixed bottom, glass）─────────────┐
-│ 🥚買入  🍖餵食  📦售出  📜紀錄  💎設定         │
-└────────────────────────────────────────────────┘
+┌── BottomBar（fixed bottom, glass, z-60 蓋過 modal）────────────┐
+│ 🎮遊戲  👥好友  🛒交易  📜紀錄  ⚙️設定                          │
+│ ↑紅點(完成可領)        └─→ TradeModal 中介 → 買/餵/賣          │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 | Glass class | alpha | blur | 邊 |
@@ -132,7 +134,7 @@
 | 遊戲引擎 | Phaser 3（pixelPerfect hit + tween wander + multi-circle collision） |
 | UI | Tailwind CSS + 自訂玻璃 utility |
 | 圖表 | Recharts |
-| 本地資料庫 | Dexie（IndexedDB），目前 schema v9 |
+| 本地資料庫 | Dexie（IndexedDB），目前 schema v13 |
 | 雲端帳號 / 同步 | Supabase（Auth + Postgres + RLS） |
 | 部署 | Cloudflare Pages + Pages Functions |
 | PWA | vite-plugin-pwa |
@@ -172,6 +174,11 @@ npm run fetch:holidays      # 月跑：TaiwanCalendar → src/data/holidays.json
 # 立繪去背修補（沒 npm wrapper，直接跑）
 node scripts/flood-fill-sprite-bg.mjs --auto      # BFS flood-fill 修 4 角殘留 / halo
 node scripts/flood-fill-sprite-bg.mjs file1.png   # 指定單檔
+
+# 按鈕 / 魂環 icon 去背 + resize（seed-based 4-corner flood-fill）
+node scripts/process-button-icons.mjs             # BottomBar + TradeModal + tab/ 全部 PNG → 256x256
+node scripts/process-button-icons.mjs <file.png>  # 處理單一檔（就地覆蓋）
+node scripts/process-rings.mjs                    # public/assets/rings/*.png → 128x128
 ```
 
 > `download:sprites` **必須本機跑**，sandbox / CI 會被 MJ CDN 擋 403。
@@ -208,33 +215,44 @@ StockGame/
 ├── public/
 │   ├── app-icon-source.JPG       ← favicon 原圖（九尾狐）
 │   ├── icons/                    ← PWA icons（npm run build:icons 產出）
-│   ├── assets/btn/*.png + tab/*.png  ← 底部 5 顆 + 3 顆新功能 + 7 張 tab icon(MJ PNG)
-│   ├── assets/bg/main.JPG        ← Phaser 場景背景（粉紅雲紋庭院 1344×896）
+│   ├── assets/btn/*.png          ← BottomBar 5 顆 + TradeModal 3 顆 + tab/ 7 張 tab icon
+│   ├── assets/bg/                ← 4 套家園背景（main / 粉紅雲紋 / 月夜 / 仙山，4B.4）
+│   ├── assets/rings/             ← 6 顆魂環 PNG（凡靈妖神聖仙）
 │   ├── assets/particles/         ← 櫻花 / 金光粒子
 │   └── sprites/<id>.png          ← 50 隻神祇立繪
 ├── src/
 │   ├── components/               ← React UI
-│   │   ├── Modal.tsx             ← 抽屜 Modal（.glass-popup）
+│   │   ├── Modal.tsx             ← 抽屜 Modal（.glass-popup，top:140 + bottom:0）
+│   │   ├── ErrorBoundary.tsx     ← 包 Bestiary 等敏感區，防 useLiveQuery rethrow 白屏
 │   │   ├── TopBar.tsx            ← HUD（.hud）
-│   │   ├── BottomBar.tsx         ← 5 顆功能鈕（.hud-bottom）
-│   │   ├── BuyModal/Sell/Feed/Settings/Records/PetInfo
+│   │   ├── BottomBar.tsx         ← 5 顆功能鈕（.hud-bottom z-60）
+│   │   ├── GameModal.tsx         ← 4 tabs：任務/成就/圖鑑/修為（R 改版搬進來）
+│   │   ├── FriendsModal.tsx      ← 階段 5 預留 placeholder
+│   │   ├── TradeModal.tsx        ← 中介彈窗：🥚買入 / 🍖餵食 / 📦售出
+│   │   ├── RecordsModal.tsx      ← 3 tabs：圖表/對比/交易紀錄
+│   │   ├── SettingsModal.tsx     ← 內含 HudThemeSection/BackgroundSection state-based 子頁
+│   │   ├── BestiaryPetDetail.tsx ← state-based 詳細頁（取代舊 nested BestiaryPetModal）
+│   │   ├── BuyModal/Sell/Feed/PetInfo + 4A 子彈窗（Rename/Boost/Temper/Color）
 │   │   └── charts/               ← Recharts 圖表
 │   ├── game/                     ← Phaser 場景
-│   │   ├── scene.ts              ← WorldScene + playableArea + 碰撞
-│   │   └── petSprite.ts          ← PetSprite（pixelPerfect + tween wander + body collision）
+│   │   ├── scene.ts              ← WorldScene + playableArea + 碰撞 + setBackgroundId
+│   │   ├── petSprite.ts          ← PetSprite（pixelPerfect + tween wander + colorVariant tint + lockDepthAt）
+│   │   └── soulRing.ts           ← 6 顆魂環 Image + 5 種特效動畫
 │   ├── data/
 │   │   ├── creatures.ts          ← 50 神祇定義
-│   │   ├── achievements.ts       ← 50+ 成就
+│   │   ├── creatureStories.ts    ← 50 隻長版背景故事（4C.3 解鎖內容）
+│   │   ├── achievements.ts       ← 30+ 成就
+│   │   ├── taskPool.ts           ← DAILY 8 + WEEKLY 7 任務池
 │   │   ├── industries.json       ← npm run fetch:industries 產出
 │   │   └── holidays.json         ← npm run fetch:holidays 產出
-│   ├── services/                 ← 業務邏輯（buy / sell / cloudSync 等）
+│   ├── services/                 ← 業務邏輯（portfolio / cloudSync / cultivation / taskService / petTier / petColor / background / creatureUnlockService / eventBus / loginStreakService）
 │   ├── api/                      ← TWSE / TPEX API 包裝
-│   ├── db/schema.ts              ← Dexie schema（目前 v9）
+│   ├── db/schema.ts              ← Dexie schema（目前 v13）
 │   ├── lib/                      ← supabase / auth
-│   └── index.css                 ← Tailwind + 玻璃 utility class
-├── scripts/                      ← 資產處理 / 資料抓取
+│   └── index.css                 ← Tailwind + 玻璃 utility class + 4 套 HUD 主題 CSS 變數
+├── scripts/                      ← 資產處理 / 資料抓取（含 process-button-icons.mjs / process-rings.mjs）
 ├── functions/api/auth/           ← Cloudflare Pages Functions
-└── docs/                         ← 立繪 prompts、設計筆記
+└── docs/                         ← 立繪 prompts、設定表、設計筆記
 ```
 
 ## License

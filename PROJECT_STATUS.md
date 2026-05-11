@@ -18,8 +18,10 @@
 | **三維度養成系統**：等級 Lv.1-999 / 魂環境界 6 階 / 魂環特效 5 種 | ✅（階段 1） |
 | **修為點數系統**：5 個來源 + HUD 💎 + 飄字 + 紀錄 tab + 雲端同步 | ✅（階段 2） |
 | **每日簽到 + 任務系統**：連登 + 里程碑 + 8 daily 池 + 7 weekly 池 + 11 emit 點 + toast + 紅點 | ✅（階段 3） |
-| 30+ 成就（5 類）+ 圖鑑 | ✅ |
-| 紀錄頁 6 圖表 + IRR / 夏普 / MDD | ✅ |
+| **修為消耗管道（階段 4）**：改名 / 催熟 / 淬煉 / 換色 / HUD 主題 / 家園背景 / 永恆紀念 / 圖鑑解鎖 | ✅（階段 4A/4B/4C 全完） |
+| **底部欄 R 重構**：BottomBar 5 顆 [遊戲][好友][交易][紀錄][設定]，GameModal 4 tabs，TradeModal 中介彈窗 | ✅（階段 R） |
+| 30+ 成就（5 類）+ 圖鑑（搬到 GameModal） | ✅ |
+| 紀錄頁 3 tabs：圖表 / 對比 / 交易紀錄（R 改版後精簡，原 7 tabs 拆分） | ✅ |
 | 跟大盤比 Alpha（90 天） | ✅ |
 | 美股 / 港股 / 加密 | ❌（user 決議只做台股） |
 | 當沖 | ❌（user 決議不做） |
@@ -60,9 +62,9 @@
 | 消耗管道:境界催熟 💎100 | ✅（`BoostRealmModal` + `pet.boostedDays`，階段 4A.3） |
 | 消耗管道:魂環淬煉 💎500 / 7 天 | ✅（`TemperRingModal` + `pet.effectBoostUntil` + `naturalEffect` 防雙重給付,階段 4A.4） |
 | 消耗管道:神獸換配色 💎300 | ✅（`ColorVariantModal` + `pet.colorVariant` + Phaser tint,階段 4B.2） |
-| 消耗管道:HUD 主題色 💎200 | ✅（`HudThemeModal` + 4 套 CSS 變數 + `[data-theme]`,階段 4B.3） |
-| 消耗管道:家園背景換皮 💎500 | ✅（`BackgroundModal` + `scene.setBackgroundId` 動態載入,階段 4B.4;美術 4 張全到位) |
-| 消耗管道:永恆紀念 💎2000 | ✅（`BestiaryPetModal` + `pet.isEternal/eternalDate/finalEffect` + `EternalCelebration`,階段 4C.2) |
+| 消耗管道:HUD 主題色 💎200 | ✅（`HudThemeSection` state-based 子頁 + 4 套 CSS 變數 + `[data-theme]`,階段 4B.3） |
+| 消耗管道:家園背景換皮 💎500 | ✅（`BackgroundSection` state-based 子頁 + `scene.setBackgroundId` 動態載入,階段 4B.4;美術 4 張全到位) |
+| 消耗管道:永恆紀念 💎2000 | ✅（`BestiaryPetDetail` state-based + `pet.isEternal/eternalDate/finalEffect` + `EternalCelebration`,階段 4C.2) |
 | 消耗管道:圖鑑故事解鎖 💎100 | ✅（`creatureUnlocks` 表 + 50 隻擴寫長版 story + 淡入動畫,階段 4C.3) |
 | 圖鑑列表視覺(✨ 永恆 / 📜 故事 角標) | ✅（階段 4C.4) |
 
@@ -84,23 +86,33 @@
 | 紀錄按鈕紅點 badge(可領數量,>9 顯「9+」) | ✅ |
 | 統一 `eventBus 'task:trigger'` event 設計(11 emit + 1 listen) | ✅ |
 
-### UI（玻璃擬態）
+### UI（玻璃擬態 + 階段 R 重構）
 
 | 項目 | 狀態 |
 |---|---|
-| HUD（top）半透明 + blur + 上緣金線 | ✅ `.hud` |
-| BottomBar（bottom）對稱玻璃 + 5 顆等寬鈕 | ✅ `.hud-bottom` |
-| Modal 改家園抽屜（fixed bottom，固定高度，slide-up） | ✅ `.glass-popup` |
+| HUD（top）半透明 + blur + 上緣金線 | ✅ `.hud`（z-index 40） |
+| BottomBar（bottom）對稱玻璃 + 5 顆等寬鈕 | ✅ `.hud-bottom`（z-index **60**，蓋過 modal backdrop） |
+| BottomBar 5 顆按鈕 = [遊戲][好友][交易][紀錄][設定] | ✅（R 改版） |
+| `GameModal` 4 tabs：任務 / 成就 / 圖鑑 / 修為 | ✅（`GameModal.tsx`） |
+| `FriendsModal` 階段 5 預留 placeholder | ✅（`FriendsModal.tsx`「🚧 即將推出」） |
+| `TradeModal` 中介彈窗：🥚 買入 / 🍖 餵食 / 📦 售出三顆大按鈕 | ✅（`TradeModal.tsx`） |
+| `RecordsModal` 精簡 3 tabs：圖表 / 對比 / 交易紀錄 | ✅ |
+| `SettingsModal` 內 state-based 子頁：HUD 主題 / 家園背景 | ✅（`HudThemeSection` / `BackgroundSection` 取代舊 nested Modal） |
+| Bestiary 詳細頁 state-based view（取代舊 BestiaryPetModal） | ✅（`BestiaryPetDetail.tsx`） |
+| Modal 改家園抽屜（`top: 140 + bottom: 0` 黏到 viewport 底） | ✅ `.glass-popup`（PR #85 改掉 vh calc） |
 | 抽屜內 sticky 標題 + 金漸層分隔 | ✅ `.glass-popup-header` + `.popup-title-divider` |
 | 內部卡片全玻璃化（無純白補丁） | ✅ `.item-card` `.data-card` `.achievement-card` `.unlock-counter` `.stat-pill-*` |
+| HUD 主題色 4 套 CSS 變數 + `<html data-theme>` 切換 | ✅（`--hud-bg` / `--popup-bg` / ...） |
+| `ErrorBoundary` 包 Bestiary 防 useLiveQuery rethrow 白屏 | ✅（PR #75） |
 | 統一 input-field 樣式（含 iOS date 拿掉系統灰底） | ✅ `.input-field` |
 | 九尾狐 favicon + maskable + apple-touch | ✅（`public/icons/`） |
+| BottomBar / TradeModal / GameModal tab PNG icon 全到位 + 去背 | ✅（`process-button-icons.mjs`） |
 
 ### 資料 / 同步 / PWA
 
 | 項目 | 狀態 |
 |---|---|
-| 本機 IndexedDB（Dexie schema v10） | ✅ |
+| 本機 IndexedDB（Dexie schema v13） | ✅ |
 | 盤中自動更新（每 30s + 背景回前景補抓） | ✅（`silentRefresh` in `App.tsx`） |
 | 「上次更新時間」相對時間 + stale 警示 | ✅（`TopBar`） |
 | 雲端帳號（Apple / Google / Email+密碼） | ✅（Supabase auth；Magic Link 降級為密碼重設） |
@@ -141,6 +153,10 @@ Bundle (production gzip 估值):
 | v7 | 修為點數系統 — 加 2 張表:`userCultivation` (id 'main' singleton)、`cultivationLog` (++id auto, indexed by createdAt/reason/relatedPetId) |
 | v8 | Pet 加 `lastEffectCheck?: RingEffect` optional 欄位(報酬率特效升級偵測用)。no-op upgrade |
 | v9 | 簽到任務系統 — 加 3 張表:`userLoginStreak` (id 'main')、`userTasks` (++id auto, indexed by taskKey/taskType/completed/claimed)、`milestoneRewards` (++id, &milestoneDay 唯一索引防重領) |
+| v10 | **重大修正** userTasks 拿掉 boolean index — IndexedDB 不接受 boolean 當 valid key,完成寫不進去 → 任務 tab 永遠空。stores 改 `'++id, taskKey, taskType'`,完成 / 領取狀態改 memory filter |
+| v11 | Pet 加 `boostedDays?: number` / `effectBoostUntil?: number` optional(階段 4A.3 催熟 + 4A.4 淬煉,修為消耗管道)。upgrade backfill `boostedDays = 0` |
+| v12 | 進階消耗管道(階段 4B)資料層:Pet 加 `colorVariant?: PetColorVariant`(配色 5 選 1);Settings 加 `unlockedBackgrounds` / `currentBackground` / `hudTheme` / `unlockedHudThemes` 4 個 optional 欄位。upgrade backfill 全部 'default' |
+| v13 | 深度消耗管道(階段 4C)資料層:Pet 加 `isEternal?: boolean` / `eternalDate?: number` / `finalEffect?: RingEffect`(永恆紀念);新增 `creatureUnlocks` 表(`++id, &creatureId` 唯一索引防重複)。upgrade backfill 舊 pet `isEternal = false` |
 
 ---
 
@@ -149,27 +165,39 @@ Bundle (production gzip 估值):
 | 想找什麼 | 看哪 |
 |---|---|
 | 神獸定義 | `src/data/creatures.ts`（50 隻原創上古神祇） |
+| 神獸長版背景故事 | `src/data/creatureStories.ts`（4C.3 用，xlsx 種子） |
 | 成就定義 | `src/data/achievements.ts` |
 | 等級計算 (Lv.1-999) | `src/services/evolution.ts`（精簡為 calculateLevel） |
-| 三維度養成計算器 | `src/services/petTier.ts`（getRealm / getRingEffect / getPetStatus） |
-| 魂環渲染器 | `src/game/soulRing.ts`（9 顆 graphics + 5 種特效） |
+| 三維度養成計算器 | `src/services/petTier.ts`（getRealm / getRingEffect / getPetStatus / upgradeEffect / naturalEffect 拆分） |
+| 神獸換色 | `src/services/petColor.ts`（COLOR_VARIANT_TINT / LABEL / CSS / ORDER） |
+| 家園背景 catalog | `src/services/background.ts`（BACKGROUNDS / getBackgroundDef / bgTextureKey） |
+| 圖鑑故事解鎖（4C.3） | `src/services/creatureUnlockService.ts`（race-safe `&creatureId` 唯一索引） |
+| 魂環渲染器 | `src/game/soulRing.ts`（6 顆 Image + ringTextureKey + 5 種特效） |
 | 修為點數服務 | `src/services/cultivationService.ts`（earn/spend/getBalance/getDetail/getHistory） |
-| eventBus | `src/services/eventBus.ts`（飄字 / count-up 跨元件通知） |
-| 修為飄字 / 紀錄 tab | `src/components/CultivationFloater.tsx` / `CultivationTab.tsx` |
+| eventBus | `src/services/eventBus.ts`（cultivation:earn/spend, task:trigger/completed） |
+| 修為飄字 / tab | `src/components/CultivationFloater.tsx` / `CultivationTab.tsx`（搬進 GameModal） |
 | 連登 + 簽到服務 | `src/services/loginStreakService.ts`（checkAndUpdateStreak / claimTodayLogin / STREAK_MILESTONES） |
 | 任務服務 | `src/services/taskService.ts`（generate daily/weekly + incrementProgress + claim + attachTaskListeners） |
 | 任務池資料 | `src/data/taskPool.ts`（DAILY_TASK_POOL 8 / WEEKLY_TASK_POOL 7） |
 | 簽到 / 里程碑 / 任務 UI | `src/components/DailyCheckInModal.tsx` / `MilestoneCelebration.tsx` / `TasksTab.tsx` / `TaskCompletedToast.tsx` |
+| 永恆紀念慶祝動畫 | `src/components/EternalCelebration.tsx`（4C.2） |
+| 階段 4A 子彈窗 | `src/components/{RenameModal,BoostRealmModal,TemperRingModal,ColorVariantModal}.tsx` |
+| 階段 4B 設定子頁 | `src/components/{HudThemeSection,BackgroundSection}.tsx`（state-based,**不**用 nested Modal） |
+| 階段 4C 圖鑑詳細頁 | `src/components/BestiaryPetDetail.tsx`（state-based,取代舊 BestiaryPetModal） |
+| 階段 R BottomBar 主彈窗 | `src/components/{GameModal,FriendsModal,TradeModal,RecordsModal,SettingsModal}.tsx` |
 | 買 / 賣 / 加碼業務邏輯 | `src/services/portfolio.ts` |
-| 雲端同步 | `src/services/cloudSync.ts` |
-| Phaser 場景 + 碰撞 | `src/game/scene.ts` |
-| 寵物 sprite + 互動 | `src/game/petSprite.ts` |
+| 雲端同步 | `src/services/cloudSync.ts`（CloudBlob 含 4A/4B/4C 所有 optional fields + `creatureUnlocks`，SCHEMA_VERSION 4） |
+| Phaser 場景 + 碰撞 | `src/game/scene.ts`（含 setBackgroundId 動態載入 + preloadRingTextures） |
+| 寵物 sprite + 互動 | `src/game/petSprite.ts`（含 colorVariant tint + lockDepthAt API + applyBaseTint） |
 | 玻璃 utility class | `src/index.css` `@layer components` |
-| Modal 抽屜 | `src/components/Modal.tsx` |
+| Modal 抽屜 + ErrorBoundary | `src/components/Modal.tsx` / `ErrorBoundary.tsx` |
 | HUD / BottomBar | `src/components/{TopBar,BottomBar}.tsx` |
 | 帳號刪除 server | `functions/api/auth/delete-account.ts` |
 | PWA manifest | `vite.config.ts` 內 VitePWA plugin |
+| PWA 更新提示 | `src/components/PwaUpdatePrompt.tsx`（30 分鐘 polling + 「更新」「強制」「稍後」） |
 | Dexie schema | `src/db/schema.ts` |
+| 按鈕 icon 處理 script | `scripts/process-button-icons.mjs`（BottomBar / TradeModal / tab/ 全部 PNG） |
+| 魂環 icon 處理 script | `scripts/process-rings.mjs` |
 
 ---
 
@@ -217,8 +245,9 @@ PWA / favicon 上線
 - **碰撞靠軟性方案**（多圓形 body shape + tween bounce），未上 Arcade Physics。實機觀察一週，若還會擠再升級
 - **拖曳神獸不支援**（user 決議）— 只能自由漫遊
 - **iOS 不支援 `navigator.vibrate`** — 只 Android Chrome / 桌機 Chromium 會震
-- **舊用戶 IndexedDB**：v1 → ... → v9 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
-- **多裝置衝突**：cloudSync 用 blob-level pull-overwrites-local，沒做 field-level merge。雲端 schemaVersion 1→3，舊 blob pull 後本地對應表歸零。若兩裝置同時操作可能互蓋（cultivation / streak / tasks 都受影響），要做 cross-device 即時同步需加 polling + 各 field 的合理 merge 策略（lifetime_earned / lifetimeLogins 取 max，task progress 同 taskKey 取大）
+- **舊用戶 IndexedDB**：v1 → ... → v13 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
+- **多裝置衝突**：cloudSync 用 blob-level pull-overwrites-local，沒做 field-level merge。雲端 SCHEMA_VERSION 1 → 4，舊 blob pull 後本地對應表歸零。若兩裝置同時操作可能互蓋（cultivation / streak / tasks / 4B 主題背景 / 4C 永恆 / creatureUnlocks 都受影響），要做 cross-device 即時同步需加 polling + 各 field 的合理 merge 策略（lifetime_earned / lifetimeLogins 取 max，task progress 同 taskKey 取大）
+- **iOS Safari `backdrop-filter` containing block 雷**：任何 element 套 `backdrop-filter` 在 iOS 上會變成 fixed 子孫的 containing block。nested Modal（Modal in Modal）會被鎖進 outer modal box 而非 viewport。目前已知 PetInfoModal 的 sub-action modals（RenameModal/BoostRealmModal/TemperRingModal/ColorVariantModal）仍是 nested 結構，理論上踩雷但 user 沒 report，未拆。**新加子頁一律用 state-based view 模式**（參考 SettingsModal / Bestiary）
 - **Magic link redirect**：Supabase 設定的 Site URL + Redirect URLs 是 hard-coded，新增部署環境（例如 staging）要去 Supabase dashboard 加
 
 ---
