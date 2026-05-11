@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import Modal from './Modal';
 import { db } from '@/db';
 import {
   spendCultivation,
@@ -18,11 +17,11 @@ import { COLOR_VARIANT_TINT } from '@/services';
 import { formatInt, daysBetween } from '@/utils';
 import type { Pet } from '@/types';
 
-interface BestiaryPetModalProps {
-  open: boolean;
-  onClose: () => void;
-  /** 點擊圖鑑卡傳進來,顯示這個 species 的所有 pet 實例 */
-  speciesId: string | null;
+interface BestiaryPetDetailProps {
+  /** 圖鑑列表點開的 species id */
+  speciesId: string;
+  /** 點「← 返回」回到列表 */
+  onBack: () => void;
 }
 
 const ETERNAL_COST = 2000;
@@ -45,20 +44,23 @@ const REALM_EMOJI: Record<SoulRealm, string> = {
 };
 
 /**
- * 圖鑑神獸詳細頁(階段 4C.2)。
+ * 圖鑑神獸詳細頁(階段 4C.2,重構 4C.4 + 圖鑑白屏修)。
  *
+ *  - **改 inline view 取代 Modal**:RecordsModal 的 `.glass-popup` 有
+ *    `backdrop-filter`,在 iOS Safari 會把 `position: fixed` 子元素鎖進
+ *    自己的 containing block,導致內嵌 Modal 變「列表下方的卡片」而非
+ *    全螢幕浮窗。Bestiary 改用 list/detail state 切換,讓詳細頁直接
+ *    取代列表渲染,完全避開這個 iOS 行為。
  *  - 顯示該 species 基本資料 + 所有 pet 實例(賣光重買的話會有多筆)
  *  - 每個 pet row:出生 / 退役日期 / 巔峰境界 / 退役當下特效(finalEffect)
  *  - 退役 pet 加 [永恆紀念 💎2000] 按鈕,確認後 spendCultivation +
  *    db.pets.update({ isEternal: true, eternalDate: now })
  *  - 已永恆紀念顯示「✨ 已紀念 · YYYY/MM/DD」+ 卡片金邊
  *  - 仍在世(未退役)顯示「(現役中)」灰底,不能紀念
- *  - 修為不足按鈕變灰「💎不足」
  *
- * 慶祝動畫由全域 EternalCelebration 元件接 'cultivation:spend' reason='eternal' 觸發,
- * 不需要 modal 內部處理(modal 關掉動畫照樣播)。
+ * 慶祝動畫由全域 EternalCelebration 元件接 'cultivation:spend' reason='eternal' 觸發。
  */
-export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryPetModalProps) {
+export default function BestiaryPetDetail({ speciesId, onBack }: BestiaryPetDetailProps) {
   const cultivation = useCultivation();
   const balance = cultivation.amount;
   const [busyPetId, setBusyPetId] = useState<string | null>(null);
@@ -66,39 +68,47 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
   const [error, setError] = useState<string | null>(null);
 
   // 訂閱該 species 所有 pet,改名/退役/紀念都即時反映
-  // 修復白屏 bug:`speciesId` 不在 pets 索引內(schema v5: 'id, code, retiredAt'),
-  // 用 .where('speciesId') 會 throw SchemaError → useLiveQuery rethrow render →
-  // 整個 modal 樹炸掉。改用 toArray + memory filter(50 隻 pet 量級毫無壓力)。
+  // 修復白屏:speciesId 不在 pets 索引(schema v5 'id, code, retiredAt'),
+  // .where 會 throw SchemaError → useLiveQuery rethrow render → 整個樹爆掉
   const pets = useLiveQuery<Pet[]>(
     async () => {
-      if (!speciesId) return [];
       const all = await db.pets.toArray();
       return all.filter((p) => p.speciesId === speciesId);
     },
     [speciesId]
   );
 
-  // 階段 4C.3:訂閱該 creature 的故事解鎖紀錄
-  // creatureId 在 stores('++id, &creatureId') 是唯一索引,可用 .where
+  // 階段 4C.3:訂閱該 creature 的故事解鎖紀錄(creatureId 有唯一索引可用 where)
   const unlock = useLiveQuery(
     async () => {
-      if (!speciesId) return null;
       try {
         return (
           (await db.creatureUnlocks.where('creatureId').equals(speciesId).first()) ?? null
         );
       } catch (e) {
-        // 防呆:若 creatureUnlocks 表還沒 migrate(極早期 v12 → v13 過渡)直接當未解鎖
-        console.warn('[BestiaryPetModal] creatureUnlocks query failed:', e);
+        console.warn('[BestiaryPetDetail] creatureUnlocks query failed:', e);
         return null;
       }
     },
     [speciesId]
   );
 
-  if (!speciesId) return null;
   const species = getCreature(speciesId);
-  if (!species) return null;
+  if (!species) {
+    return (
+      <div className="data-card p-4 text-center text-sm text-gray-500 space-y-2">
+        <p>⚠️ 找不到神獸資料</p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-bold"
+        >
+          ← 返回圖鑑
+        </button>
+      </div>
+    );
+  }
+
   const story = getCreatureStory(speciesId);
   const isStoryUnlocked = !!unlock;
   const storyInsufficient = balance < STORY_UNLOCK_COST;
@@ -127,7 +137,7 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
     }
     setBusyPetId(pet.id);
 
-    const displayName = getPetDisplayName(pet, species);
+    const displayName = getPetDisplayName(pet, species!);
     const r = await spendCultivation(
       ETERNAL_COST,
       'eternal',
@@ -149,7 +159,6 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
   }
 
   const sortedPets = (pets ?? []).slice().sort((a, b) => {
-    // 已退役放前(date desc),仍在世放最後(active 永遠在底)
     if (a.retiredAt && b.retiredAt) return b.retiredAt - a.retiredAt;
     if (a.retiredAt && !b.retiredAt) return -1;
     if (!a.retiredAt && b.retiredAt) return 1;
@@ -157,8 +166,26 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
   });
 
   return (
-    <Modal open={open} onClose={busyPetId ? () => {} : onClose} title="神獸詳細" hideClose={!!busyPetId}>
-      <div className="space-y-3 text-sm">
+    <div className="bestiary-detail-fill flex flex-col text-sm">
+      {/* 返回按鈕(浮在 card 上方) */}
+      <div className="flex items-center justify-between mb-2 px-1">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={!!busyPetId}
+          className="text-sm text-mythic-jade-500 font-bold active:scale-95 transition-transform disabled:opacity-50"
+        >
+          ← 返回圖鑑
+        </button>
+        <span className="text-xs text-gray-500">神獸詳細</span>
+      </div>
+
+      {/*
+        整個詳細頁包在「一張大卡」內,flex-1 撐滿可用高度。
+        內部 section 用 gap-3 分隔,不再各自 data-card 巢狀。
+        填滿到 BottomBar 上方靠 .bestiary-detail-fill 在 index.css 設 min-height。
+      */}
+      <div className="data-card p-4 flex-1 flex flex-col gap-4">
         {/* species 基本資訊 */}
         <div className="flex items-center gap-3">
           <div className="w-20 h-20 flex items-center justify-center shrink-0 rounded-lg bg-amber-50 border border-amber-200">
@@ -180,7 +207,10 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
         </div>
 
         {/* 階段 4C.3 修仙傳說區塊 */}
-        <div className="data-card p-3 space-y-2">
+        <div
+          className="pt-3 space-y-2"
+          style={{ borderTop: '1px dashed rgba(212, 175, 55, 0.35)' }}
+        >
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold text-gray-700">📜 修仙傳說</h4>
             {isStoryUnlocked && unlock && (
@@ -191,7 +221,7 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
           </div>
           {isStoryUnlocked ? (
             <p
-              key={species.id /* 換 species 時 re-mount 重跑 fade-in */}
+              key={species.id}
               className="story-fade-in text-xs leading-relaxed text-gray-700 whitespace-pre-line"
             >
               {story}
@@ -220,26 +250,32 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
           )}
         </div>
 
-        {(pets ?? []).length === 0 ? (
-          <div className="data-card p-4 text-center text-gray-500 text-xs">
-            🔒 尚未召喚過這隻神獸
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold text-gray-600">召喚紀錄({sortedPets.length})</h4>
-            {sortedPets.map((pet) => (
-              <PetRow
-                key={pet.id}
-                pet={pet}
-                speciesName={species.name}
-                balance={balance}
-                isBusy={busyPetId === pet.id}
-                anyBusy={!!busyPetId}
-                onEternal={() => handleEternal(pet)}
-              />
-            ))}
-          </div>
-        )}
+        {/* 召喚紀錄區塊 */}
+        <div
+          className="pt-3"
+          style={{ borderTop: '1px dashed rgba(212, 175, 55, 0.35)' }}
+        >
+          {(pets ?? []).length === 0 ? (
+            <div className="text-center py-4 text-gray-500 text-xs">
+              🔒 尚未召喚過這隻神獸
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-gray-600">召喚紀錄({sortedPets.length})</h4>
+              {sortedPets.map((pet) => (
+                <PetRow
+                  key={pet.id}
+                  pet={pet}
+                  speciesName={species.name}
+                  balance={balance}
+                  isBusy={busyPetId === pet.id}
+                  anyBusy={!!busyPetId}
+                  onEternal={() => handleEternal(pet)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         {error && (
           <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
@@ -247,11 +283,13 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
           </p>
         )}
 
-        <div className="text-xs text-gray-500 text-right">
+        {/* 餘額固定在 card 底部(spacer 把它推下去) */}
+        <div className="flex-1" />
+        <div className="text-xs text-gray-500 text-right pt-2 border-t border-gray-200">
           目前餘額:💎 {balance} 修為
         </div>
       </div>
-    </Modal>
+    </div>
   );
 }
 
@@ -276,12 +314,11 @@ function PetRow({
   const displayName = pet.customName?.trim() || speciesName;
   const tint = COLOR_VARIANT_TINT[pet.colorVariant ?? 'default'];
 
-  // 持有期間(出生 → 退役 / 至今)
   const endTs = pet.retiredAt ?? Date.now();
   const days = daysBetween(pet.bornAt, endTs);
 
   const peakRealm = pet.lastRealmCheck ?? 'fan';
-  const finalEff = pet.finalEffect; // 退役 pet 才有
+  const finalEff = pet.finalEffect;
 
   return (
     <div
@@ -296,11 +333,7 @@ function PetRow({
               {isEternal && '✨ '}
               {displayName}
             </span>
-            {pet.code && (
-              <span className="text-[11px] text-gray-500">
-                ({pet.code})
-              </span>
-            )}
+            {pet.code && <span className="text-[11px] text-gray-500">({pet.code})</span>}
             {!isRetired && (
               <span className="text-[10px] text-emerald-600 font-bold ml-1">(現役中)</span>
             )}
@@ -344,22 +377,16 @@ function PetRow({
 
         <div className="shrink-0">
           {!isRetired ? (
-            <span className="text-[10px] text-gray-400 px-2 py-1.5">
-              尚未退役
-            </span>
+            <span className="text-[10px] text-gray-400 px-2 py-1.5">尚未退役</span>
           ) : isEternal ? (
-            <span className="text-[10px] text-amber-700 px-2 py-1.5 font-bold">
-              已紀念
-            </span>
+            <span className="text-[10px] text-amber-700 px-2 py-1.5 font-bold">已紀念</span>
           ) : (
             <button
               type="button"
               onClick={onEternal}
               disabled={anyBusy || insufficient}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition-transform disabled:active:scale-100 ${
-                insufficient
-                  ? 'bg-gray-300 text-gray-500'
-                  : 'bg-amber-500 text-white'
+                insufficient ? 'bg-gray-300 text-gray-500' : 'bg-amber-500 text-white'
               }`}
             >
               {isBusy
