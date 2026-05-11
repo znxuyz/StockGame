@@ -6,11 +6,14 @@ import {
   spendCultivation,
   effectLabel,
   realmLabel,
+  unlockCreatureStory,
+  STORY_UNLOCK_COST,
   type RingEffect,
   type SoulRealm
 } from '@/services';
 import { useCultivation } from '@/hooks/useCultivation';
 import { getCreature, getPetDisplayName } from '@/data/creatures';
+import { getCreatureStory } from '@/data/creatureStories';
 import { COLOR_VARIANT_TINT } from '@/services';
 import { formatInt, daysBetween } from '@/utils';
 import type { Pet } from '@/types';
@@ -59,6 +62,7 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
   const cultivation = useCultivation();
   const balance = cultivation.amount;
   const [busyPetId, setBusyPetId] = useState<string | null>(null);
+  const [unlockingStory, setUnlockingStory] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 訂閱該 species 所有 pet,改名/退役/紀念都即時反映
@@ -70,9 +74,38 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
     [speciesId]
   );
 
+  // 階段 4C.3:訂閱該 creature 的故事解鎖紀錄
+  const unlock = useLiveQuery(
+    async () => {
+      if (!speciesId) return null;
+      return (
+        (await db.creatureUnlocks.where('creatureId').equals(speciesId).first()) ?? null
+      );
+    },
+    [speciesId]
+  );
+
   if (!speciesId) return null;
   const species = getCreature(speciesId);
   if (!species) return null;
+  const story = getCreatureStory(speciesId);
+  const isStoryUnlocked = !!unlock;
+  const storyInsufficient = balance < STORY_UNLOCK_COST;
+
+  async function handleUnlockStory() {
+    if (unlockingStory || !species) return;
+    setError(null);
+    if (storyInsufficient) {
+      setError(`修為不足,還差 ${STORY_UNLOCK_COST - balance}`);
+      return;
+    }
+    setUnlockingStory(true);
+    const r = await unlockCreatureStory(species.id, species.name);
+    setUnlockingStory(false);
+    if (!r.success) {
+      setError(r.reason === 'insufficient' ? '修為不足' : '操作失敗,請稍後再試');
+    }
+  }
 
   async function handleEternal(pet: Pet) {
     if (busyPetId) return;
@@ -133,6 +166,47 @@ export default function BestiaryPetModal({ open, onClose, speciesId }: BestiaryP
             <p className="text-xs text-gray-500 italic mt-0.5">{species.description}</p>
             <p className="text-[11px] text-gray-400 mt-1">{species.category}</p>
           </div>
+        </div>
+
+        {/* 階段 4C.3 修仙傳說區塊 */}
+        <div className="data-card p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-gray-700">📜 修仙傳說</h4>
+            {isStoryUnlocked && unlock && (
+              <span className="text-[10px] text-amber-700">
+                ✨ 已解鎖 · {new Date(unlock.unlockedAt).toLocaleDateString('zh-TW')}
+              </span>
+            )}
+          </div>
+          {isStoryUnlocked ? (
+            <p
+              key={species.id /* 換 species 時 re-mount 重跑 fade-in */}
+              className="story-fade-in text-xs leading-relaxed text-gray-700 whitespace-pre-line"
+            >
+              {story}
+            </p>
+          ) : (
+            <div className="text-center py-2 space-y-2">
+              <p className="text-xs text-gray-500">🔒 故事尚未解鎖</p>
+              <p className="text-[11px] text-gray-500">
+                解鎖 {species.name} 的修仙傳說?消耗 💎 {STORY_UNLOCK_COST} 修為
+              </p>
+              <button
+                type="button"
+                onClick={handleUnlockStory}
+                disabled={unlockingStory || storyInsufficient}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition-transform disabled:active:scale-100 ${
+                  storyInsufficient ? 'bg-gray-300 text-gray-500' : 'bg-amber-500 text-white'
+                }`}
+              >
+                {unlockingStory
+                  ? '解鎖中⋯'
+                  : storyInsufficient
+                    ? `💎不足(差 ${STORY_UNLOCK_COST - balance})`
+                    : `解鎖故事 💎${STORY_UNLOCK_COST}`}
+              </button>
+            </div>
+          )}
         </div>
 
         {(pets ?? []).length === 0 ? (
