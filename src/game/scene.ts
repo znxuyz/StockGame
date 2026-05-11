@@ -3,6 +3,7 @@ import { PetSprite, spriteKey, type PetSpriteData } from './petSprite';
 import { CREATURES } from '@/data/creatures';
 import { REALM_COLOR, realmLabel, type SoulRealm } from '@/services/petTier';
 import { bgTextureKey, getBackgroundDef } from '@/services/background';
+import { preloadRingTextures } from './soulRing';
 
 /**
  * 水墨世界場景。
@@ -75,6 +76,8 @@ export class WorldScene extends Phaser.Scene {
     this.load.image(bgTextureKey('default'), `${base}assets/bg/main.JPG`);
     this.load.image('petal', `${base}assets/particles/petal.png`);
     this.load.image('spark', `${base}assets/particles/spark.JPG`);
+    // 階段 4B 美術:6 個境界魂環 PNG(128x128,SoulRingRenderer 用 setDisplaySize 縮 20)
+    preloadRingTextures(this, base);
 
     // 只對 art:true 的物種嘗試載入立繪 — 其他物種一定 fallback emoji,
     // 不必讓 Phaser 噴一堆 404 進 console。
