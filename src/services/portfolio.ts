@@ -18,6 +18,7 @@ import { calculateLevel } from './evolution';
 import { earnCultivation } from './cultivationService';
 import { emitTaskTrigger } from './taskService';
 import { pickRandomCreature, getCreature } from '@/data/creatures';
+import { getRingEffect } from './petTier';
 
 /** 修為獎勵金額(階段 2.3),改數字直接從這調 */
 const CULTIVATION_REWARD = {
@@ -288,9 +289,16 @@ export async function sell(params: SellParams): Promise<ActionResult> {
       // 全部賣完：刪 holding、寵物退役進圖鑑
       const existingPet = await db.pets.get(holding.petId);
       if (!existingPet) throw new Error(`資料不一致：找不到 ${params.code} 的寵物`);
+      // 階段 4C.2:退役當下的魂環特效快照,圖鑑卡用這個還原動態效果
+      // (退役後沒持倉/價格資料即時算了)。按賣出時的市價 / 累積投入算 returnRate。
+      const finalReturnRate =
+        holding.totalCost > 0
+          ? (params.price * params.shares - holding.totalCost) / holding.totalCost
+          : 0;
       pet = {
         ...existingPet,
-        retiredAt: params.now
+        retiredAt: params.now,
+        finalEffect: getRingEffect(finalReturnRate)
       };
       await db.pets.put(pet);
       await db.holdings.delete(params.code);
