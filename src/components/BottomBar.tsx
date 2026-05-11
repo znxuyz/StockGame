@@ -20,21 +20,16 @@ function withClick(fn: () => void) {
 }
 
 /**
- * 底部玻璃擬態功能列(階段 R.6 改版)。
+ * 底部玻璃擬態功能列(階段 R.6 改版 + icon 修正)。
  *
  * 新 5 顆按鈕:[遊戲][好友][交易][紀錄][設定]
- *  - 遊戲:任務 / 成就 / 圖鑑 / 修為 4 tab(原本 RecordsModal 內部)
- *  - 好友:placeholder「即將推出」(階段 5 才實作)
- *  - 交易:統一入口,點下去看 3 個動作(召喚 / 加碼 / 退役 → 既有 Modal)
- *  - 紀錄:精簡為 3 個工具 tab(圖表 / 對比 / 交易明細)
- *  - 設定:不變
+ *  - 遊戲 / 好友 / 交易:暫用 emoji 占位(新功能,等用戶補美術 PNG)
+ *  - 紀錄 / 設定:沿用既有 PNG(卷軸 / 粉鑽框)
  *
- * 紅點通知遷到遊戲按鈕(本來在紀錄按鈕),條件不變:有可領任務 → 紅點。
+ * 紅點通知遷到遊戲按鈕,條件不變:有可領任務 → 紅點。
  *
- * icon:
- *  - 美術尚未補上,先用 emoji 占位。後續上傳到 public/assets/btn/{game,friends,trade}.png
- *    並 mark assetReady=true 即可切回 PNG。買入/餵食/售出 三顆 PNG 已不再使用,
- *    保留檔案直到 R.7 確定沒人 reference 才刪。
+ * 美術切換:當 public/assets/btn/{game,friends,trade}.png 補上後,
+ * 把對應按鈕從 emoji={'🎮'} 改成 src='/assets/btn/game.png' 即可。
  */
 export default function BottomBar({
   onGame,
@@ -43,7 +38,7 @@ export default function BottomBar({
   onRecords,
   onSettings
 }: BottomBarProps) {
-  // 階段 3.7 遷移:可領任務數(completed && !claimed)→ 從紀錄按鈕搬到遊戲按鈕
+  // 階段 3.7 遷移:可領任務數 → 遊戲按鈕紅點
   const claimableTaskCount =
     useLiveQuery(
       async () => {
@@ -65,16 +60,26 @@ export default function BottomBar({
         />
         <ActionButton emoji="👥" onClick={withClick(onFriends)} label="好友" />
         <ActionButton emoji="🔄" onClick={withClick(onTrade)} label="交易" />
-        <ActionButton emoji="📊" onClick={withClick(onRecords)} label="紀錄" />
-        <ActionButton emoji="⚙️" onClick={withClick(onSettings)} label="設定" />
+        <ActionButton
+          src="/assets/btn/records.png"
+          onClick={withClick(onRecords)}
+          label="紀錄"
+        />
+        <ActionButton
+          src="/assets/btn/settings.png"
+          onClick={withClick(onSettings)}
+          label="設定"
+        />
       </div>
     </div>
   );
 }
 
 interface ActionButtonProps {
-  /** 暫用 emoji 占位,之後換 PNG 再加 src prop */
-  emoji: ReactNode;
+  /** PNG 圖示路徑(沿用舊 icon 的按鈕用) */
+  src?: string;
+  /** emoji 占位(新功能尚未補美術用);src / emoji 二擇一 */
+  emoji?: ReactNode;
   onClick: () => void;
   label: string;
   disabled?: boolean;
@@ -82,25 +87,34 @@ interface ActionButtonProps {
   badge?: number;
 }
 
-function ActionButton({ emoji, onClick, label, disabled, badge }: ActionButtonProps) {
+function ActionButton({ src, emoji, onClick, label, disabled, badge }: ActionButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex flex-col items-center justify-end gap-0.5 py-1.5 ${
+      className={`relative flex flex-col items-center justify-end gap-0.5 py-0.5 ${
         disabled
-          ? 'opacity-40 cursor-not-allowed'
+          ? 'opacity-40 grayscale cursor-not-allowed'
           : 'active:scale-95 transition-transform'
       }`}
     >
-      {/* emoji 圓盤,跟原 64×64 PNG 的視覺重量接近 */}
-      <span
-        className="w-full max-w-[56px] aspect-square flex items-center justify-center text-4xl select-none drop-shadow-[0_2px_6px_rgba(33,78,61,0.35)]"
-        aria-hidden
-      >
-        {emoji}
-      </span>
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="w-full max-w-[64px] aspect-square object-contain select-none drop-shadow-[0_2px_6px_rgba(33,78,61,0.35)]"
+        />
+      ) : (
+        <span
+          className="w-full max-w-[56px] aspect-square flex items-center justify-center text-4xl select-none drop-shadow-[0_2px_6px_rgba(33,78,61,0.35)]"
+          aria-hidden
+        >
+          {emoji}
+        </span>
+      )}
       <span className="text-[11px] font-bold tracking-wider text-mythic-ink-200 font-zh">
         {label}
       </span>
