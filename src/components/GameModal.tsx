@@ -17,12 +17,19 @@ interface GameModalProps {
 
 type Tab = 'tasks' | 'achievements' | 'bestiary' | 'cultivation';
 
-const TAB_LABEL: Record<Tab, string> = {
-  tasks: '📋 任務',
-  achievements: '🏆 成就',
-  bestiary: '📚 圖鑑',
-  cultivation: '💎 修為'
+interface TabMeta {
+  label: string;
+  icon: string;
+}
+
+const TABS: Record<Tab, TabMeta> = {
+  tasks: { label: '任務', icon: '/assets/btn/tab/task.png' },
+  achievements: { label: '成就', icon: '/assets/btn/tab/achievement.png' },
+  bestiary: { label: '圖鑑', icon: '/assets/btn/tab/codex.png' },
+  cultivation: { label: '修為', icon: '/assets/btn/tab/cultivation.png' }
 };
+
+const TAB_ORDER: Tab[] = ['tasks', 'achievements', 'bestiary', 'cultivation'];
 
 /** tab → task trigger 對應(沿用 RecordsModal 的設計) */
 const TAB_TASK_TRIGGER: Partial<Record<Tab, TaskTriggerEvent>> = {
@@ -52,20 +59,33 @@ export default function GameModal({ open, onClose, onPetClick }: GameModalProps)
       className="grid grid-cols-4 border-b"
       style={{ borderColor: 'rgba(212, 175, 55, 0.25)' }}
     >
-      {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
-        <button
-          key={t}
-          type="button"
-          onClick={() => setTab(t)}
-          className={`py-2.5 text-sm font-bold border-b-2 transition-colors ${
-            tab === t
-              ? 'text-mythic-jade-500 border-mythic-jade-400'
-              : 'text-gray-500 border-transparent hover:bg-white/20'
-          }`}
-        >
-          {TAB_LABEL[t]}
-        </button>
-      ))}
+      {TAB_ORDER.map((t) => {
+        const meta = TABS[t];
+        const active = tab === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-xs font-bold border-b-2 transition-colors ${
+              active
+                ? 'text-mythic-jade-500 border-mythic-jade-400'
+                : 'text-gray-500 border-transparent hover:bg-white/20'
+            }`}
+          >
+            <img
+              src={meta.icon}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className={`w-6 h-6 object-contain transition-opacity ${
+                active ? 'opacity-100' : 'opacity-60'
+              }`}
+            />
+            <span>{meta.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 

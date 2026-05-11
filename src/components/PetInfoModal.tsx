@@ -340,18 +340,32 @@ export default function PetInfoModal({
               <button
                 type="button"
                 onClick={() => onQuickFeed(pet.code)}
-                className={`${buttonBase} bg-mythic-jade-500 text-white`}
+                className={`${buttonBase} bg-mythic-jade-500 text-white flex items-center justify-center gap-1.5`}
               >
-                🍖 加碼
+                <img
+                  src="/assets/btn/feed.png"
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="w-6 h-6 object-contain drop-shadow"
+                />
+                <span>加碼</span>
               </button>
             )}
             {onQuickSell && (
               <button
                 type="button"
                 onClick={() => onQuickSell(pet.code)}
-                className={`${buttonBase} bg-rose-500 text-white`}
+                className={`${buttonBase} bg-rose-500 text-white flex items-center justify-center gap-1.5`}
               >
-                📤 賣出
+                <img
+                  src="/assets/btn/sell.png"
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="w-6 h-6 object-contain drop-shadow"
+                />
+                <span>賣出</span>
               </button>
             )}
           </div>

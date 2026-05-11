@@ -53,13 +53,21 @@ export default function BottomBar({
     <div className="hud-bottom">
       <div className="grid grid-cols-5 gap-0.5">
         <ActionButton
-          emoji="🎮"
+          src="/assets/btn/game.png"
           onClick={withClick(onGame)}
           label="遊戲"
           badge={claimableTaskCount > 0 ? claimableTaskCount : undefined}
         />
-        <ActionButton emoji="👥" onClick={withClick(onFriends)} label="好友" />
-        <ActionButton emoji="🔄" onClick={withClick(onTrade)} label="交易" />
+        <ActionButton
+          src="/assets/btn/friends.png"
+          onClick={withClick(onFriends)}
+          label="好友"
+        />
+        <ActionButton
+          src="/assets/btn/trade.png"
+          onClick={withClick(onTrade)}
+          label="交易"
+        />
         <ActionButton
           src="/assets/btn/records.png"
           onClick={withClick(onRecords)}
