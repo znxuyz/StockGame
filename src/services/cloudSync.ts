@@ -23,11 +23,12 @@ import type {
   CultivationLog,
   LoginStreak,
   UserTask,
-  MilestoneReward
+  MilestoneReward,
+  CreatureUnlock
 } from '@/types';
 
-/** SCHEMA_VERSION 3(階段 3.8 加 simulation/streak/task/milestone 三表) */
-const SCHEMA_VERSION = 3;
+/** SCHEMA_VERSION 4(階段 4C.5 加 creatureUnlocks) */
+const SCHEMA_VERSION = 4;
 const PUSH_DEBOUNCE_MS = 1000;
 
 export interface CloudBlob {
@@ -35,12 +36,14 @@ export interface CloudBlob {
   stocks: Stock[];
   holdings: Holding[];
   /**
-   * 神獸列表。階段 4A/4B 新增 4 個 optional 欄位都自動隨 JSON 序列化同步,
+   * 神獸列表。階段 4A/4B/4C 新增 7 個 optional 欄位都自動隨 JSON 序列化同步,
    * 不需要 cloudSync 程式碼動:
    *   - customName(階段 4A.2 改名)
    *   - boostedDays(階段 4A.3 催熟累積天數)
    *   - effectBoostUntil(階段 4A.4 淬煉到期 unix ms)
    *   - colorVariant(階段 4B.2 配色淬煉)
+   *   - isEternal / eternalDate(階段 4C.2 永恆紀念)
+   *   - finalEffect(階段 4C.2 退役當下的特效快照)
    * 跨裝置 race 已驗證:effectBoostUntil 是時間戳,B 裝置拉到後仍以 now 比對,
    * 過期就自動降回自然 effect,不會卡狀態。
    */
@@ -75,6 +78,12 @@ export interface CloudBlob {
    * @deprecated 同 userTasks。已領取的里程碑由 currentStreak 推算,不需 sync。
    */
   milestoneRewards?: MilestoneReward[];
+  /**
+   * 階段 4C.5:圖鑑修仙傳說解鎖紀錄(階段 4C.3 寫入)。
+   * 紀錄以 creatureId 為單位(`&` 唯一索引),賣光重買仍解鎖。
+   * append-only,沒 race issue:clear + bulkPut 即可。
+   */
+  creatureUnlocks?: CreatureUnlock[];
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
@@ -119,7 +128,8 @@ async function readAllForSync(): Promise<CloudBlob> {
     settings,
     userCultivation,
     cultivationLog,
-    userLoginStreak
+    userLoginStreak,
+    creatureUnlocks
   ] = await Promise.all([
     db.stocks.toArray(),
     db.holdings.toArray(),
@@ -130,7 +140,8 @@ async function readAllForSync(): Promise<CloudBlob> {
     db.settings.get('singleton'),
     db.userCultivation.get('main'),
     db.cultivationLog.toArray(),
-    db.userLoginStreak.get('main')
+    db.userLoginStreak.get('main'),
+    db.creatureUnlocks.toArray()
   ]);
 
   return {
@@ -144,7 +155,8 @@ async function readAllForSync(): Promise<CloudBlob> {
     settings: settings ?? null,
     userCultivation: userCultivation ?? null,
     cultivationLog,
-    userLoginStreak: userLoginStreak ?? null
+    userLoginStreak: userLoginStreak ?? null,
+    creatureUnlocks
     // userTasks / milestoneRewards 故意不寫(階段 3.8 後純本地)
   };
 }
@@ -179,7 +191,8 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       db.settings,
       db.userCultivation,
       db.cultivationLog,
-      db.userLoginStreak
+      db.userLoginStreak,
+      db.creatureUnlocks
     ],
     async () => {
       await db.stocks.clear();
@@ -212,6 +225,11 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       // 階段 3.8:userLoginStreak 同步,userTasks / milestoneRewards 不動本地
       await db.userLoginStreak.clear();
       if (blob.userLoginStreak) await db.userLoginStreak.put(blob.userLoginStreak);
+
+      // 階段 4C.5:圖鑑故事解鎖紀錄。append-only,clear + bulkPut 同步即可。
+      // 舊版 blob 沒這欄位 → 等於從零開始解鎖(換手機才登入可接受)。
+      await db.creatureUnlocks.clear();
+      if (blob.creatureUnlocks?.length) await db.creatureUnlocks.bulkPut(blob.creatureUnlocks);
 
       // 注意:userTasks / milestoneRewards 不 clear、不 write(純本地狀態)。
       // caller 在 pullNow 後跑 checkAndGenerateTasks 確保任務存在。

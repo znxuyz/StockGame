@@ -206,7 +206,7 @@ Phaser sprite 視覺:
 | 賣出該次有獲利 | `sell_profit` | floor(realizedPnL / 1000) |
 
 ### 消耗來源
-階段 4A + 4B 已實作 6 個。階段 4A 三顆 button 在 `PetInfoModal` 底部(每隻神獸獨立花費);階段 4B 三項在 `SettingsModal`(全域設定)。
+階段 4A / 4B / 4C 全部實作完畢,共 8 個 reason 代碼。階段 4A 三顆 button 在 `PetInfoModal` 底部(每隻神獸獨立花費);階段 4B 三項在 `SettingsModal`(全域設定);階段 4C 兩項在 `BestiaryPetModal`(圖鑑詳細頁)。
 | 按鈕位置 | reason | 金額 | 效果 |
 |---|---|---|---|
 | PetInfoModal:改名 | `rename` | 50 | 寫 `pet.customName`,1-10 字限中英數,不可同原名 |
@@ -215,8 +215,8 @@ Phaser sprite 視覺:
 | PetInfoModal:換色 | `recolor` | 300 | `pet.colorVariant` 5 選 1,Phaser sprite 套對應 tint |
 | SettingsModal:HUD 主題 | `theme` | 200 | 解鎖一次永久持有;切換時 `<html data-theme>` 即時切 CSS 變數 |
 | SettingsModal:家園背景 | `background` | 500 | 解鎖一次永久持有;切換時 `WorldScene.setBackgroundId` 動態載入 texture |
-
-階段 4C 預留 2 個 reason 代碼:`eternal` / `unlock_story`。
+| BestiaryPetModal:永恆紀念 | `eternal` | 2000 | `pet.isEternal=true`,圖鑑卡金邊 + ✨ 角標 + finalEffect 永久動態 |
+| BestiaryPetModal:解鎖傳說 | `unlock_story` | 100 | `creatureUnlocks` 表 append,per-creatureId 永久解鎖(賣光重買仍解鎖) |
 
 **淬煉雙重給付防護**:`PetStatus` 拆 `effect`(渲染用,boost 套用後)/ `naturalEffect`(報酬率原值);`PhaserMap` 的 `effect_unlock` 比對改用 `naturalEffect`,玩家花 500 淬煉不會拿回 +50 自然 reward。`pet.lastEffectCheck` 永遠存 naturalEffect。
 
