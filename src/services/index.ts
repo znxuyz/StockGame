@@ -31,6 +31,9 @@ export {
 export { BACKGROUNDS, getBackgroundDef, bgTextureKey } from './background';
 export type { BackgroundDef } from './background';
 
+export { unlockCreatureStory, STORY_UNLOCK_COST } from './creatureUnlockService';
+export type { UnlockResult } from './creatureUnlockService';
+
 export { runPriceUpdate, describePriceUpdateError } from './priceUpdate';
 export type { PriceUpdateResult } from './priceUpdate';
 

@@ -507,6 +507,15 @@ button {
 }
 .task-toast { animation: task-toast-in 3000ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
+/* 圖鑑故事解鎖後的淡入(階段 4C.3)— BestiaryPetModal 用 */
+@keyframes story-fade-in {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.story-fade-in {
+  animation: story-fade-in 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* PWA 新版提示 — 從頂部滑入(放在 HUD 之上,不擋遊戲畫面) */
 @keyframes pwa-update-slide-down {
   0%   { opacity: 0; transform: translate(-50%, -120%); }
