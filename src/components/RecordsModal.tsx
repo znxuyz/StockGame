@@ -20,11 +20,18 @@ interface RecordsModalProps {
 
 type Tab = 'overview' | 'compare' | 'transactions';
 
-const TAB_LABEL: Record<Tab, string> = {
-  overview: '📊 圖表',
-  compare: '📈 對比',
-  transactions: '📜 交易紀錄'
+interface TabMeta {
+  label: string;
+  icon: string;
+}
+
+const TABS: Record<Tab, TabMeta> = {
+  overview: { label: '圖表', icon: '/assets/btn/tab/chart.png' },
+  compare: { label: '對比', icon: '/assets/btn/tab/compare.png' },
+  transactions: { label: '交易紀錄', icon: '/assets/btn/tab/transactions.png' }
 };
+
+const TAB_ORDER: Tab[] = ['overview', 'compare', 'transactions'];
 
 /**
  * 紀錄彈窗(階段 R.3 精簡)。
@@ -54,20 +61,33 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
       className="grid grid-cols-3 border-b"
       style={{ borderColor: 'rgba(212, 175, 55, 0.25)' }}
     >
-      {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
-        <button
-          key={t}
-          type="button"
-          onClick={() => setTab(t)}
-          className={`py-2.5 text-sm font-bold border-b-2 transition-colors ${
-            tab === t
-              ? 'text-mythic-jade-500 border-mythic-jade-400'
-              : 'text-gray-500 border-transparent hover:bg-white/20'
-          }`}
-        >
-          {TAB_LABEL[t]}
-        </button>
-      ))}
+      {TAB_ORDER.map((t) => {
+        const meta = TABS[t];
+        const active = tab === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-xs font-bold border-b-2 transition-colors ${
+              active
+                ? 'text-mythic-jade-500 border-mythic-jade-400'
+                : 'text-gray-500 border-transparent hover:bg-white/20'
+            }`}
+          >
+            <img
+              src={meta.icon}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className={`w-6 h-6 object-contain transition-opacity ${
+                active ? 'opacity-100' : 'opacity-60'
+              }`}
+            />
+            <span>{meta.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 
