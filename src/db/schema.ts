@@ -13,7 +13,8 @@ import type {
   CultivationLog,
   LoginStreak,
   UserTask,
-  MilestoneReward
+  MilestoneReward,
+  CreatureUnlock
 } from '@/types';
 
 /**
@@ -48,6 +49,8 @@ export class StockGameDB extends Dexie {
   userTasks!: Table<UserTask, number>;
   /** 連登里程碑領取紀錄(階段 3.1) */
   milestoneRewards!: Table<MilestoneReward, number>;
+  /** 圖鑑故事解鎖紀錄(階段 4C.3,creatureId 唯一索引防重複解鎖) */
+  creatureUnlocks!: Table<CreatureUnlock, number>;
 
   constructor() {
     super('StockGameDB');
@@ -268,6 +271,37 @@ export class StockGameDB extends Dexie {
             if (r.currentBackground === undefined) r.currentBackground = 'default';
             if (r.hudTheme === undefined) r.hudTheme = 'default';
             if (r.unlockedHudThemes === undefined) r.unlockedHudThemes = ['default'];
+          });
+      });
+
+    /**
+     * v13:深度消耗管道(階段 4C)資料層。
+     *
+     * pets 表加 3 個 optional 欄位(階段 4C.2 永恆紀念):
+     *   - isEternal:boolean,2000 修為「永恆封印」後 true,圖鑑卡魂環變動態
+     *   - eternalDate:unix ms,紀念日期(顯示「✨ 已紀念 · 2025/05/10」)
+     *   - finalEffect:RingEffect,退役當下的特效快照,圖鑑卡用這個還原動態
+     *
+     * 新增 creatureUnlocks 表(階段 4C.3 圖鑑故事解鎖):
+     *   - 主鍵 ++id auto-increment
+     *   - &creatureId 唯一索引(防 race 重複解鎖)
+     *   - unlockedAt unix ms
+     *   - 解鎖一個 creatureId 永久解鎖(賣光重買仍解鎖狀態)
+     *
+     * pets backfill isEternal=false 給舊資料;eternalDate/finalEffect undefined。
+     */
+    this.version(13)
+      .stores({
+        creatureUnlocks: '++id, &creatureId'
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('pets')
+          .toCollection()
+          .modify((pet) => {
+            const p = pet as Record<string, unknown>;
+            if (p.isEternal === undefined) p.isEternal = false;
+            // eternalDate / finalEffect 不 backfill,undefined = 還沒紀念 / 還在世
           });
       });
   }
