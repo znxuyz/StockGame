@@ -37,6 +37,7 @@ import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
 import CultivationFloater from '@/components/CultivationFloater';
 import MilestoneCelebration from '@/components/MilestoneCelebration';
+import EternalCelebration from '@/components/EternalCelebration';
 import TaskCompletedToast from '@/components/TaskCompletedToast';
 import DailyCheckInModal from '@/components/DailyCheckInModal';
 import BottomBar from '@/components/BottomBar';
@@ -434,6 +435,7 @@ function Game() {
       />
       <CultivationFloater />
       <MilestoneCelebration />
+      <EternalCelebration />
       <TaskCompletedToast />
       {checkInStreak && (
         <DailyCheckInModal
