@@ -15,6 +15,8 @@
  * 不處理:
  *  - bg/main.JPG    背景圖,JPG 比 PNG 小,維持 .JPG
  *  - particles/spark.JPG   黑底金光,Phaser 用 BlendMode.ADD 直接吃黑,不去背
+ *  - btn/*.png  5 顆底部按鈕 + 3 顆新功能 icon + tab/ 7 張(MJ 直接 PNG 上傳),
+ *    走 process-button-icons.mjs(4 角 seed RGB 動態 flood-fill),不再 JPG → PNG
  */
 
 import { existsSync, statSync } from 'node:fs';
@@ -29,12 +31,6 @@ const force = process.argv.includes('--force');
 // resize 是「最長邊」上限,沒設就保留原始尺寸。手機 UI 不需要 1024px,
 // 縮小可以大幅減少 PNG 體積(PWA precache 才不會超過 2 MB 限制)。
 const TASKS = [
-  // 5 顆底部按鈕:UI 顯示 ~64px,3x retina = 192,設 256 留餘裕
-  { in: 'public/assets/btn/buy.JPG',         out: 'public/assets/btn/buy.png',         mode: 'white',       resize: 256 },
-  { in: 'public/assets/btn/feed.JPG',        out: 'public/assets/btn/feed.png',        mode: 'white',       resize: 256 },
-  { in: 'public/assets/btn/sell.JPG',        out: 'public/assets/btn/sell.png',        mode: 'white',       resize: 256 },
-  { in: 'public/assets/btn/records.JPG',     out: 'public/assets/btn/records.png',     mode: 'white-flood', resize: 256 },
-  { in: 'public/assets/btn/settings.JPG',    out: 'public/assets/btn/settings.png',    mode: 'white',       resize: 256 },
   // 櫻花粒子:Phaser 粒子顯示頂多 64px,3x = 192,設 128
   { in: 'public/assets/particles/petal.JPG', out: 'public/assets/particles/petal.png', mode: 'white',       resize: 128 }
 ];
@@ -73,7 +69,7 @@ function applyBlackThreshold(data, channels) {
   }
 }
 
-/** 深色底:brightness ≤ 70 → 透明,70 ~ 110 漸進。給 records.JPG 深藍底用 */
+/** 深色底:brightness ≤ 70 → 透明,70 ~ 110 漸進(歷史保留) */
 function applyDarkThreshold(data, channels) {
   const ABOVE = 110;
   const BELOW = 70;

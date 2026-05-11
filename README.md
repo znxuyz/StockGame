@@ -164,7 +164,7 @@ npm run typecheck    # 型別檢查
 
 ```bash
 npm run build:icons         # public/app-icon-source.JPG → public/icons/*.png（PWA / favicon）
-npm run process:ui-assets   # public/assets/btn/*.JPG → 去背 PNG（5 顆底部按鈕）
+npm run process:ui-assets   # public/assets/particles/petal.JPG → 去背 PNG（粒子）
 npm run download:sprites    # docs/art-prompts.md → public/sprites/*.png（50 隻立繪 / MJ）
 npm run fetch:industries    # 月跑：證交所 OpenAPI → src/data/industries.json
 npm run fetch:holidays      # 月跑：TaiwanCalendar → src/data/holidays.json
@@ -208,7 +208,7 @@ StockGame/
 ├── public/
 │   ├── app-icon-source.JPG       ← favicon 原圖（九尾狐）
 │   ├── icons/                    ← PWA icons（npm run build:icons 產出）
-│   ├── assets/btn/*.JPG / *.png  ← 5 顆底部按鈕原圖 + 去背 PNG
+│   ├── assets/btn/*.png + tab/*.png  ← 底部 5 顆 + 3 顆新功能 + 7 張 tab icon(MJ PNG)
 │   ├── assets/bg/main.JPG        ← Phaser 場景背景（粉紅雲紋庭院 1344×896）
 │   ├── assets/particles/         ← 櫻花 / 金光粒子
 │   └── sprites/<id>.png          ← 50 隻神祇立繪
