@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
 import HoldingPicker from './HoldingPicker';
@@ -19,6 +19,8 @@ interface SellModalProps {
   onClose: () => void;
   settings: Settings;
   onActionComplete: (message: string) => void;
+  /** 階段 R.7:從神獸詳細頁快速進入時帶 code,自動預選那檔 */
+  presetCode?: string | null;
 }
 
 /**
@@ -26,13 +28,29 @@ interface SellModalProps {
  *  - 提供「全部賣出」快捷
  *  - 即時試算手續費 + 證交稅（一般 0.3% / ETF 0.1%）+ 已實現損益
  *  - 賣光時提示寵物進圖鑑
+ *
+ * 階段 R.7:支援 presetCode 預選(從 PetInfoModal 快速進入)。
  */
-export default function SellModal({ open, onClose, settings, onActionComplete }: SellModalProps) {
+export default function SellModal({
+  open,
+  onClose,
+  settings,
+  onActionComplete,
+  presetCode
+}: SellModalProps) {
   const [code, setCode] = useState<string | null>(null);
   const [shares, setShares] = useState('');
   const [price, setPrice] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 階段 R.7:打開 modal 時若有 presetCode 自動填入,
+  // 玩家仍可手動 HoldingPicker 切其他檔(presetCode 只是入口預設值)
+  useEffect(() => {
+    if (open && presetCode) {
+      setCode(presetCode);
+    }
+  }, [open, presetCode]);
 
   const holding = useLiveQuery(async () => (code ? db.holdings.get(code) : undefined), [code]);
   const stock = useLiveQuery(async () => (code ? db.stocks.get(code) : undefined), [code]);

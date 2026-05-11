@@ -28,6 +28,10 @@ interface PetInfoModalProps {
   onClose: () => void;
   pet: Pet | null;
   stock: Stock | null;
+  /** 階段 R.7:點 [加碼] 快速進 FeedModal(預選此 pet 的 code) */
+  onQuickFeed?: (code: string) => void;
+  /** 階段 R.7:點 [賣出] 快速進 SellModal(預選此 pet 的 code) */
+  onQuickSell?: (code: string) => void;
 }
 
 /** 魂環境界顯示用 emoji + 文字色,跟魂環顏色對齊 */
@@ -59,7 +63,14 @@ const EFFECT_EMOJI: Record<RingEffect, string> = {
   erupting: '✨'
 };
 
-export default function PetInfoModal({ open, onClose, pet: petProp, stock }: PetInfoModalProps) {
+export default function PetInfoModal({
+  open,
+  onClose,
+  pet: petProp,
+  stock,
+  onQuickFeed,
+  onQuickSell
+}: PetInfoModalProps) {
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -314,6 +325,35 @@ export default function PetInfoModal({ open, onClose, pet: petProp, stock }: Pet
               </Row>
             )}
             <Row label="持有天數">{daysHeld} 天</Row>
+          </div>
+        )}
+
+        {/*
+          階段 R.7:快速交易按鈕(加碼 / 賣出)。
+          直接觸發既有 FeedModal / SellModal,並預選此 pet 的 code,
+          玩家從主畫面點神獸就能直接交易,不必走「交易彈窗 → 加碼 → 選神獸」三步。
+          沒持倉(尚未召喚的退役神獸)時不顯示這列。
+        */}
+        {(onQuickFeed || onQuickSell) && (
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            {onQuickFeed && (
+              <button
+                type="button"
+                onClick={() => onQuickFeed(pet.code)}
+                className={`${buttonBase} bg-mythic-jade-500 text-white`}
+              >
+                🍖 加碼
+              </button>
+            )}
+            {onQuickSell && (
+              <button
+                type="button"
+                onClick={() => onQuickSell(pet.code)}
+                className={`${buttonBase} bg-rose-500 text-white`}
+              >
+                📤 賣出
+              </button>
+            )}
           </div>
         )}
 

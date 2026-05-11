@@ -117,6 +117,8 @@ export default function App() {
 function Game() {
   const [modal, setModal] = useState<ModalKind>(null);
   const [petTarget, setPetTarget] = useState<{ pet: Pet; stock: Stock } | null>(null);
+  // 階段 R.7:從 PetInfoModal 快速進入 FeedModal/SellModal 時帶 code 預選
+  const [tradePresetCode, setTradePresetCode] = useState<string | null>(null);
   /**
    * 階段 3.2:每日簽到彈窗 streak。App 啟動 checkAndUpdateStreak 後,
    * 若 isNewDay && !todayClaimed 設這個,DailyCheckInModal open。
@@ -493,15 +495,23 @@ function Game() {
       />
       <FeedModal
         open={modal === 'feed'}
-        onClose={() => setModal(null)}
+        onClose={() => {
+          setModal(null);
+          setTradePresetCode(null);
+        }}
         settings={settings}
         onActionComplete={postAction}
+        presetCode={tradePresetCode}
       />
       <SellModal
         open={modal === 'sell'}
-        onClose={() => setModal(null)}
+        onClose={() => {
+          setModal(null);
+          setTradePresetCode(null);
+        }}
         settings={settings}
         onActionComplete={postAction}
+        presetCode={tradePresetCode}
       />
       <Suspense fallback={null}>
         {modal === 'records' && (
@@ -542,6 +552,14 @@ function Game() {
         onClose={() => setModal(null)}
         pet={petTarget?.pet ?? null}
         stock={petTarget?.stock ?? null}
+        onQuickFeed={(code) => {
+          setTradePresetCode(code);
+          setModal('feed');
+        }}
+        onQuickSell={(code) => {
+          setTradePresetCode(code);
+          setModal('sell');
+        }}
       />
 
       <Toast

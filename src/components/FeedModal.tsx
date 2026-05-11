@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
 import HoldingPicker from './HoldingPicker';
@@ -12,18 +12,40 @@ interface FeedModalProps {
   onClose: () => void;
   settings: Settings;
   onActionComplete: (message: string) => void;
+  /**
+   * 階段 R.7:從神獸詳細頁快速進來時帶 code,自動預選那檔,
+   * HoldingPicker 變唯讀資訊條(玩家明確知道在加碼哪一檔)。
+   * 從 BottomBar → TradeModal → FeedModal 的路徑不帶,維持原本選檔流程。
+   */
+  presetCode?: string | null;
 }
 
 /**
  * 加碼彈窗 — 對應「餵食加碼」按鈕。
  * 從持倉清單選一檔，輸入股數 + 成本價，計算新的平均成本後寫入。
+ *
+ * 階段 R.7:支援 presetCode 預選(從 PetInfoModal 快速進入)。
  */
-export default function FeedModal({ open, onClose, settings, onActionComplete }: FeedModalProps) {
+export default function FeedModal({
+  open,
+  onClose,
+  settings,
+  onActionComplete,
+  presetCode
+}: FeedModalProps) {
   const [code, setCode] = useState<string | null>(null);
   const [shares, setShares] = useState('');
   const [price, setPrice] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 階段 R.7:打開 modal 時若有 presetCode 自動填入,
+  // 之後玩家手動 HoldingPicker 切其他檔仍允許(presetCode 只是入口預設值)
+  useEffect(() => {
+    if (open && presetCode) {
+      setCode(presetCode);
+    }
+  }, [open, presetCode]);
 
   const holding = useLiveQuery(async () => (code ? db.holdings.get(code) : undefined), [code]);
   const stock = useLiveQuery(async () => (code ? db.stocks.get(code) : undefined), [code]);
