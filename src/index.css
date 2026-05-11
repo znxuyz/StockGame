@@ -206,6 +206,15 @@
   }
 
   /**
+   * 階段 4C 圖鑑詳細頁填滿容器(Bug 修):
+   * 把 BestiaryPetDetail 的根 div 撐到 glass-popup-content 的 min-height,
+   * 內部 data-card 用 flex-1 把空白填掉,卡片不再「飄在空中」。
+   */
+  .bestiary-detail-fill {
+    min-height: 100%;
+  }
+
+  /**
    * 彈窗背後 dim+blur 遮罩:
    *  - 0.25 黑底淡淡擋住遊戲畫面,提示「現在不能操作下方」
    *  - blur 8px 進一步糊化遊戲畫面,玩家視覺焦點集中在彈窗

@@ -2,34 +2,31 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { CREATURES, getCreature } from '@/data/creatures';
-import BestiaryPetModal from './BestiaryPetModal';
+import BestiaryPetDetail from './BestiaryPetDetail';
 
 /**
  * 神獸圖鑑：依陣營分區,已收集的有彩色立繪,未收集的灰階剪影。
  * 賣光的也計入收集(pet.retiredAt 不影響圖鑑)。
  *
- * category 直接是中文陣營名(天界 / 魔界 / 自然界 ...),不需翻譯字典。
- * 陣營出現順序 = creatures.ts 內第一次出現的順序。
- *
- * 階段 4C.2:已收集的卡可點開 BestiaryPetModal 看所有實例 + 永恆紀念。
- *   - 任一 pet 已 isEternal → 卡片金光環 + ✨ 標誌(右上角)
- *
- * 階段 4C.4 視覺升級:
- *   - 卡片左上角加 📜 標誌(已解鎖修仙傳說的 species)
- *   - 統計列加「📜 故事 N/50」(配合「📚 圖鑑 X/50」並列)
+ * 階段 4C.2 + 4C.4 + 圖鑑白屏修:
+ *  - 內嵌 detail view 取代 Modal-in-Modal:點神獸卡 → state 切換 →
+ *    BestiaryPetDetail 直接取代列表渲染。原本巢狀 Modal 被 iOS Safari 的
+ *    backdrop-filter containing block 鎖住,變成「列表下方的卡」要捲才看到
+ *    這個 state-based 切換完全避開那個 CSS 行為,順帶解決卡片填滿+置中問題
+ *    (一個 view 一個容器,所有 layout 都從 parent 繼承)
+ *  - 已紀念神獸:卡片金光環 + ✨ 右上角標 + 「永恆·」名稱前綴
+ *  - 已解鎖傳說:卡片左上 📜 角標
  */
 export default function Bestiary() {
   const allPets = useLiveQuery(() => db.pets.toArray(), []);
   const ownedSpecies = new Set((allPets ?? []).map((p) => p.speciesId));
   // 階段 4C.2:該 species 任一 pet isEternal 就標金邊
-  // 防呆 ?? false:舊資料沒 isEternal 欄位時當 false 處理(已有 v13 backfill,
-  // 但雙重保險避免 race / 雲端拉到舊版 blob 等情況)
+  // 防呆 ?? false:舊資料沒 isEternal 欄位時當 false 處理
   const eternalSpecies = new Set(
     (allPets ?? []).filter((p) => p.isEternal ?? false).map((p) => p.speciesId)
   );
   // 階段 4C.4:已解鎖修仙傳說的 species(creatureUnlocks 表)
-  // 防呆:若表還沒 migrate 完(v12 → v13 過渡)或其他錯誤,當作沒解鎖過,
-  // 不要讓 useLiveQuery 把錯 rethrow 出去整個 Bestiary 白屏。
+  // 防呆:若表還沒 migrate 完(v12 → v13 過渡)或其他錯誤,當作沒解鎖過
   const unlocks = useLiveQuery(async () => {
     try {
       return await db.creatureUnlocks.toArray();
@@ -40,7 +37,8 @@ export default function Bestiary() {
   }, []);
   const storyUnlockedSpecies = new Set((unlocks ?? []).map((u) => u.creatureId));
 
-  const [openSpeciesId, setOpenSpeciesId] = useState<string | null>(null);
+  // 內嵌 detail view 狀態。null = 顯示列表,設了 species id = 顯示該神獸詳細頁
+  const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
 
   const grouped = new Map<string, typeof CREATURES>();
   for (const c of CREATURES) {
@@ -53,15 +51,23 @@ export default function Bestiary() {
   const eternal = eternalSpecies.size;
   const stories = storyUnlockedSpecies.size;
 
+  // 已選 species → 直接 render 詳細頁取代列表,不再 nested modal
+  if (selectedSpeciesId) {
+    return (
+      <BestiaryPetDetail
+        speciesId={selectedSpeciesId}
+        onBack={() => setSelectedSpeciesId(null)}
+      />
+    );
+  }
+
   return (
-    <div className="data-card p-3">
+    <div>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
         <h4 className="text-sm font-bold">
           📚 神祇圖鑑 {owned}/{total}
         </h4>
-        <span className="text-xs text-amber-700">
-          ✨ 永恆 {eternal}
-        </span>
+        <span className="text-xs text-amber-700">✨ 永恆 {eternal}</span>
         <span className="text-xs text-gray-600">
           📜 故事 {stories}/{total}
         </span>
@@ -89,7 +95,7 @@ export default function Bestiary() {
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => got && setOpenSpeciesId(c.id)}
+                    onClick={() => got && setSelectedSpeciesId(c.id)}
                     disabled={!got}
                     className={`relative aspect-square rounded-lg flex flex-col items-center justify-center p-1 text-center overflow-hidden ${cardCls} ${
                       got ? 'active:scale-95 transition-transform cursor-pointer' : 'cursor-default'
@@ -119,7 +125,6 @@ export default function Bestiary() {
                         alt={c.name}
                         className={`flex-1 w-full object-cover ${got ? '' : 'grayscale opacity-30'}`}
                         onError={(e) => {
-                          // 圖檔缺漏 → fallback emoji
                           const img = e.currentTarget as HTMLImageElement;
                           img.style.display = 'none';
                           const fb = img.nextElementSibling as HTMLElement | null;
@@ -151,17 +156,11 @@ export default function Bestiary() {
           </div>
         ))}
       </div>
-
-      <BestiaryPetModal
-        open={openSpeciesId !== null}
-        onClose={() => setOpenSpeciesId(null)}
-        speciesId={openSpeciesId}
-      />
     </div>
   );
 }
 
-/** 點寵物彈窗用：取得神獸 species 名稱（外部用） */
+/** 點寵物彈窗用:取得神獸 species 名稱(外部用) */
 export function speciesName(id: string): string {
   return getCreature(id)?.name ?? '?';
 }
