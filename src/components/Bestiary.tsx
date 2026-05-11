@@ -12,7 +12,11 @@ import BestiaryPetModal from './BestiaryPetModal';
  * 陣營出現順序 = creatures.ts 內第一次出現的順序。
  *
  * 階段 4C.2:已收集的卡可點開 BestiaryPetModal 看所有實例 + 永恆紀念。
- *   - 任一 pet 已 isEternal → 卡片金光環 + ✨ 標誌
+ *   - 任一 pet 已 isEternal → 卡片金光環 + ✨ 標誌(右上角)
+ *
+ * 階段 4C.4 視覺升級:
+ *   - 卡片左上角加 📜 標誌(已解鎖修仙傳說的 species)
+ *   - 統計列加「📜 故事 N/50」(配合「📚 圖鑑 X/50」並列)
  */
 export default function Bestiary() {
   const allPets = useLiveQuery(() => db.pets.toArray(), []);
@@ -21,6 +25,9 @@ export default function Bestiary() {
   const eternalSpecies = new Set(
     (allPets ?? []).filter((p) => p.isEternal).map((p) => p.speciesId)
   );
+  // 階段 4C.4:已解鎖修仙傳說的 species(creatureUnlocks 表)
+  const unlocks = useLiveQuery(() => db.creatureUnlocks.toArray(), []);
+  const storyUnlockedSpecies = new Set((unlocks ?? []).map((u) => u.creatureId));
 
   const [openSpeciesId, setOpenSpeciesId] = useState<string | null>(null);
 
@@ -32,12 +39,22 @@ export default function Bestiary() {
 
   const total = CREATURES.length;
   const owned = ownedSpecies.size;
+  const eternal = eternalSpecies.size;
+  const stories = storyUnlockedSpecies.size;
 
   return (
     <div className="data-card p-3">
-      <h4 className="text-sm font-bold mb-2">
-        📚 神祇圖鑑 ({owned}/{total})
-      </h4>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+        <h4 className="text-sm font-bold">
+          📚 神祇圖鑑 {owned}/{total}
+        </h4>
+        <span className="text-xs text-amber-700">
+          ✨ 永恆 {eternal}
+        </span>
+        <span className="text-xs text-gray-600">
+          📜 故事 {stories}/{total}
+        </span>
+      </div>
       <div className="space-y-3">
         {[...grouped.entries()].map(([cat, list]) => (
           <div key={cat}>
@@ -46,11 +63,17 @@ export default function Bestiary() {
               {list.map((c) => {
                 const got = ownedSpecies.has(c.id);
                 const isEternal = eternalSpecies.has(c.id);
+                const isStoryUnlocked = storyUnlockedSpecies.has(c.id);
                 const cardCls = !got
                   ? 'bg-gray-100 border border-gray-200'
                   : isEternal
                     ? 'bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-400 shadow-md'
                     : 'bg-amber-50 border border-amber-200';
+                const titleSuffix = !got
+                  ? '(未收集)'
+                  : [isEternal ? '✨ 已永恆紀念' : '', isStoryUnlocked ? '📜 已解鎖傳說' : '']
+                      .filter(Boolean)
+                      .join(' · ');
                 return (
                   <button
                     key={c.id}
@@ -60,11 +83,22 @@ export default function Bestiary() {
                     className={`relative aspect-square rounded-lg flex flex-col items-center justify-center p-1 text-center overflow-hidden ${cardCls} ${
                       got ? 'active:scale-95 transition-transform cursor-pointer' : 'cursor-default'
                     }`}
-                    title={c.name + (got ? (isEternal ? ' ✨ 已永恆紀念' : '') : '(未收集)')}
+                    title={titleSuffix ? `${c.name} · ${titleSuffix}` : c.name}
                   >
-                    {/* 已紀念角標 */}
+                    {/* 階段 4C.4:已解鎖傳說 → 左上 📜;已紀念 → 右上 ✨ */}
+                    {isStoryUnlocked && (
+                      <span
+                        className="absolute top-0.5 left-0.5 text-[10px] z-10 drop-shadow"
+                        aria-label="已解鎖傳說"
+                      >
+                        📜
+                      </span>
+                    )}
                     {isEternal && (
-                      <span className="absolute top-0.5 right-0.5 text-[10px] z-10 drop-shadow">
+                      <span
+                        className="absolute top-0.5 right-0.5 text-[10px] z-10 drop-shadow"
+                        aria-label="已永恆紀念"
+                      >
                         ✨
                       </span>
                     )}
@@ -97,7 +131,7 @@ export default function Bestiary() {
                             : 'text-gray-400'
                       }`}
                     >
-                      {got ? c.name : '???'}
+                      {got ? (isEternal ? `永恆·${c.name}` : c.name) : '???'}
                     </span>
                   </button>
                 );
