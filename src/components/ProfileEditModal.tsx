@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import AvatarSelectorModal from './AvatarSelectorModal';
+import ShowcaseSelector from './ShowcaseSelector';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useCultivation } from '@/hooks/useCultivation';
 import {
@@ -42,6 +43,7 @@ export default function ProfileEditModal({ open, onClose, onActionComplete }: Pr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [copyFlash, setCopyFlash] = useState(false);
 
   useEffect(() => {
@@ -273,6 +275,16 @@ export default function ProfileEditModal({ open, onClose, onActionComplete }: Pr
             </p>
           )}
 
+          {/* 階段 5B:展示神獸入口(獨立子彈窗,跟 save 並列) */}
+          <button
+            type="button"
+            onClick={() => setShowcaseOpen(true)}
+            className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
+          >
+            <span className="text-sm text-gray-700">🏆 展示神獸</span>
+            <span className="text-xs text-gray-500">挑 1-3 隻在個人頁突出 ›</span>
+          </button>
+
           <button
             type="button"
             onClick={handleSave}
@@ -284,13 +296,18 @@ export default function ProfileEditModal({ open, onClose, onActionComplete }: Pr
         </div>
       )}
 
-      {/* 頭像選擇器(state-based 子彈窗 — 是 nested Modal,但這個 modal 結構簡單沒踩 iOS bug
-          因為 selector 開時可關掉再開個人檔案,玩家不會同時看到兩層) */}
+      {/* 頭像選擇器 + 展示神獸選擇器(state-based 子彈窗 — 是 nested Modal,
+          但這兩個 modal 結構簡單沒踩 iOS bug,玩家不會同時看到兩層) */}
       <AvatarSelectorModal
         open={avatarOpen}
         onClose={() => setAvatarOpen(false)}
         currentAvatarId={avatarId}
         onSelect={(id) => setAvatarId(id)}
+      />
+      <ShowcaseSelector
+        open={showcaseOpen}
+        onClose={() => setShowcaseOpen(false)}
+        onActionComplete={onActionComplete}
       />
     </Modal>
   );

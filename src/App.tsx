@@ -32,7 +32,11 @@ import {
   fetchRemoteMeta,
   localHasUserData
 } from '@/services/cloudSync';
-import { createProfileIfNeeded } from '@/services';
+import {
+  createProfileIfNeeded,
+  attachProfileSyncListeners,
+  backfillProfileSync
+} from '@/services';
 import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
@@ -63,6 +67,7 @@ import ProfileSetupPrompt from '@/components/ProfileSetupPrompt';
 import ShareModal from '@/components/share/ShareModal';
 import MonthlyReviewModal from '@/components/share/MonthlyReviewModal';
 import MonthlyReviewPrompt from '@/components/share/MonthlyReviewPrompt';
+import FriendProfileModal from '@/components/FriendProfileModal';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind =
@@ -79,6 +84,7 @@ type ModalKind =
   | 'profile'
   | 'share'
   | 'monthly'
+  | 'friendProfile'
   | null;
 
 export default function App() {
@@ -147,6 +153,8 @@ function Game() {
   const [sharePet, setSharePet] = useState<Pet | null>(null);
   /** 階段 5C:月度回顧目標(null = 用上個月預設) */
   const [monthlyTarget, setMonthlyTarget] = useState<{ year: number; month: number } | null>(null);
+  /** 階段 5B:好友個人頁目標 user_id */
+  const [friendProfileUserId, setFriendProfileUserId] = useState<string | null>(null);
   /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
   const refreshingRef = useRef(false);
 
@@ -159,12 +167,19 @@ function Game() {
   const allowAutoPushRef = useRef(false);
 
   // OAuth / Email+密碼登入成功 → SIGNED_IN 事件 → useAuth 更新 session →
-  // 自動關掉 SignInModal(supabase-js 已自行清乾淨 URL hash/query)
+  // 自動關掉 SignInModal(supabase-js 已自行清乾淨 URL hash/window URL hash/query)
   useEffect(() => {
     if (userId && modal === 'signin') {
       setModal(null);
     }
   }, [userId, modal]);
+
+  // 階段 5B:attach profileSyncService listeners(全域,僅 mount 一次)
+  // listener 內部會 check session,沒登入時 noop
+  useEffect(() => {
+    const detach = attachProfileSyncListeners();
+    return () => detach();
+  }, []);
 
   // 每分鐘更新 market status(open / after-hours / weekend / holiday)
   useEffect(() => {
@@ -428,6 +443,14 @@ function Game() {
         } catch (e) {
           console.warn('[cloud] createProfileIfNeeded failed:', e);
         }
+
+        // 階段 5B:user_creature_summary 為空 → 從本地 pets 一次性 backfill
+        // 失敗只 warn,之後事件觸發還會逐步補
+        try {
+          await backfillProfileSync();
+        } catch (e) {
+          console.warn('[cloud] backfillProfileSync failed:', e);
+        }
       } catch (e) {
         console.warn('[cloud] initial sync error:', e);
         setToast({
@@ -568,6 +591,32 @@ function Game() {
         open={modal === 'friends'}
         onClose={() => setModal(null)}
         onOpenSignIn={() => setModal('signin')}
+        onOpenFriendProfile={(userId) => {
+          setFriendProfileUserId(userId);
+          setModal('friendProfile');
+        }}
+      />
+      <FriendProfileModal
+        open={modal === 'friendProfile'}
+        onClose={() => {
+          setModal(null);
+          setFriendProfileUserId(null);
+        }}
+        friendUserId={friendProfileUserId}
+        onBack={() => {
+          // 「← 返回好友列表」= 關自己回到 FriendsModal
+          setModal('friends');
+          setFriendProfileUserId(null);
+        }}
+        onRelationChanged={() => {
+          // 好友移除 / 封鎖後 → 關掉 friend profile,讓 FriendsModal 開回去自動 reload
+          setFriendProfileUserId(null);
+        }}
+        onShareMyPet={(p) => {
+          setSharePet(p);
+          setModal('share');
+        }}
+        onActionComplete={postAction}
       />
       <ProfileEditModal
         open={modal === 'profile'}

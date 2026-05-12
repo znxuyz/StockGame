@@ -95,7 +95,7 @@ export async function earnCultivation(
     relatedPetId
   });
 
-  eventBus.emit('cultivation:earn', { amount, reason, reasonText });
+  eventBus.emit('cultivation:earn', { amount, reason, reasonText, relatedPetId });
   return newAmount;
 }
 
@@ -143,7 +143,7 @@ export async function spendCultivation(
     relatedPetId
   });
 
-  eventBus.emit('cultivation:spend', { amount, reason, reasonText });
+  eventBus.emit('cultivation:spend', { amount, reason, reasonText, relatedPetId });
   return { success: true, newBalance: newAmount };
 }
 

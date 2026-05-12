@@ -137,3 +137,25 @@ export {
   markMonthlyReviewShown,
   wasMonthlyReviewShown
 } from './monthlyStatsService';
+
+// 階段 5B:好友個人頁
+export { attachProfileSyncListeners, backfillProfileSync } from './profileSyncService';
+export { getMyShowcase, updateMyShowcase, getShowcase } from './showcaseService';
+export {
+  getFriendCreatures,
+  getFriendShowcase,
+  getFriendMilestones,
+  getFriendCloudStats,
+  getFriendFullProfile,
+  getCodexComparison,
+  getMyVsTheirMetrics,
+  clearFriendProfileCache
+} from './friendProfileService';
+export type {
+  FriendFullProfile,
+  FriendCloudStats,
+  CodexEntry,
+  CodexEntryStatus,
+  CodexComparisonSummary,
+  VsMetric
+} from './friendProfileService';

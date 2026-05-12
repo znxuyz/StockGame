@@ -20,6 +20,8 @@ export interface CultivationEarnEvent {
   amount: number;
   reason: CultivationReason;
   reasonText: string;
+  /** 階段 5B:關聯 pet id,讓 profileSyncService 識別境界突破對應的神獸 */
+  relatedPetId?: string;
 }
 
 /** 修為消耗事件(階段 4 才會用,先列好) */
@@ -27,6 +29,8 @@ export interface CultivationSpendEvent {
   amount: number;
   reason: CultivationReason;
   reasonText: string;
+  /** 階段 5B:同 earn — 永恆紀念(reason='eternal')帶 petId 給 profileSyncService */
+  relatedPetId?: string;
 }
 
 /**

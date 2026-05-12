@@ -31,6 +31,8 @@ interface FriendsModalProps {
   onOpenProfile?: () => void;
   /** 沒登入時的登入入口 */
   onOpenSignIn?: () => void;
+  /** 階段 5B:點好友卡 → 開好友個人頁(帶 userId) */
+  onOpenFriendProfile?: (userId: string) => void;
 }
 
 /**
@@ -44,7 +46,8 @@ interface FriendsModalProps {
 export default function FriendsModal({
   open,
   onClose,
-  onOpenSignIn
+  onOpenSignIn,
+  onOpenFriendProfile
 }: FriendsModalProps) {
   const { session } = useAuth();
   const userId = session?.user?.id;
@@ -141,7 +144,12 @@ export default function FriendsModal({
       }
     >
       {tab === 'friends' && (
-        <FriendsTab friends={friends} loading={loading} onReload={reload} />
+        <FriendsTab
+          friends={friends}
+          loading={loading}
+          onReload={reload}
+          onOpenProfile={onOpenFriendProfile}
+        />
       )}
       {tab === 'requests' && (
         <RequestsTab
@@ -190,11 +198,13 @@ function TabBtn({
 function FriendsTab({
   friends,
   loading,
-  onReload
+  onReload,
+  onOpenProfile
 }: {
   friends: FriendEntry[];
   loading: boolean;
   onReload: () => Promise<void>;
+  onOpenProfile?: (userId: string) => void;
 }) {
   const [actionOn, setActionOn] = useState<string | null>(null);
 
@@ -239,6 +249,7 @@ function FriendsTab({
           entry={f}
           actionOpen={actionOn === f.userId}
           onActionToggle={() => setActionOn((cur) => (cur === f.userId ? null : f.userId))}
+          onOpenProfile={onOpenProfile ? () => onOpenProfile(f.userId) : undefined}
           onRemove={() => handleRemove(f.userId, f.profile.nickname)}
           onBlock={() => handleBlock(f.userId, f.profile.nickname)}
         />
@@ -251,12 +262,14 @@ function FriendCard({
   entry,
   actionOpen,
   onActionToggle,
+  onOpenProfile,
   onRemove,
   onBlock
 }: {
   entry: FriendEntry;
   actionOpen: boolean;
   onActionToggle: () => void;
+  onOpenProfile?: () => void;
   onRemove: () => void;
   onBlock: () => void;
 }) {
@@ -264,28 +277,41 @@ function FriendCard({
   const title = getTitle(entry.cultivation ?? 0);
   return (
     <div className="item-card px-3 py-2 relative">
-      <button
-        type="button"
-        onClick={onActionToggle}
-        className="w-full flex items-center gap-3 text-left active:bg-white/30 transition-colors rounded"
-      >
-        <ProfileAvatar avatarCreatureId={entry.profile.avatarCreatureId} size={44} />
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold text-gray-800 truncate">{entry.profile.nickname}</div>
-          <div className="text-[11px] text-gray-600 flex items-center gap-2 mt-0.5">
-            <span>
-              {title.emoji} {title.name}
-            </span>
-            {entry.cultivation !== null && (
-              <span className="text-gray-500">💎 {entry.cultivation.toLocaleString()}</span>
-            )}
+      <div className="flex items-center gap-3">
+        {/* 卡片主體點 → 開個人頁(階段 5B) */}
+        <button
+          type="button"
+          onClick={onOpenProfile ?? onActionToggle}
+          className="flex-1 flex items-center gap-3 text-left active:bg-white/30 transition-colors rounded"
+        >
+          <ProfileAvatar avatarCreatureId={entry.profile.avatarCreatureId} size={44} />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-gray-800 truncate">
+              {entry.profile.nickname}
+            </div>
+            <div className="text-[11px] text-gray-600 flex items-center gap-2 mt-0.5">
+              <span>
+                {title.emoji} {title.name}
+              </span>
+              {entry.cultivation !== null && (
+                <span className="text-gray-500">💎 {entry.cultivation.toLocaleString()}</span>
+              )}
+            </div>
+            <div className="text-[11px] text-gray-500 mt-0.5">
+              {seen.dot} {seen.text}
+            </div>
           </div>
-          <div className="text-[11px] text-gray-500 mt-0.5">
-            {seen.dot} {seen.text}
-          </div>
-        </div>
-        <span className="text-gray-400 text-xs">⋯</span>
-      </button>
+        </button>
+        {/* ⋯ 操作選單(移除 / 封鎖)*/}
+        <button
+          type="button"
+          onClick={onActionToggle}
+          className="shrink-0 w-7 h-7 rounded-full text-gray-500 active:bg-gray-100 transition-colors"
+          aria-label="更多操作"
+        >
+          ⋯
+        </button>
+      </div>
       {actionOpen && (
         <div className="mt-2 pt-2 border-t border-gray-200 flex gap-2">
           <button
