@@ -12,3 +12,4 @@ export * from './task';
 export * from './creatureUnlock';
 export * from './profile';
 export * from './friend';
+export * from './monthlyStats';

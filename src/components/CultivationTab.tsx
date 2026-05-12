@@ -20,6 +20,8 @@ import type { CultivationLog, CultivationReason } from '@/types';
 interface CultivationTabProps {
   /** 點擊紀錄(有 relatedPetId 才可點)→ 跳該 pet 詳細頁;不傳則純展示 */
   onPetClick?: (petId: string) => void;
+  /** 階段 5C:點「📜 查看月度回顧」→ caller 開 MonthlyReviewModal */
+  onOpenMonthlyReview?: () => void;
 }
 
 const PAGE_SIZE = 50;
@@ -48,7 +50,7 @@ const REASON_EMOJI: Record<CultivationReason, string> = {
   unlock_story: '📖'
 };
 
-export default function CultivationTab({ onPetClick }: CultivationTabProps) {
+export default function CultivationTab({ onPetClick, onOpenMonthlyReview }: CultivationTabProps) {
   const detail = useCultivation();
   const [limit, setLimit] = useState(PAGE_SIZE);
 
@@ -83,6 +85,18 @@ export default function CultivationTab({ onPetClick }: CultivationTabProps) {
           </span>
         </div>
       </div>
+
+      {/* 階段 5C:月度回顧入口 */}
+      {onOpenMonthlyReview && (
+        <button
+          type="button"
+          onClick={onOpenMonthlyReview}
+          className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-amber-200 bg-amber-50 active:scale-[0.99] transition-transform"
+        >
+          <span className="text-sm text-amber-800 font-bold">📜 查看月度回顧</span>
+          <span className="text-xs text-amber-700">本月修煉錄 ›</span>
+        </button>
+      )}
 
       {/* 歷史列表 */}
       <div>

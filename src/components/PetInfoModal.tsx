@@ -32,6 +32,8 @@ interface PetInfoModalProps {
   onQuickFeed?: (code: string) => void;
   /** 階段 R.7:點 [賣出] 快速進 SellModal(預選此 pet 的 code) */
   onQuickSell?: (code: string) => void;
+  /** 階段 5C:分享按鈕 → 開 ShareModal 帶這隻 pet */
+  onShare?: (pet: Pet) => void;
 }
 
 /** 魂環境界顯示用 emoji + 文字色,跟魂環顏色對齊 */
@@ -69,7 +71,8 @@ export default function PetInfoModal({
   pet: petProp,
   stock,
   onQuickFeed,
-  onQuickSell
+  onQuickSell,
+  onShare
 }: PetInfoModalProps) {
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
@@ -187,7 +190,19 @@ export default function PetInfoModal({
 
   return (
     <Modal open={open} onClose={onClose} title={displayName}>
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 relative">
+        {/* 階段 5C:分享按鈕 — 內容區右上角,在頭像上方一點 */}
+        {onShare && (
+          <button
+            type="button"
+            onClick={() => onShare(pet)}
+            className="absolute top-2 right-2 w-9 h-9 rounded-full bg-amber-100 text-amber-700 border border-amber-300 flex items-center justify-center text-base active:scale-90 transition-transform shadow-sm z-10"
+            aria-label="分享神獸卡片"
+            title="生成分享卡片"
+          >
+            📤
+          </button>
+        )}
         {/* 神獸頭像 + 名稱 + 描述 */}
         <div className="flex items-center gap-4">
           <div className="w-28 h-28 flex items-center justify-center shrink-0">

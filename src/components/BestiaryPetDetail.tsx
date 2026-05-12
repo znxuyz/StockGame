@@ -22,6 +22,8 @@ interface BestiaryPetDetailProps {
   speciesId: string;
   /** 點「← 返回」回到列表 */
   onBack: () => void;
+  /** 階段 5C:點「分享」→ caller 開 ShareModal 帶該 species 最新一隻 pet */
+  onShare?: (pet: Pet) => void;
 }
 
 const ETERNAL_COST = 2000;
@@ -60,7 +62,7 @@ const REALM_EMOJI: Record<SoulRealm, string> = {
  *
  * 慶祝動畫由全域 EternalCelebration 元件接 'cultivation:spend' reason='eternal' 觸發。
  */
-export default function BestiaryPetDetail({ speciesId, onBack }: BestiaryPetDetailProps) {
+export default function BestiaryPetDetail({ speciesId, onBack, onShare }: BestiaryPetDetailProps) {
   const cultivation = useCultivation();
   const balance = cultivation.amount;
   const [busyPetId, setBusyPetId] = useState<string | null>(null);
@@ -177,7 +179,24 @@ export default function BestiaryPetDetail({ speciesId, onBack }: BestiaryPetDeta
         >
           ← 返回圖鑑
         </button>
-        <span className="text-xs text-gray-500">神獸詳細</span>
+        <div className="flex items-center gap-2">
+          {/* 階段 5C:分享圖鑑神獸(挑該 species 最新一隻 pet 當卡片資料) */}
+          {onShare && sortedPets.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const active = sortedPets.find((p) => !p.retiredAt);
+                const target = active ?? sortedPets[0];
+                if (target) onShare(target);
+              }}
+              className="text-xs px-2 py-1 rounded-md bg-amber-100 text-amber-700 border border-amber-300 active:scale-95 transition-transform"
+              aria-label="分享神獸卡片"
+            >
+              📤 分享
+            </button>
+          )}
+          <span className="text-xs text-gray-500">神獸詳細</span>
+        </div>
       </div>
 
       {/*

@@ -60,6 +60,9 @@ import PasswordRecoveryModal from '@/components/PasswordRecoveryModal';
 import SignInModal from '@/components/SignInModal';
 import ProfileEditModal from '@/components/ProfileEditModal';
 import ProfileSetupPrompt from '@/components/ProfileSetupPrompt';
+import ShareModal from '@/components/share/ShareModal';
+import MonthlyReviewModal from '@/components/share/MonthlyReviewModal';
+import MonthlyReviewPrompt from '@/components/share/MonthlyReviewPrompt';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind =
@@ -74,6 +77,8 @@ type ModalKind =
   | 'friends'
   | 'trade'
   | 'profile'
+  | 'share'
+  | 'monthly'
   | null;
 
 export default function App() {
@@ -138,6 +143,10 @@ function Game() {
    * ProfileSetupPrompt 關閉時 +1,TopBar useEffect 偵測變動 → 套 .paw-flash class。
    */
   const [pawFlashToken, setPawFlashToken] = useState(0);
+  /** 階段 5C:分享卡片目標 pet(ShareModal 用) */
+  const [sharePet, setSharePet] = useState<Pet | null>(null);
+  /** 階段 5C:月度回顧目標(null = 用上個月預設) */
+  const [monthlyTarget, setMonthlyTarget] = useState<{ year: number; month: number } | null>(null);
   /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
   const refreshingRef = useRef(false);
 
@@ -545,6 +554,15 @@ function Game() {
           setModal(null);
           handlePetClickById(petId);
         }}
+        onOpenMonthlyReview={() => {
+          setMonthlyTarget(null);
+          setModal('monthly');
+        }}
+        onShare={(p) => {
+          // 圖鑑詳細頁 → 開分享彈窗(關遊戲彈窗,避免兩個 popup 疊)
+          setSharePet(p);
+          setModal('share');
+        }}
       />
       <FriendsModal
         open={modal === 'friends'}
@@ -574,6 +592,10 @@ function Game() {
         settings={settings}
         onActionComplete={postAction}
         onOpenSignIn={() => setModal('signin')}
+        onOpenMonthlyReview={() => {
+          setMonthlyTarget(null);
+          setModal('monthly');
+        }}
       />
       <SignInModal
         open={modal === 'signin'}
@@ -591,6 +613,35 @@ function Game() {
         onQuickSell={(code) => {
           setTradePresetCode(code);
           setModal('sell');
+        }}
+        onShare={(p) => {
+          setSharePet(p);
+          setModal('share');
+        }}
+      />
+      <ShareModal
+        open={modal === 'share'}
+        onClose={() => {
+          setModal(null);
+          setSharePet(null);
+        }}
+        pet={sharePet}
+        onActionComplete={postAction}
+      />
+      <MonthlyReviewModal
+        open={modal === 'monthly'}
+        onClose={() => {
+          setModal(null);
+          setMonthlyTarget(null);
+        }}
+        initialYear={monthlyTarget?.year}
+        initialMonth={monthlyTarget?.month}
+        onActionComplete={postAction}
+      />
+      <MonthlyReviewPrompt
+        onView={(y, m) => {
+          setMonthlyTarget({ year: y, month: m });
+          setModal('monthly');
         }}
       />
 

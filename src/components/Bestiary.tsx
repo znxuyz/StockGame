@@ -3,6 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { CREATURES, getCreature } from '@/data/creatures';
 import BestiaryPetDetail from './BestiaryPetDetail';
+import type { Pet } from '@/types';
+
+interface BestiaryProps {
+  /** 階段 5C:點圖鑑詳細頁的「📤 分享」按鈕 → caller 開 ShareModal */
+  onShare?: (pet: Pet) => void;
+}
 
 /**
  * 神獸圖鑑：依陣營分區,已收集的有彩色立繪,未收集的灰階剪影。
@@ -17,7 +23,7 @@ import BestiaryPetDetail from './BestiaryPetDetail';
  *  - 已紀念神獸:卡片金光環 + ✨ 右上角標 + 「永恆·」名稱前綴
  *  - 已解鎖傳說:卡片左上 📜 角標
  */
-export default function Bestiary() {
+export default function Bestiary({ onShare }: BestiaryProps = {}) {
   const allPets = useLiveQuery(() => db.pets.toArray(), []);
   const ownedSpecies = new Set((allPets ?? []).map((p) => p.speciesId));
   // 階段 4C.2:該 species 任一 pet isEternal 就標金邊
@@ -57,6 +63,7 @@ export default function Bestiary() {
       <BestiaryPetDetail
         speciesId={selectedSpeciesId}
         onBack={() => setSelectedSpeciesId(null)}
+        onShare={onShare}
       />
     );
   }

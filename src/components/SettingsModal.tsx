@@ -28,24 +28,20 @@ interface SettingsModalProps {
   onActionComplete: (message: string) => void;
   /** 登入鈕被按下,App 端開 SignInModal */
   onOpenSignIn: () => void;
+  /** 階段 5C:點「📜 月度回顧」入口,關掉設定讓 App 開 MonthlyReviewModal */
+  onOpenMonthlyReview?: () => void;
 }
 
 /**
- * 設定彈窗 — 手續費折扣 + 最低手續費 + 音效 + HUD 主題 + 家園背景 + 雲端同步。
- *
- * 階段 5A.2 後:
- *  - 移除「玩家名稱(可選)」輸入框(改由 HUD 左上角掌印 → 個人檔案彈窗管暱稱)
- *  - 移除「個人檔案」入口(主要入口統一到 HUD 左上角)
- *  - 舊資料 `settings.playerName` 留 DB 不刪,只標 @deprecated
- *    `createProfileIfNeeded` 第一次建 user_profile 時會把舊 playerName 寫入 nickname
- *    遷移完成
+ * 設定彈窗 — 手續費折扣 + 最低手續費 + 音效 + HUD 主題 + 家園背景 + 月度回顧 + 雲端同步。
  */
 export default function SettingsModal({
   open,
   onClose,
   settings,
   onActionComplete,
-  onOpenSignIn
+  onOpenSignIn,
+  onOpenMonthlyReview
 }: SettingsModalProps) {
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
@@ -235,6 +231,21 @@ export default function SettingsModal({
             {bgLabel(settings.currentBackground ?? 'default')} ›
           </span>
         </button>
+
+        {/* 階段 5C:月度回顧入口。關掉設定彈窗讓 App 開 MonthlyReviewModal */}
+        {onOpenMonthlyReview && (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenMonthlyReview();
+            }}
+            className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
+          >
+            <span className="text-sm text-gray-700">📜 月度回顧</span>
+            <span className="text-xs text-gray-500">查看每月修煉錄 ›</span>
+          </button>
+        )}
 
         <button
           type="button"

@@ -127,3 +127,13 @@ export {
   titleProgress
 } from './titleService';
 export type { CultivationTitle } from './titleService';
+
+// 階段 5C:月度戰績
+export {
+  getMonthlyStats,
+  getAvailableMonths,
+  getPreviousMonth,
+  monthlyReviewKey,
+  markMonthlyReviewShown,
+  wasMonthlyReviewShown
+} from './monthlyStatsService';

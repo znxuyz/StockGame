@@ -13,6 +13,10 @@ interface GameModalProps {
   onClose: () => void;
   /** 點修為紀錄行(有 relatedPetId)→ caller 可選實作跳 PetInfoModal */
   onPetClick?: (petId: string) => void;
+  /** 階段 5C:修為 tab 內「📜 查看月度回顧」鈕 → caller 開 MonthlyReviewModal */
+  onOpenMonthlyReview?: () => void;
+  /** 階段 5C:圖鑑詳細頁「📤 分享」鈕 → caller 開 ShareModal 帶最新 pet */
+  onShare?: (pet: import('@/types').Pet) => void;
 }
 
 type Tab = 'tasks' | 'achievements' | 'bestiary' | 'cultivation';
@@ -44,7 +48,7 @@ const TAB_TASK_TRIGGER: Partial<Record<Tab, TaskTriggerEvent>> = {
  *
  * R.6 才會接到 BottomBar,這個 commit 元件先 ready,但沒人 import 就還不會出現。
  */
-export default function GameModal({ open, onClose, onPetClick }: GameModalProps) {
+export default function GameModal({ open, onClose, onPetClick, onOpenMonthlyReview, onShare }: GameModalProps) {
   const [tab, setTab] = useState<Tab>('tasks');
 
   // tab 切換 → emit task trigger(目前只有圖鑑 view_codex 有對應)
@@ -96,10 +100,12 @@ export default function GameModal({ open, onClose, onPetClick }: GameModalProps)
         {tab === 'achievements' && <AchievementsList />}
         {tab === 'bestiary' && (
           <ErrorBoundary label="Bestiary">
-            <Bestiary />
+            <Bestiary onShare={onShare} />
           </ErrorBoundary>
         )}
-        {tab === 'cultivation' && <CultivationTab onPetClick={onPetClick} />}
+        {tab === 'cultivation' && (
+          <CultivationTab onPetClick={onPetClick} onOpenMonthlyReview={onOpenMonthlyReview} />
+        )}
       </div>
     </Modal>
   );
