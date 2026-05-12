@@ -30,6 +30,8 @@ interface SettingsModalProps {
   onOpenSignIn: () => void;
   /** 階段 5C:點「📜 月度回顧」入口,關掉設定讓 App 開 MonthlyReviewModal */
   onOpenMonthlyReview?: () => void;
+  /** 階段 5E:點「🔒 隱私設定」入口,關掉設定讓 App 開 PrivacySettingsModal */
+  onOpenPrivacy?: () => void;
 }
 
 /**
@@ -41,7 +43,8 @@ export default function SettingsModal({
   settings,
   onActionComplete,
   onOpenSignIn,
-  onOpenMonthlyReview
+  onOpenMonthlyReview,
+  onOpenPrivacy
 }: SettingsModalProps) {
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
@@ -244,6 +247,21 @@ export default function SettingsModal({
           >
             <span className="text-sm text-gray-700">📜 月度回顧</span>
             <span className="text-xs text-gray-500">查看每月修煉錄 ›</span>
+          </button>
+        )}
+
+        {/* 階段 5E:隱私設定入口 */}
+        {onOpenPrivacy && (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenPrivacy();
+            }}
+            className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
+          >
+            <span className="text-sm text-gray-700">🔒 隱私設定</span>
+            <span className="text-xs text-gray-500">持倉 / 排行榜 / 動態分享 ›</span>
           </button>
         )}
 

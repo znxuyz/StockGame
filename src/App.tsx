@@ -35,7 +35,11 @@ import {
 import {
   createProfileIfNeeded,
   attachProfileSyncListeners,
-  backfillProfileSync
+  backfillProfileSync,
+  syncMyPortfolio,
+  generateMySnapshot,
+  checkExpiredLoans,
+  getMyPrivacy
 } from '@/services';
 import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
@@ -69,6 +73,9 @@ import MonthlyReviewModal from '@/components/share/MonthlyReviewModal';
 import MonthlyReviewPrompt from '@/components/share/MonthlyReviewPrompt';
 import FriendProfileModal from '@/components/FriendProfileModal';
 import CultivationShareModal from '@/components/feed/CultivationShareModal';
+import PrivacySettingsModal from '@/components/PrivacySettingsModal';
+import LoanCreatureModal from '@/components/LoanCreatureModal';
+import BorrowedCreaturesModal from '@/components/BorrowedCreaturesModal';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind =
@@ -87,6 +94,9 @@ type ModalKind =
   | 'monthly'
   | 'friendProfile'
   | 'shareCompose'
+  | 'privacy'
+  | 'loan'
+  | 'borrowed'
   | null;
 
 export default function App() {
@@ -157,6 +167,8 @@ function Game() {
   const [monthlyTarget, setMonthlyTarget] = useState<{ year: number; month: number } | null>(null);
   /** 階段 5B:好友個人頁目標 user_id */
   const [friendProfileUserId, setFriendProfileUserId] = useState<string | null>(null);
+  /** 階段 5E:借展神獸的目標 pet(LoanCreatureModal 用) */
+  const [loanPet, setLoanPet] = useState<Pet | null>(null);
   /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
   const refreshingRef = useRef(false);
 
@@ -182,6 +194,20 @@ function Game() {
     const detach = attachProfileSyncListeners();
     return () => detach();
   }, []);
+
+  // 階段 5E:過期借展自動歸還(每分鐘 check 一次)+ mount 立刻跑一次
+  useEffect(() => {
+    if (!userId) return;
+    void checkExpiredLoans();
+    const id = setInterval(() => {
+      void checkExpiredLoans();
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [userId]);
+
+  // 階段 5E:本地 holdings / prices 變動 → debounce 5 秒 sync 雲端 portfolio summary
+  // 在這個 ref 內存 timer,避免 strict mode double-run 重設
+  const portfolioSyncTimerRef = useRef<number | undefined>(undefined);
 
   // 每分鐘更新 market status(open / after-hours / weekend / holiday)
   useEffect(() => {
@@ -453,6 +479,16 @@ function Game() {
         } catch (e) {
           console.warn('[cloud] backfillProfileSync failed:', e);
         }
+
+        // 階段 5E:確保 privacy row 存在(預設值)+ 第一次同步 portfolio summary + snapshot
+        // 失敗只 warn 不擋主流程
+        try {
+          await getMyPrivacy();
+          await syncMyPortfolio();
+          await generateMySnapshot();
+        } catch (e) {
+          console.warn('[cloud] stage 5E initial sync failed:', e);
+        }
       } catch (e) {
         console.warn('[cloud] initial sync error:', e);
         setToast({
@@ -484,6 +520,23 @@ function Game() {
     milestoneCount,
     creatureUnlocksCount
   ]);
+
+  // 階段 5E:本地 holdings / prices 變動 → debounce 5 秒 sync user_portfolio_summary
+  useEffect(() => {
+    if (!userId) return;
+    if (!allowAutoPushRef.current) return;
+    if (portfolioSyncTimerRef.current !== undefined) {
+      clearTimeout(portfolioSyncTimerRef.current);
+    }
+    portfolioSyncTimerRef.current = window.setTimeout(() => {
+      void syncMyPortfolio();
+    }, 5_000);
+    return () => {
+      if (portfolioSyncTimerRef.current !== undefined) {
+        clearTimeout(portfolioSyncTimerRef.current);
+      }
+    };
+  }, [userId, holdings, prices, stocks, transactions]);
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
   async function handlePetClickById(petId: string) {
@@ -638,6 +691,7 @@ function Game() {
         open={modal === 'profile'}
         onClose={() => setModal(null)}
         onActionComplete={postAction}
+        onOpenBorrowed={() => setModal('borrowed')}
       />
       <ProfileSetupPrompt
         onOpenEdit={() => setModal('profile')}
@@ -661,6 +715,12 @@ function Game() {
           setMonthlyTarget(null);
           setModal('monthly');
         }}
+        onOpenPrivacy={() => setModal('privacy')}
+      />
+      <PrivacySettingsModal
+        open={modal === 'privacy'}
+        onClose={() => setModal(null)}
+        onActionComplete={postAction}
       />
       <SignInModal
         open={modal === 'signin'}
@@ -683,6 +743,24 @@ function Game() {
           setSharePet(p);
           setModal('share');
         }}
+        onLoan={(p) => {
+          setLoanPet(p);
+          setModal('loan');
+        }}
+      />
+      <LoanCreatureModal
+        open={modal === 'loan'}
+        onClose={() => {
+          setModal(null);
+          setLoanPet(null);
+        }}
+        pet={loanPet}
+        onActionComplete={postAction}
+      />
+      <BorrowedCreaturesModal
+        open={modal === 'borrowed'}
+        onClose={() => setModal(null)}
+        onActionComplete={postAction}
       />
       <ShareModal
         open={modal === 'share'}

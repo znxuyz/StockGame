@@ -16,3 +16,4 @@ export {
   computeDailyReturns,
   type CashFlow
 } from './finance';
+export { maskAmount, formatReturnPercent } from './amountMasker';

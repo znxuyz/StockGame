@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
+import FriendPortfolioView from './FriendPortfolioView';
+import LeaderboardView from './LeaderboardView';
 import { db } from '@/db';
 import { useCultivation } from '@/hooks/useCultivation';
 import { formatLastSeen } from '@/hooks/useMyProfile';
@@ -317,6 +319,18 @@ function FriendProfileBody({
       <section>
         <h4 className="text-xs text-gray-500 mb-2 font-bold">⚔ 我 vs 他</h4>
         <MeVsThemList metrics={metrics} />
+      </section>
+
+      {/* §6.5 持倉組合(階段 5E) */}
+      <section>
+        <h4 className="text-xs text-gray-500 mb-2 font-bold">💼 持倉組合</h4>
+        <FriendPortfolioView friendUserId={profile.userId} />
+      </section>
+
+      {/* §6.6 修煉排行榜(階段 5E) */}
+      <section>
+        <h4 className="text-xs text-gray-500 mb-2 font-bold">📊 修煉排行榜</h4>
+        <LeaderboardView />
       </section>
 
       {/* §8 操作 */}

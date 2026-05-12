@@ -15,3 +15,4 @@ export * from './friend';
 export * from './monthlyStats';
 export * from './showcase';
 export * from './feed';
+export * from './privacy';

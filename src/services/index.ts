@@ -138,6 +138,21 @@ export {
   wasMonthlyReviewShown
 } from './monthlyStatsService';
 
+// 階段 5E:持倉隱私 + 排行榜 + 神獸借展
+export { getMyPrivacy, getFriendPrivacy, updateMyPrivacy } from './privacyService';
+export type { UpdatePrivacyInput } from './privacyService';
+export { syncMyPortfolio, getFriendPortfolio } from './portfolioSyncService';
+export { generateMySnapshot, getLeaderboard, clearLeaderboardCache } from './leaderboardService';
+export {
+  loanCreature,
+  recallLoan,
+  claimBorrowerReward,
+  getMyActiveLoans,
+  getFriendIncomingLoans,
+  checkExpiredLoans
+} from './creatureLoanService';
+export type { LoanResult, ActiveLoansBundle } from './creatureLoanService';
+
 // 階段 5D:動態牆
 export {
   publishFeedEvent,

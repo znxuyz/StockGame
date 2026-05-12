@@ -16,6 +16,8 @@ interface ProfileEditModalProps {
   onClose: () => void;
   /** 操作完成回拋訊息給 caller(顯示 toast) */
   onActionComplete?: (message: string) => void;
+  /** 階段 5E:點「🎁 神獸借展」→ caller 關自己開 BorrowedCreaturesModal */
+  onOpenBorrowed?: () => void;
 }
 
 const NICKNAME_MAX = 20;
@@ -32,7 +34,12 @@ const SIGNATURE_MAX = 150;
  *
  * 未登入雲端 → 顯示提示「請先登入雲端帳號」(其實沒入口會走到這,防呆)
  */
-export default function ProfileEditModal({ open, onClose, onActionComplete }: ProfileEditModalProps) {
+export default function ProfileEditModal({
+  open,
+  onClose,
+  onActionComplete,
+  onOpenBorrowed
+}: ProfileEditModalProps) {
   const { profile, loading, reload } = useMyProfile();
   const cultivation = useCultivation();
   const title = getTitle(cultivation.lifetimeEarned);
@@ -284,6 +291,21 @@ export default function ProfileEditModal({ open, onClose, onActionComplete }: Pr
             <span className="text-sm text-gray-700">🏆 展示神獸</span>
             <span className="text-xs text-gray-500">挑 1-3 隻在個人頁突出 ›</span>
           </button>
+
+          {/* 階段 5E:神獸借展入口 */}
+          {onOpenBorrowed && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenBorrowed();
+              }}
+              className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
+            >
+              <span className="text-sm text-gray-700">🎁 神獸借展</span>
+              <span className="text-xs text-gray-500">借出 / 借入總覽 ›</span>
+            </button>
+          )}
 
           <button
             type="button"

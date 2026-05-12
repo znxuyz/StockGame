@@ -34,6 +34,8 @@ interface PetInfoModalProps {
   onQuickSell?: (code: string) => void;
   /** 階段 5C:分享按鈕 → 開 ShareModal 帶這隻 pet */
   onShare?: (pet: Pet) => void;
+  /** 階段 5E:點「🎁 借展」→ caller 開 LoanCreatureModal(只給 isEternal pet 用) */
+  onLoan?: (pet: Pet) => void;
 }
 
 /** 魂環境界顯示用 emoji + 文字色,跟魂環顏色對齊 */
@@ -72,7 +74,8 @@ export default function PetInfoModal({
   stock,
   onQuickFeed,
   onQuickSell,
-  onShare
+  onShare,
+  onLoan
 }: PetInfoModalProps) {
   const [detail, setDetail] = useState<HoldingDetail | null>(null);
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
@@ -428,6 +431,17 @@ export default function PetInfoModal({
             {colorLabel}
           </button>
         </div>
+
+        {/* 階段 5E:永恆紀念神獸才可借展 */}
+        {onLoan && pet.isEternal && (
+          <button
+            type="button"
+            onClick={() => onLoan(pet)}
+            className="w-full mt-2 py-2 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold active:scale-[0.99] transition-transform"
+          >
+            🎁 借展給好友 (24h)
+          </button>
+        )}
       </div>
 
       <RenameModal open={renameOpen} onClose={() => setRenameOpen(false)} pet={pet} />
