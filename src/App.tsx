@@ -133,6 +133,11 @@ function Game() {
   const [toast, setToast] = useState<{ message: string; variant: 'info' | 'error' } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [marketStatus, setMarketStatus] = useState<MarketStatus>(getMarketStatus());
+  /**
+   * 階段 5A.2:TopBar 左上角掌印「跳動 3 次」引導 token。
+   * ProfileSetupPrompt 關閉時 +1,TopBar useEffect 偵測變動 → 套 .paw-flash class。
+   */
+  const [pawFlashToken, setPawFlashToken] = useState(0);
   /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
   const refreshingRef = useRef(false);
 
@@ -471,6 +476,8 @@ function Game() {
         lastPriceUpdateAt={settings.lastPriceUpdateAt}
         refreshing={refreshing}
         cloudSignedIn={!!userId}
+        onOpenProfile={() => setModal('profile')}
+        flashPawToken={pawFlashToken}
       />
       <CultivationFloater />
       <MilestoneCelebration />
@@ -549,7 +556,10 @@ function Game() {
         onClose={() => setModal(null)}
         onActionComplete={postAction}
       />
-      <ProfileSetupPrompt onOpenEdit={() => setModal('profile')} />
+      <ProfileSetupPrompt
+        onOpenEdit={() => setModal('profile')}
+        onDismiss={() => setPawFlashToken((t) => t + 1)}
+      />
       <TradeModal
         open={modal === 'trade'}
         onClose={() => setModal(null)}
@@ -564,7 +574,6 @@ function Game() {
         settings={settings}
         onActionComplete={postAction}
         onOpenSignIn={() => setModal('signin')}
-        onOpenProfile={() => setModal('profile')}
       />
       <SignInModal
         open={modal === 'signin'}

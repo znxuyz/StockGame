@@ -1,4 +1,5 @@
 import { supabase, isCloudConfigured } from '@/lib/supabase';
+import { db } from '@/db';
 import type { UserProfile } from '@/types';
 import { generateUniqueInviteCode } from './inviteCodeService';
 
@@ -85,8 +86,24 @@ export async function getProfilesByIds(userIds: string[]): Promise<Map<string, U
 }
 
 /**
+ * 階段 5A.2 一次性遷移:若本地舊 `settings.playerName` 還有值(1-20 字)
+ * 就拿來當第一次建 user_profile 的 nickname,免得舊玩家換到雲端版後名稱消失。
+ * 沒值 / 太長 / 撈不到 → fallback 預設「修仙者#XXXX」。
+ */
+async function pickInitialNickname(): Promise<string> {
+  try {
+    const s = await db.settings.get('singleton');
+    const legacy = s?.playerName?.trim();
+    if (legacy && legacy.length >= 1 && legacy.length <= 20) return legacy;
+  } catch {
+    // settings 還沒 seed / Dexie 錯誤都吞掉
+  }
+  return generateDefaultNickname();
+}
+
+/**
  * 註冊 / 第一次登入時自動建 row。已有 row → 跳過(idempotent)。
- *  - 預設暱稱「修仙者#XXXX」
+ *  - 預設暱稱「修仙者#XXXX」(階段 5A.2 起若 settings.playerName 有值就用)
  *  - 抽唯一邀請碼(碰撞重試 10 次)
  *  - 其餘欄位用 DB 預設值(signature='', last_seen_at=now())
  *
@@ -102,7 +119,7 @@ export async function createProfileIfNeeded(): Promise<UserProfile | null> {
   const existing = await getProfile(userId);
   if (existing) return existing;
 
-  const nickname = generateDefaultNickname();
+  const nickname = await pickInitialNickname();
   const inviteCode = await generateUniqueInviteCode();
 
   const { data, error } = await supabase

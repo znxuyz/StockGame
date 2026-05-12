@@ -28,25 +28,27 @@ interface SettingsModalProps {
   onActionComplete: (message: string) => void;
   /** 登入鈕被按下,App 端開 SignInModal */
   onOpenSignIn: () => void;
-  /** 階段 5A:點「個人檔案」入口,關掉設定彈窗讓 App 開 ProfileEditModal */
-  onOpenProfile?: () => void;
 }
 
 /**
- * 設定彈窗 — 手續費折扣 + 最低手續費 + 玩家名稱。
- * 折扣以「幾折」為單位輸入（28 折 → 0.28），UI 上更直觀。
+ * 設定彈窗 — 手續費折扣 + 最低手續費 + 音效 + HUD 主題 + 家園背景 + 雲端同步。
+ *
+ * 階段 5A.2 後:
+ *  - 移除「玩家名稱(可選)」輸入框(改由 HUD 左上角掌印 → 個人檔案彈窗管暱稱)
+ *  - 移除「個人檔案」入口(主要入口統一到 HUD 左上角)
+ *  - 舊資料 `settings.playerName` 留 DB 不刪,只標 @deprecated
+ *    `createProfileIfNeeded` 第一次建 user_profile 時會把舊 playerName 寫入 nickname
+ *    遷移完成
  */
 export default function SettingsModal({
   open,
   onClose,
   settings,
   onActionComplete,
-  onOpenSignIn,
-  onOpenProfile
+  onOpenSignIn
 }: SettingsModalProps) {
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
-  const [playerName, setPlayerName] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
   const { session } = useAuth();
@@ -115,7 +117,6 @@ export default function SettingsModal({
     if (!open) return;
     setDiscountTenths(String(settings.brokerageFeeDiscount * 10));
     setMinFee(String(settings.brokerageMinFee));
-    setPlayerName(settings.playerName ?? '');
     setSoundEnabled(settings.soundEnabled);
   }, [open, settings]);
 
@@ -129,7 +130,6 @@ export default function SettingsModal({
         ...settings,
         brokerageFeeDiscount: safeTenths / 10,
         brokerageMinFee: safeMinFee,
-        playerName: playerName.trim() || undefined,
         soundEnabled
       };
       await db.settings.put(next);
@@ -170,17 +170,6 @@ export default function SettingsModal({
   return (
     <Modal open={open} onClose={onClose} title="設定">
       <div className="space-y-3">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">玩家名稱（可選）</label>
-          <input
-            type="text"
-            placeholder="無名小卒"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            className="input-field"
-          />
-        </div>
-
         <div>
           <label className="block text-xs text-gray-500 mb-1">
             手續費折扣（幾折，1-10）
@@ -267,20 +256,6 @@ export default function SettingsModal({
                     <span className="text-emerald-700">已登入</span>
                     <span className="ml-2 text-gray-700 break-all">{userEmail}</span>
                   </div>
-                  {/* 階段 5A:個人檔案入口 */}
-                  {onOpenProfile && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onOpenProfile();
-                      }}
-                      className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
-                    >
-                      <span className="text-sm text-gray-700">👤 個人檔案</span>
-                      <span className="text-xs text-gray-500">暱稱 / 頭像 / 邀請碼 ›</span>
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={handleSignOut}

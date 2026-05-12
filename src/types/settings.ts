@@ -12,7 +12,11 @@ export interface Settings {
   lastPriceUpdateAt?: number;
   /** 上次每日快照寫入日期 YYYY-MM-DD */
   lastSnapshotDate?: string;
-  /** 玩家自訂名稱 */
+  /**
+   * @deprecated 階段 5A.2 起改用雲端 `user_profile.nickname` 統一管理玩家名稱。
+   * 欄位保留不刪以相容舊資料;`createProfileIfNeeded` 第一次建 user_profile
+   * 時會把這個值寫入新的 nickname,之後 SettingsModal 不再顯示 / 寫入此欄位。
+   */
   playerName?: string;
   /** 帳戶建立時間（成就：週年） */
   createdAt: number;

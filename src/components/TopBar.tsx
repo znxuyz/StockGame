@@ -19,6 +19,14 @@ interface TopBarProps {
   refreshing: boolean;
   /** 是否登入雲端(沒登入就不顯示雲端 icon) */
   cloudSignedIn: boolean;
+  /** 階段 5A.2:點左上角掌印 → 開個人檔案彈窗 */
+  onOpenProfile?: () => void;
+  /**
+   * 階段 5A.2:掌印「跳動 3 次」引導用遞增 token。
+   * App 在 ProfileSetupPrompt 關閉時 +1,TopBar useEffect 偵測變動 → 套
+   * .paw-flash class 跑一次動畫(1.4s × 3)。0 表示不需閃。
+   */
+  flashPawToken?: number;
 }
 
 /** 市場狀態 → icon + 精簡標籤(2 字以內) */
@@ -83,7 +91,9 @@ export default function TopBar({
   totalAchievements,
   lastPriceUpdateAt,
   refreshing,
-  cloudSignedIn
+  cloudSignedIn,
+  onOpenProfile,
+  flashPawToken
 }: TopBarProps) {
   const market = marketStatusDisplay(marketStatus);
   // 每 15 秒重算「N 分前」字串(reactive 顯示)
@@ -108,6 +118,25 @@ export default function TopBar({
   // 訂閱修為餘額(階段 2.2):earn/spend 寫入 Dexie 後 hook 自動 re-render
   const cultivation = useCultivation();
 
+  // 階段 5A.2:flashPawToken 變動 → 1.4s × 3 動畫;結束後移除 class
+  // 用 token-based 觸發比 boolean 好處理(避免「flash 中又 flash」要 reset)
+  const [pawFlashing, setPawFlashing] = useState(false);
+  useEffect(() => {
+    if (!flashPawToken) return;
+    setPawFlashing(true);
+    const id = setTimeout(() => setPawFlashing(false), 1400 * 3 + 100);
+    return () => clearTimeout(id);
+  }, [flashPawToken]);
+
+  function handlePawClick() {
+    if (!onOpenProfile) return;
+    // Android Chrome / 桌機 Chromium 短震 20ms;iOS 不支援不會錯
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(20);
+    }
+    onOpenProfile();
+  }
+
   if (!summary) {
     return (
       <div className="hud">
@@ -130,15 +159,35 @@ export default function TopBar({
 
   return (
     <div className="hud">
-      {/* 主資料:badge(row-span-2) + 2x2 stats(NT$ 大數用 K/M 縮寫省空間) */}
+      {/* 主資料:badge(row-span-2) + 2x2 stats(NT$ 大數用 K/M 縮寫省空間)
+          階段 5A.2:掌印改可點 → 個人檔案彈窗;沒帶 onOpenProfile 時仍是裝飾 */}
       <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-3 gap-y-0.5 leading-tight">
-        <img
-          src="/assets/ui/badge_pet.png"
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="row-span-2 w-9 h-9 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
-        />
+        {onOpenProfile ? (
+          <button
+            type="button"
+            onClick={handlePawClick}
+            className="row-span-2 w-9 h-9 shrink-0 rounded-full active:scale-95 transition-transform select-none"
+            aria-label="個人檔案"
+          >
+            <img
+              src="/assets/ui/badge_pet.png"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className={`w-full h-full pointer-events-none ${
+                pawFlashing ? 'paw-flash' : 'drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)]'
+              }`}
+            />
+          </button>
+        ) : (
+          <img
+            src="/assets/ui/badge_pet.png"
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="row-span-2 w-9 h-9 shrink-0 drop-shadow-[0_2px_4px_rgba(33,78,61,0.35)] select-none pointer-events-none"
+          />
+        )}
         <Stat label="神獸" value={`${summary.holdingCount}`} suffix="隻" />
         <Stat label="投入" value={formatCount(summary.totalCost)} />
         <Stat label="總市值" value={formatCount(summary.totalMarketValue)} />

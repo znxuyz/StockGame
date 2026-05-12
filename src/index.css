@@ -538,6 +538,24 @@ button {
   animation: story-fade-in 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ── 階段 5A.2:HUD 左上角掌印按鈕閃爍引導 ──
+   ProfileSetupPrompt 關閉時觸發,提示玩家「個人檔案入口在這裡」。
+   3 次脈動 = 1.4s × 3,搭配金色光暈,結束後恢復常態。*/
+@keyframes paw-flash {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(33, 78, 61, 0.35));
+  }
+  50% {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.9))
+            drop-shadow(0 2px 4px rgba(33, 78, 61, 0.35));
+  }
+}
+.paw-flash {
+  animation: paw-flash 1.4s ease-in-out 3;
+}
+
 /* PWA 新版提示 — 從頂部滑入(放在 HUD 之上,不擋遊戲畫面) */
 @keyframes pwa-update-slide-down {
   0%   { opacity: 0; transform: translate(-50%, -120%); }

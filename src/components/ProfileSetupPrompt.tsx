@@ -9,6 +9,11 @@ const TRIGGER_COUNT = 3;
 
 interface ProfileSetupPromptProps {
   onOpenEdit: () => void;
+  /**
+   * 階段 5A.2:不論點「馬上設定」或「之後再說」都呼叫,讓 App.tsx 觸發
+   * TopBar 掌印 .paw-flash 引導動畫。
+   */
+  onDismiss?: () => void;
 }
 
 /**
@@ -21,10 +26,13 @@ interface ProfileSetupPromptProps {
  *  - 已召喚的神獸 distinct speciesId 數 ≥ 3
  *  - localStorage 沒記錄過已提示
  *
- * 點「馬上設定」→ open ProfileEditModal + localStorage 寫 flag
- * 點「之後再說」→ localStorage 寫 flag(再不打擾)
+ * 5A.2 改版:文案改指引到 HUD 左上角掌印,關閉後 onDismiss 觸發掌印 .paw-flash
+ * 動畫 3 次,引導玩家找到新入口。
+ *
+ * 點「馬上設定」→ open ProfileEditModal + localStorage 寫 flag(動畫被彈窗蓋住)
+ * 點「之後再說」→ localStorage 寫 flag + 掌印閃爍 3 次
  */
-export default function ProfileSetupPrompt({ onOpenEdit }: ProfileSetupPromptProps) {
+export default function ProfileSetupPrompt({ onOpenEdit, onDismiss }: ProfileSetupPromptProps) {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const { profile } = useMyProfile();
@@ -57,6 +65,7 @@ export default function ProfileSetupPrompt({ onOpenEdit }: ProfileSetupPromptPro
     localStorage.setItem(STORAGE_KEY, '1');
     setVisible(false);
     if (open) onOpenEdit();
+    onDismiss?.();
   }
 
   return (
@@ -79,7 +88,11 @@ export default function ProfileSetupPrompt({ onOpenEdit }: ProfileSetupPromptPro
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-gray-700">
           你目前是「<span className="font-bold">{profile.nickname}</span>」
         </div>
-        <div className="text-sm text-gray-700">✏️ 自訂個人檔案?</div>
+        <p className="text-sm text-gray-700 leading-relaxed">
+          點左上角的 🐾 <span className="font-bold">修仙印記</span>
+          <br />
+          可以自訂你的暱稱、頭像、簽名
+        </p>
         <div className="flex gap-2 pt-1">
           <button
             type="button"
