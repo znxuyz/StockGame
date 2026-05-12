@@ -68,6 +68,7 @@ import ShareModal from '@/components/share/ShareModal';
 import MonthlyReviewModal from '@/components/share/MonthlyReviewModal';
 import MonthlyReviewPrompt from '@/components/share/MonthlyReviewPrompt';
 import FriendProfileModal from '@/components/FriendProfileModal';
+import CultivationShareModal from '@/components/feed/CultivationShareModal';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind =
@@ -85,6 +86,7 @@ type ModalKind =
   | 'share'
   | 'monthly'
   | 'friendProfile'
+  | 'shareCompose'
   | null;
 
 export default function App() {
@@ -595,6 +597,20 @@ function Game() {
           setFriendProfileUserId(userId);
           setModal('friendProfile');
         }}
+        onOpenShareComposer={() => setModal('shareCompose')}
+        onOpenCreature={async (speciesId) => {
+          // 自己有這隻就開 PetInfo,沒有就靜默(沒專門「跳圖鑑詳細」入口,5E 再做)
+          const myPets = await db.pets.toArray();
+          const mine = myPets.find((p) => p.speciesId === speciesId);
+          if (!mine) return;
+          await handlePetClickById(mine.id);
+        }}
+      />
+      <CultivationShareModal
+        open={modal === 'shareCompose'}
+        onClose={() => setModal('friends')}
+        onPosted={() => setModal('friends')}
+        onActionComplete={postAction}
       />
       <FriendProfileModal
         open={modal === 'friendProfile'}

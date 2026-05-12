@@ -22,6 +22,7 @@ import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { eventBus } from './eventBus';
 import { getRealm, realmLabel } from './petTier';
 import { getTitle } from './titleService';
+import { publishFeedEvent } from './feedEventService';
 import { getCreature, getPetDisplayName } from '@/data/creatures';
 import type {
   Pet,
@@ -30,6 +31,12 @@ import type {
   MilestoneEventType,
   SoulRealmId
 } from '@/types';
+
+/**
+ * 階段 5D:哪些境界值得發到動態牆。
+ * 凡 → 靈 / 靈 → 妖 太頻繁不發,只發升到 shen/sheng/xian。
+ */
+const FEED_PUBLISH_REALMS: SoulRealmId[] = ['shen', 'sheng', 'xian'];
 
 let attached = false;
 /** 之前那次 earn 的 lifetimeEarned 快照,給「稱號升級」判斷用 */
@@ -149,9 +156,15 @@ async function handleEarn(payload: {
       if (!snap) return;
       await upsertCreatureSummary(userId, payload.relatedPetId);
       const species = getCreature(snap.pet.speciesId);
+      const creatureName = getPetDisplayName(snap.pet, species);
       await recordMilestone(userId, 'summon', {
         creatureId: snap.pet.speciesId,
-        creatureName: getPetDisplayName(snap.pet, species)
+        creatureName
+      });
+      // 階段 5D:同步發到動態牆(5min dedup 內 caller 不需 worry 連續召喚刷牆)
+      await publishFeedEvent('summon', {
+        creatureSpeciesId: snap.pet.speciesId,
+        creatureName
       });
       break;
     }
@@ -161,12 +174,22 @@ async function handleEarn(payload: {
       if (!snap) return;
       await upsertCreatureSummary(userId, payload.relatedPetId);
       const species = getCreature(snap.pet.speciesId);
+      const creatureName = getPetDisplayName(snap.pet, species);
       await recordMilestone(userId, 'realm_up', {
         creatureId: snap.pet.speciesId,
-        creatureName: getPetDisplayName(snap.pet, species),
+        creatureName,
         realm: snap.realm,
         realmLabel: realmLabel(snap.realm)
       });
+      // 階段 5D:只在升到 shen/sheng/xian 三高階境界時發牆,凡靈妖太頻繁
+      if (FEED_PUBLISH_REALMS.includes(snap.realm)) {
+        await publishFeedEvent('creature_realm_up', {
+          creatureSpeciesId: snap.pet.speciesId,
+          creatureName,
+          toRealm: snap.realm,
+          toRealmLabel: realmLabel(snap.realm)
+        });
+      }
       break;
     }
     case 'streak_milestone': {
@@ -174,6 +197,8 @@ async function handleEarn(payload: {
       const match = /(\d+)/.exec(payload.reasonText);
       const days = match ? Number(match[1]) : payload.amount;
       await recordMilestone(userId, 'streak', { streakDays: days });
+      // 階段 5D:同步動態牆
+      await publishFeedEvent('streak_milestone', { days });
       break;
     }
     case 'pet_level_up': {
@@ -204,9 +229,15 @@ async function handleSpend(payload: {
     if (!snap) return;
     await upsertCreatureSummary(userId, payload.relatedPetId, { eternalOverride: true });
     const species = getCreature(snap.pet.speciesId);
+    const creatureName = getPetDisplayName(snap.pet, species);
     await recordMilestone(userId, 'eternal', {
       creatureId: snap.pet.speciesId,
-      creatureName: getPetDisplayName(snap.pet, species)
+      creatureName
+    });
+    // 階段 5D:永恆紀念是重大事件,一定發牆
+    await publishFeedEvent('eternal', {
+      creatureSpeciesId: snap.pet.speciesId,
+      creatureName
     });
   }
 }
@@ -227,6 +258,11 @@ async function maybeRecordTitleUp(userId: string): Promise<void> {
   await recordMilestone(userId, 'title_up', {
     titleId: newTitle.id,
     titleName: newTitle.name
+  });
+  // 階段 5D:稱號升等也發牆(凡 → 渡劫 8 階,跨閾值頻率低,不需 dedup)
+  await publishFeedEvent('title_up', {
+    fromTitle: prevTitle.name,
+    toTitle: newTitle.name
   });
 }
 

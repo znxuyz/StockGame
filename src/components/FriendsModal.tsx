@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
+import FeedTab from './feed/FeedTab';
 import { useAuth } from '@/lib/auth';
 import { isCloudConfigured } from '@/lib/supabase';
 import { formatLastSeen } from '@/hooks/useMyProfile';
@@ -18,11 +19,12 @@ import {
   formatInviteCode,
   formatInviteCodeInput,
   getTitle,
+  getUnreadFeedCount,
   type SearchResult
 } from '@/services';
 import type { FriendEntry, FriendRequestEntry } from '@/types';
 
-type Tab = 'friends' | 'requests' | 'search';
+type Tab = 'friends' | 'requests' | 'search' | 'feed';
 
 interface FriendsModalProps {
   open: boolean;
@@ -33,6 +35,12 @@ interface FriendsModalProps {
   onOpenSignIn?: () => void;
   /** 階段 5B:點好友卡 → 開好友個人頁(帶 userId) */
   onOpenFriendProfile?: (userId: string) => void;
+  /** 階段 5D:點「+ 發布修仙分享」→ caller 開 CultivationShareModal */
+  onOpenShareComposer?: () => void;
+  /** 階段 5D:動態 feed 內點神獸 → caller 路由(自己有 → PetInfo / 沒有 → Bestiary) */
+  onOpenCreature?: (creatureSpeciesId: string) => void;
+  /** 階段 5D:玩家剛發完文 → 動態 tab 內容外的 caller(目前無事可做) */
+  feedReloadKey?: number;
 }
 
 /**
@@ -47,7 +55,9 @@ export default function FriendsModal({
   open,
   onClose,
   onOpenSignIn,
-  onOpenFriendProfile
+  onOpenFriendProfile,
+  onOpenShareComposer,
+  onOpenCreature
 }: FriendsModalProps) {
   const { session } = useAuth();
   const userId = session?.user?.id;
@@ -57,6 +67,7 @@ export default function FriendsModal({
   const [pending, setPending] = useState<FriendRequestEntry[]>([]);
   const [sent, setSent] = useState<FriendRequestEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [feedUnread, setFeedUnread] = useState(0);
 
   const reload = useCallback(async () => {
     if (!userId) return;
@@ -80,6 +91,29 @@ export default function FriendsModal({
       reload();
     }
   }, [open, userId, reload]);
+
+  // 階段 5D:打開彈窗時拉「未讀動態」count(localStorage lastViewIso 為基準)
+  useEffect(() => {
+    if (!open || !userId) {
+      setFeedUnread(0);
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      const last = (() => {
+        try {
+          return localStorage.getItem('feed_last_view_at_v1');
+        } catch {
+          return null;
+        }
+      })();
+      const count = await getUnreadFeedCount(last);
+      if (mounted) setFeedUnread(count);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [open, userId, tab]);
 
   // 切回 friends tab 時自動 reload(從 search 加完好友後切回看)
   useEffect(() => {
@@ -140,6 +174,16 @@ export default function FriendsModal({
           <TabBtn active={tab === 'search'} onClick={() => setTab('search')}>
             搜尋
           </TabBtn>
+          <TabBtn
+            active={tab === 'feed'}
+            onClick={() => {
+              setTab('feed');
+              setFeedUnread(0); // 進 feed 立刻消紅點(FeedTab 內也會寫 localStorage)
+            }}
+            badge={feedUnread}
+          >
+            動態
+          </TabBtn>
         </div>
       }
     >
@@ -160,6 +204,14 @@ export default function FriendsModal({
         />
       )}
       {tab === 'search' && <SearchTab onReload={reload} />}
+      {tab === 'feed' && (
+        <FeedTab
+          myUserId={userId ?? null}
+          onOpenFriendProfile={onOpenFriendProfile}
+          onOpenCreature={onOpenCreature}
+          onOpenShareComposer={onOpenShareComposer}
+        />
+      )}
     </Modal>
   );
 }

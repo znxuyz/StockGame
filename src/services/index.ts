@@ -138,6 +138,28 @@ export {
   wasMonthlyReviewShown
 } from './monthlyStatsService';
 
+// 階段 5D:動態牆
+export {
+  publishFeedEvent,
+  getFriendsFeed,
+  deleteFeedEvent,
+  getUnreadFeedCount
+} from './feedEventService';
+export { likeFeedEvent, unlikeFeedEvent } from './feedLikeService';
+export {
+  addComment,
+  getComments,
+  deleteComment
+} from './feedCommentService';
+export type { CommentWithAuthor } from './feedCommentService';
+export {
+  detectSensitiveWords,
+  publishCultivationShare
+} from './cultivationShareService';
+export type { DetectedSensitive, PublishShareInput } from './cultivationShareService';
+export { getOnlineFriends } from './onlineFriendsService';
+export type { OnlineFriend } from './onlineFriendsService';
+
 // 階段 5B:好友個人頁
 export { attachProfileSyncListeners, backfillProfileSync } from './profileSyncService';
 export { getMyShowcase, updateMyShowcase, getShowcase } from './showcaseService';
