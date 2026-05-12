@@ -89,3 +89,41 @@ export {
   attachTaskListeners
 } from './taskService';
 export type { ClaimTaskResult, ActiveTasks } from './taskService';
+
+// 階段 5A:好友系統(身分層)
+export {
+  formatInviteCode,
+  parseInviteCode,
+  formatInviteCodeInput,
+  generateUniqueInviteCode
+} from './inviteCodeService';
+export {
+  getMyProfile,
+  getProfile,
+  getProfilesByIds,
+  createProfileIfNeeded,
+  updateProfile,
+  updateLastSeen,
+  generateDefaultNickname
+} from './profileService';
+export {
+  searchByInviteCode,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  cancelFriendRequest,
+  removeFriend,
+  blockUser,
+  unblockUser,
+  getFriends,
+  getPendingRequests,
+  getSentRequests
+} from './friendService';
+export type { SearchResult, SendRequestResult } from './friendService';
+export {
+  CULTIVATION_TITLES,
+  getTitle,
+  getNextTitle,
+  titleProgress
+} from './titleService';
+export type { CultivationTitle } from './titleService';

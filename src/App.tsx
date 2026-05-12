@@ -32,6 +32,7 @@ import {
   fetchRemoteMeta,
   localHasUserData
 } from '@/services/cloudSync';
+import { createProfileIfNeeded } from '@/services';
 import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
@@ -57,6 +58,8 @@ import InstallPrompt from '@/components/InstallPrompt';
 import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
 import PasswordRecoveryModal from '@/components/PasswordRecoveryModal';
 import SignInModal from '@/components/SignInModal';
+import ProfileEditModal from '@/components/ProfileEditModal';
+import ProfileSetupPrompt from '@/components/ProfileSetupPrompt';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind =
@@ -70,6 +73,7 @@ type ModalKind =
   | 'game'
   | 'friends'
   | 'trade'
+  | 'profile'
   | null;
 
 export default function App() {
@@ -402,6 +406,14 @@ function Game() {
 
         initialSyncDoneForUserRef.current = userId;
         allowAutoPushRef.current = true;
+
+        // 階段 5A:確保 user_profile row 存在(沒有就建,預設暱稱 + 唯一邀請碼)
+        // 失敗只 warn 不擋主流程,useMyProfile 之後 mount 還會 retry
+        try {
+          await createProfileIfNeeded();
+        } catch (e) {
+          console.warn('[cloud] createProfileIfNeeded failed:', e);
+        }
       } catch (e) {
         console.warn('[cloud] initial sync error:', e);
         setToast({
@@ -527,7 +539,17 @@ function Game() {
           handlePetClickById(petId);
         }}
       />
-      <FriendsModal open={modal === 'friends'} onClose={() => setModal(null)} />
+      <FriendsModal
+        open={modal === 'friends'}
+        onClose={() => setModal(null)}
+        onOpenSignIn={() => setModal('signin')}
+      />
+      <ProfileEditModal
+        open={modal === 'profile'}
+        onClose={() => setModal(null)}
+        onActionComplete={postAction}
+      />
+      <ProfileSetupPrompt onOpenEdit={() => setModal('profile')} />
       <TradeModal
         open={modal === 'trade'}
         onClose={() => setModal(null)}
@@ -542,6 +564,7 @@ function Game() {
         settings={settings}
         onActionComplete={postAction}
         onOpenSignIn={() => setModal('signin')}
+        onOpenProfile={() => setModal('profile')}
       />
       <SignInModal
         open={modal === 'signin'}

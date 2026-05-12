@@ -28,6 +28,8 @@ interface SettingsModalProps {
   onActionComplete: (message: string) => void;
   /** 登入鈕被按下,App 端開 SignInModal */
   onOpenSignIn: () => void;
+  /** 階段 5A:點「個人檔案」入口,關掉設定彈窗讓 App 開 ProfileEditModal */
+  onOpenProfile?: () => void;
 }
 
 /**
@@ -39,7 +41,8 @@ export default function SettingsModal({
   onClose,
   settings,
   onActionComplete,
-  onOpenSignIn
+  onOpenSignIn,
+  onOpenProfile
 }: SettingsModalProps) {
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
@@ -264,6 +267,20 @@ export default function SettingsModal({
                     <span className="text-emerald-700">已登入</span>
                     <span className="ml-2 text-gray-700 break-all">{userEmail}</span>
                   </div>
+                  {/* 階段 5A:個人檔案入口 */}
+                  {onOpenProfile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenProfile();
+                      }}
+                      className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform"
+                    >
+                      <span className="text-sm text-gray-700">👤 個人檔案</span>
+                      <span className="text-xs text-gray-500">暱稱 / 頭像 / 邀請碼 ›</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleSignOut}
