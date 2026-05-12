@@ -5,7 +5,8 @@ import type {
   UserProfile
 } from '@/types';
 import { parseInviteCode } from './inviteCodeService';
-import { getProfilesByIds } from './profileService';
+import { getProfile, getProfilesByIds } from './profileService';
+import { notify } from './notificationService';
 
 /**
  * 階段 5A:好友服務。
@@ -182,6 +183,18 @@ export async function sendFriendRequest(toUserId: string): Promise<SendRequestRe
     if (error.code === '23505') return { ok: false, reason: 'already_sent' };
     return { ok: false, reason: 'unknown', error: error.message };
   }
+
+  // 階段 5F:發通知給對方
+  const myProfile = await getProfile(me);
+  const nickname = myProfile?.nickname ?? '修仙者';
+  void notify({
+    targetUserId: toUserId,
+    type: 'friend_request',
+    title: '新的好友請求',
+    message: `${nickname} 想加你為好友`,
+    relatedData: { fromUserId: me, fromNickname: nickname }
+  });
+
   return { ok: true };
 }
 
@@ -217,6 +230,17 @@ export async function acceptFriendRequest(requestId: number): Promise<{ ok: bool
     .update({ status: 'accepted' })
     .eq('id', requestId);
   if (updateErr) return { ok: false, error: updateErr.message };
+
+  // 階段 5F:發通知給請求發起人
+  const myProfile = await getProfile(me);
+  const nickname = myProfile?.nickname ?? '修仙者';
+  void notify({
+    targetUserId: req.from_user,
+    type: 'friend_accepted',
+    title: '好友請求被接受 ✓',
+    message: `${nickname} 接受了你的好友請求`,
+    relatedData: { fromUserId: me, fromNickname: nickname }
+  });
 
   return { ok: true };
 }

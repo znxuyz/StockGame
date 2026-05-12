@@ -355,6 +355,73 @@ scripts/
 
 ---
 
+## 9.5 階段 5F:Web Push 推播設定(選用)
+
+**站內通知**(NotificationsTab)只要跑完 5F 的 SQL migration 就會直接運作 — 不需 VAPID。
+**手機推播**(APP 沒開也收得到通知)額外需要設定 VAPID + 部署 Edge Function:
+
+### Step 1:生成 VAPID Keys(一次性)
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+會輸出:
+```
+Public Key:  BNxxx... (87 字元)
+Private Key: xxxxx... (43 字元)
+```
+
+VAPID keys 生成一次永久用,不會改變。**Private Key 絕對不可 commit 進 repo**。
+
+### Step 2:設 Cloudflare Pages env var(前端用 public key)
+
+Cloudflare Pages → Settings → Environment variables:
+
+| Variable | Scope | Value |
+|---|---|---|
+| `VITE_VAPID_PUBLIC_KEY` | Production + Preview | (Step 1 拿到的 Public Key) |
+
+⚠️ 改 env var 必須 retry deploy 才生效(Vite build 時烘進 bundle)。
+
+### Step 3:設 Supabase secrets(Edge Function 用)
+
+```bash
+supabase secrets set VAPID_PUBLIC_KEY=BNxxx...
+supabase secrets set VAPID_PRIVATE_KEY=xxxxx...
+supabase secrets set VAPID_SUBJECT=mailto:你的@email
+```
+
+`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` Supabase 預設已注入 Edge Function 環境,通常不必設。
+
+### Step 4:部署 Edge Function
+
+```bash
+supabase functions deploy send-push
+```
+
+部署完即可。Function URL 自動拿到 Supabase Auth context,client 端用 `supabase.functions.invoke('send-push')` 呼叫。
+
+### Step 5:玩家端啟用
+
+1. **iOS**:從 Safari「加入主畫面」→ 從主畫面開啟 APP(iOS 16.4+ 才支援 Web Push,且必須是 PWA)
+2. **Android / 桌機 Chrome / Edge**:直接從瀏覽器使用即可
+3. 在 APP 內:設定 → 🔒 隱私設定 → 啟用手機推播
+4. 系統會彈出通知權限請求,點允許
+5. 之後好友按讚 / 評論 / 借展神獸 等事件就會推播到手機
+
+### 故障排除
+
+- **推播沒收到**:檢查 `supabase functions list` 是否有 `send-push`、`supabase secrets list` 是否有 VAPID 三個 secrets
+- **訂閱失敗 "no_vapid_key"**:`VITE_VAPID_PUBLIC_KEY` 沒在 Cloudflare 設好 / 沒 retry deploy
+- **iOS PWA 安裝後仍不能訂閱**:確認 iOS 系統版本 ≥ 16.4(`設定 → 一般 → 關於本機`)
+- **權限被拒**:`iOS 設定 → 通知 → 神獸股市 → 開啟`(被拒過後不能在 app 內重叫權限請求)
+
+VAPID 沒設定時,**站內通知 + 紅點 + Realtime 仍正常運作**,只是不發手機推播。
+Edge Function 沒部署時:client 呼叫 `notificationService.notify()` 會 silent fail,站內通知 + 推播都不發。
+
+---
+
 ## 10. License
 
 MIT(看 LICENSE 檔)。fork 後想拿去做別的用途也歡迎。

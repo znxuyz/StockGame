@@ -16,6 +16,17 @@ export interface UserPrivacySettings {
   autoPublishTitleUp: boolean;
   autoPublishStreak: boolean;
   autoPublishEternal: boolean;
+  // 階段 5F:推播 + 通知偏好(同表)
+  pushEnabled: boolean;
+  notifyFriendRequest: boolean;
+  notifyFeedLike: boolean;
+  notifyFeedComment: boolean;
+  notifyLoan: boolean;
+  notifyRank: boolean;
+  notifyAchievement: boolean;
+  /** 'HH:MM' 格式;Postgres time 拉回會是 'HH:MM:SS',service 層 normalize */
+  quietHoursStart: string;
+  quietHoursEnd: string;
   updatedAt: string;
 }
 
@@ -29,7 +40,16 @@ export const DEFAULT_PRIVACY: Omit<UserPrivacySettings, 'userId' | 'updatedAt'> 
   autoPublishRealmUp: true,
   autoPublishTitleUp: true,
   autoPublishStreak: true,
-  autoPublishEternal: true
+  autoPublishEternal: true,
+  pushEnabled: true,
+  notifyFriendRequest: true,
+  notifyFeedLike: true,
+  notifyFeedComment: true,
+  notifyLoan: true,
+  notifyRank: false,
+  notifyAchievement: true,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '08:00'
 };
 
 export interface PortfolioSummaryItem {

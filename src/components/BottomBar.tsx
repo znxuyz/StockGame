@@ -9,6 +9,8 @@ interface BottomBarProps {
   onTrade: () => void;
   onRecords: () => void;
   onSettings: () => void;
+  /** 階段 5F:好友按鈕右上角未讀通知紅點(0 = 不顯示) */
+  friendsUnreadCount?: number;
 }
 
 /** 點按鈕先響 click 再執行原 handler */
@@ -36,7 +38,8 @@ export default function BottomBar({
   onFriends,
   onTrade,
   onRecords,
-  onSettings
+  onSettings,
+  friendsUnreadCount = 0
 }: BottomBarProps) {
   // 階段 3.7 遷移:可領任務數 → 遊戲按鈕紅點
   const claimableTaskCount =
@@ -62,6 +65,7 @@ export default function BottomBar({
           src="/assets/btn/friends.png"
           onClick={withClick(onFriends)}
           label="好友"
+          badge={friendsUnreadCount > 0 ? friendsUnreadCount : undefined}
         />
         <ActionButton
           src="/assets/btn/trade.png"

@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
-import { getMyPrivacy, updateMyPrivacy } from '@/services';
+import {
+  getMyPrivacy,
+  isPushSupported,
+  subscribePush,
+  unsubscribePush,
+  updateMyPrivacy
+} from '@/services';
 import { isCloudConfigured } from '@/lib/supabase';
 import type { PortfolioVisibility, UserPrivacySettings } from '@/types';
 
@@ -167,6 +173,11 @@ export default function PrivacySettingsModal({
             />
           </section>
 
+          <hr className="border-gray-200" />
+
+          {/* 階段 5F:通知 + 推播 */}
+          <NotificationSection data={data} onCommit={commit} onActionComplete={onActionComplete} />
+
           <p className="text-[11px] text-gray-400 italic text-center">
             設定變更即時生效,不用按儲存
           </p>
@@ -232,5 +243,142 @@ function CheckRow({
         {caption && <div className="text-[11px] text-gray-500 leading-relaxed">{caption}</div>}
       </div>
     </label>
+  );
+}
+
+// ─── 階段 5F:通知 + 推播 section ───────────────────────
+
+function NotificationSection({
+  data,
+  onCommit,
+  onActionComplete
+}: {
+  data: UserPrivacySettings;
+  onCommit: (patch: Partial<UserPrivacySettings>) => Promise<void>;
+  onActionComplete?: (message: string) => void;
+}) {
+  const sup = isPushSupported();
+
+  async function togglePush(v: boolean) {
+    // 1. 先 commit 偏好(以便 Edge Function 立刻看得到)
+    await onCommit({ pushEnabled: v });
+    // 2. v=true → 訂閱 SW Push;v=false → 取消訂閱
+    if (v) {
+      const r = await subscribePush();
+      if (!r.ok) {
+        const reasonMap: Record<string, string> = {
+          unsupported: '此裝置不支援推播,iOS 需先「加入主畫面」',
+          permission_denied: '通知權限被拒,請到系統設定 → 通知 → 神獸股市 開啟',
+          not_signed_in: '尚未登入雲端',
+          failed: '訂閱失敗,請稍後再試'
+        };
+        onActionComplete?.(`⚠️ ${reasonMap[r.reason] ?? '訂閱失敗'}`);
+        // rollback 偏好
+        await onCommit({ pushEnabled: false });
+      } else {
+        onActionComplete?.('🔔 已啟用手機推播');
+      }
+    } else {
+      await unsubscribePush();
+      onActionComplete?.('已關閉手機推播');
+    }
+  }
+
+  return (
+    <section>
+      <h4 className="text-xs font-bold text-gray-700 mb-2">🔔 通知與推播</h4>
+
+      {/* 推播主開關 */}
+      <div
+        className={`rounded-lg border p-2 mb-2 ${
+          data.pushEnabled ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'
+        }`}
+      >
+        <CheckRow
+          label="啟用手機推播"
+          caption={
+            sup.supported
+              ? '收到讚 / 評論 / 借展時推播到手機,APP 沒開也會收到'
+              : sup.reason === 'need_pwa_install'
+                ? '⚠️ iOS 需先「加入主畫面」才能使用推播'
+                : sup.reason === 'no_vapid_key'
+                  ? '⚠️ 推播功能尚未啟用(管理員需設定 VAPID keys)'
+                  : '⚠️ 此裝置 / 瀏覽器不支援推播'
+          }
+          checked={data.pushEnabled}
+          onChange={togglePush}
+        />
+      </div>
+
+      {/* 單類型開關 */}
+      <div className="space-y-0.5 mb-3">
+        <CheckRow
+          label="🤝 好友請求 / 接受"
+          checked={data.notifyFriendRequest}
+          onChange={(v) => onCommit({ notifyFriendRequest: v })}
+        />
+        <CheckRow
+          label="❤️ 收到讚"
+          checked={data.notifyFeedLike}
+          onChange={(v) => onCommit({ notifyFeedLike: v })}
+        />
+        <CheckRow
+          label="💬 收到評論"
+          checked={data.notifyFeedComment}
+          onChange={(v) => onCommit({ notifyFeedComment: v })}
+        />
+        <CheckRow
+          label="🎁 神獸借展"
+          checked={data.notifyLoan}
+          onChange={(v) => onCommit({ notifyLoan: v })}
+        />
+        <CheckRow
+          label="📊 排行變動"
+          caption="預設關,避免太多通知"
+          checked={data.notifyRank}
+          onChange={(v) => onCommit({ notifyRank: v })}
+        />
+        <CheckRow
+          label="🏆 成就解鎖"
+          checked={data.notifyAchievement}
+          onChange={(v) => onCommit({ notifyAchievement: v })}
+        />
+      </div>
+
+      {/* 勿擾時間 */}
+      <div>
+        <div className="text-xs text-gray-600 mb-1">勿擾時間(此時段只寫站內,不發手機推播)</div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-500">從</span>
+          <input
+            type="time"
+            value={data.quietHoursStart}
+            onChange={(e) => onCommit({ quietHoursStart: e.target.value })}
+            className="input-field py-1 text-sm w-24"
+          />
+          <span className="text-gray-500">到</span>
+          <input
+            type="time"
+            value={data.quietHoursEnd}
+            onChange={(e) => onCommit({ quietHoursEnd: e.target.value })}
+            className="input-field py-1 text-sm w-24"
+          />
+        </div>
+      </div>
+
+      {/* PWA 提示 */}
+      {sup.reason === 'need_pwa_install' && (
+        <div className="mt-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
+          <p className="font-bold mb-1">啟用手機推播步驟</p>
+          <ol className="list-decimal list-inside space-y-0.5">
+            <li>點 Safari 下方分享按鈕</li>
+            <li>選「加入主畫面」</li>
+            <li>從主畫面開啟「神獸股市」</li>
+            <li>回到此處啟用推播</li>
+          </ol>
+          <p className="mt-1 text-amber-700">需 iOS 16.4 或更新版本</p>
+        </div>
+      )}
+    </section>
   );
 }

@@ -17,8 +17,7 @@ import { getTitle } from './titleService';
 import type {
   LeaderboardCategory,
   LeaderboardEntry,
-  LeaderboardSnapshot,
-  UserPrivacySettings
+  LeaderboardSnapshot
 } from '@/types';
 
 interface SnapshotRow {
@@ -147,20 +146,11 @@ export async function getLeaderboard(
     supabase.from('user_data').select('user_id, blob').in('user_id', candidateIds)
   ]);
 
-  const privacyMap = new Map<string, UserPrivacySettings>();
+  // 排行榜只需要 joinLeaderboard 一個欄位,直接 narrow 成簡單 map
+  const privacyMap = new Map<string, { joinLeaderboard: boolean }>();
   for (const row of (privacyRows as Record<string, unknown>[]) ?? []) {
     privacyMap.set(row.user_id as string, {
-      userId: row.user_id as string,
-      portfolioAmountVisibility: row.portfolio_amount_visibility as 'hidden',
-      showDailyReturn: row.show_daily_return as boolean,
-      showTotalReturn: row.show_total_return as boolean,
-      joinLeaderboard: row.join_leaderboard as boolean,
-      autoPublishSummon: row.auto_publish_summon as boolean,
-      autoPublishRealmUp: row.auto_publish_realm_up as boolean,
-      autoPublishTitleUp: row.auto_publish_title_up as boolean,
-      autoPublishStreak: row.auto_publish_streak as boolean,
-      autoPublishEternal: row.auto_publish_eternal as boolean,
-      updatedAt: row.updated_at as string
+      joinLeaderboard: row.join_leaderboard as boolean
     });
   }
   const lifetimeMap = new Map<string, number>();

@@ -7,7 +7,8 @@
  */
 
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { getProfilesByIds } from './profileService';
+import { getProfile, getProfilesByIds } from './profileService';
+import { notify } from './notificationService';
 import type { FeedComment, UserProfile } from '@/types';
 
 interface FeedCommentRow {
@@ -53,6 +54,31 @@ export async function addComment(
     .from('feed_comments')
     .insert({ event_id: eventId, user_id: userId, content });
   if (error) return { ok: false, error: error.message };
+
+  // 階段 5F:發通知給動態主人
+  const { data: ev } = await supabase
+    .from('feed_events')
+    .select('user_id')
+    .eq('id', eventId)
+    .maybeSingle();
+  if (ev?.user_id && ev.user_id !== userId) {
+    const myProfile = await getProfile(userId);
+    const nickname = myProfile?.nickname ?? '修仙者';
+    const excerpt = content.length > 30 ? content.slice(0, 30) + '⋯' : content;
+    void notify({
+      targetUserId: ev.user_id as string,
+      type: 'feed_comment',
+      title: '收到評論 💬',
+      message: `${nickname}: ${excerpt}`,
+      relatedData: {
+        fromUserId: userId,
+        fromNickname: nickname,
+        feedEventId: eventId,
+        commentExcerpt: excerpt
+      }
+    });
+  }
+
   return { ok: true };
 }
 

@@ -45,6 +45,9 @@ export default defineConfig({
       skipWaiting: false,
       clientsClaim: true,
       globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}'],
+      // 階段 5F:Web Push 事件處理 — 進 SW 後 importScripts 載入 push 監聽
+      // public/push-handler.js 會被原樣拷到 dist/,SW 同源 import 安全
+      importScripts: ['push-handler.js'],
       runtimeCaching: [
         // ── 雲端 API:不快取(每次都要 fresh,避免拿到別人 / 過期資料)
         {

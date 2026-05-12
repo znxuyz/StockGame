@@ -6,6 +6,8 @@
  */
 
 import { supabase, isCloudConfigured } from '@/lib/supabase';
+import { getProfile } from './profileService';
+import { notify } from './notificationService';
 
 async function getCurrentUserId(): Promise<string | null> {
   if (!isCloudConfigured) return null;
@@ -24,6 +26,25 @@ export async function likeFeedEvent(eventId: number): Promise<{ ok: boolean; err
     if (error.code === '23505') return { ok: true };
     return { ok: false, error: error.message };
   }
+
+  // 階段 5F:發通知給動態主人(自己讚自己不發,notify 內已過濾)
+  const { data: ev } = await supabase
+    .from('feed_events')
+    .select('user_id')
+    .eq('id', eventId)
+    .maybeSingle();
+  if (ev?.user_id && ev.user_id !== userId) {
+    const myProfile = await getProfile(userId);
+    const nickname = myProfile?.nickname ?? '修仙者';
+    void notify({
+      targetUserId: ev.user_id as string,
+      type: 'feed_like',
+      title: '收到讚 ❤️',
+      message: `${nickname} 讚了你的動態`,
+      relatedData: { fromUserId: userId, fromNickname: nickname, feedEventId: eventId }
+    });
+  }
+
   return { ok: true };
 }
 

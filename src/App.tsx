@@ -39,8 +39,12 @@ import {
   syncMyPortfolio,
   generateMySnapshot,
   checkExpiredLoans,
-  getMyPrivacy
+  getMyPrivacy,
+  getUnreadCount,
+  subscribeToMyNotifications,
+  cleanupOldNotifications
 } from '@/services';
+import type { AppNotification } from '@/types';
 import { useAuth } from '@/lib/auth';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
@@ -169,6 +173,11 @@ function Game() {
   const [friendProfileUserId, setFriendProfileUserId] = useState<string | null>(null);
   /** 階段 5E:借展神獸的目標 pet(LoanCreatureModal 用) */
   const [loanPet, setLoanPet] = useState<Pet | null>(null);
+  /** 階段 5F:全域未讀通知數(BottomBar friends 紅點用) */
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  /** 階段 5F:打開 FriendsModal 時的預設 tab(來自通知點擊 / BottomBar 點 friends 紅點) */
+  const [friendsInitialTab, setFriendsInitialTab] =
+    useState<'friends' | 'requests' | 'search' | 'feed' | 'notifications'>('friends');
   /** 用 ref 而非 state 鎖併發,避免 silentRefresh closure 拿到 stale 的 refreshing */
   const refreshingRef = useRef(false);
 
@@ -203,6 +212,47 @@ function Game() {
       void checkExpiredLoans();
     }, 60_000);
     return () => clearInterval(id);
+  }, [userId]);
+
+  // 階段 5F:接收 service worker postMessage(push 通知點擊後)
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      const msg = event.data as { type?: string; url?: string } | null;
+      if (msg?.type === 'notification_click') {
+        // url 內 hash 帶 notif_type=feed_like&feed_id=123 之類,簡單做法直接開 friends modal
+        // 玩家從通知 tab 看詳細
+        setFriendsInitialTab('notifications');
+        setModal('friends');
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
+  // 階段 5F:登入後拉初始未讀通知數 + Realtime 訂閱新通知 INSERT
+  // 進入 NotificationsTab 後 unread count 會由內部更新為 0;這裡單純做 badge
+  useEffect(() => {
+    if (!userId) {
+      setUnreadNotifCount(0);
+      return;
+    }
+    let mounted = true;
+    void getUnreadCount().then((c) => {
+      if (mounted) setUnreadNotifCount(c);
+    });
+    // 順手清 90 天前舊通知,避免 DB 變大
+    void cleanupOldNotifications();
+
+    const detach = subscribeToMyNotifications(userId, (notif: AppNotification) => {
+      setUnreadNotifCount((c) => c + 1);
+      // 站內 toast 提示新通知(已讀後玩家可從 friends modal 看詳細)
+      setToast({ message: `🔔 ${notif.title}`, variant: 'info' });
+    });
+    return () => {
+      mounted = false;
+      detach();
+    };
   }, [userId]);
 
   // 階段 5E:本地 holdings / prices 變動 → debounce 5 秒 sync 雲端 portfolio summary
@@ -586,10 +636,15 @@ function Game() {
 
       <BottomBar
         onGame={() => setModal('game')}
-        onFriends={() => setModal('friends')}
+        onFriends={() => {
+          // 階段 5F:點 friends button 時若有未讀 → 預設切到通知 tab
+          setFriendsInitialTab(unreadNotifCount > 0 ? 'notifications' : 'friends');
+          setModal('friends');
+        }}
         onTrade={() => setModal('trade')}
         onRecords={() => setModal('records')}
         onSettings={() => setModal('settings')}
+        friendsUnreadCount={unreadNotifCount}
       />
 
       {/* 彈窗們 */}
@@ -657,6 +712,38 @@ function Game() {
           const mine = myPets.find((p) => p.speciesId === speciesId);
           if (!mine) return;
           await handlePetClickById(mine.id);
+        }}
+        initialTab={friendsInitialTab}
+        onUnreadCountChange={setUnreadNotifCount}
+        onNotificationClick={(notif) => {
+          // 路由:
+          //   friend_request / friend_accepted → 跳到請求 tab(已切過去)
+          //   feed_like / feed_comment → 跳對方個人頁(動態主人 = 自己,改去動態 tab)
+          //   loan_received → 開 BorrowedCreaturesModal
+          //   rank_changed / achievement / system → 留在通知 tab
+          const data = notif.relatedData ?? {};
+          switch (notif.notificationType) {
+            case 'friend_request':
+              setFriendsInitialTab('requests');
+              break;
+            case 'friend_accepted':
+              if (data.fromUserId) {
+                setFriendProfileUserId(data.fromUserId);
+                setModal('friendProfile');
+              }
+              break;
+            case 'feed_like':
+            case 'feed_comment':
+              setFriendsInitialTab('feed');
+              break;
+            case 'loan_received':
+            case 'loan_returning':
+            case 'loan_returned':
+              setModal('borrowed');
+              break;
+            default:
+              break;
+          }
         }}
       />
       <CultivationShareModal

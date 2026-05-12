@@ -25,7 +25,25 @@ interface PrivacyRow {
   auto_publish_title_up: boolean;
   auto_publish_streak: boolean;
   auto_publish_eternal: boolean;
+  // 階段 5F 擴充欄位(可能不存在,readBoolean fallback)
+  push_enabled?: boolean;
+  notify_friend_request?: boolean;
+  notify_feed_like?: boolean;
+  notify_feed_comment?: boolean;
+  notify_loan?: boolean;
+  notify_rank?: boolean;
+  notify_achievement?: boolean;
+  /** Postgres time 預設 'HH:MM:SS' 格式 */
+  quiet_hours_start?: string;
+  quiet_hours_end?: string;
   updated_at: string;
+}
+
+/** Postgres time 'HH:MM:SS' → UI 'HH:MM' */
+function normalizeTime(t: string | undefined, fallback: string): string {
+  if (!t) return fallback;
+  const m = /^(\d{1,2}):(\d{2})/.exec(t);
+  return m ? `${m[1].padStart(2, '0')}:${m[2]}` : fallback;
 }
 
 function rowToPrivacy(row: PrivacyRow): UserPrivacySettings {
@@ -40,6 +58,15 @@ function rowToPrivacy(row: PrivacyRow): UserPrivacySettings {
     autoPublishTitleUp: row.auto_publish_title_up,
     autoPublishStreak: row.auto_publish_streak,
     autoPublishEternal: row.auto_publish_eternal,
+    pushEnabled: row.push_enabled ?? true,
+    notifyFriendRequest: row.notify_friend_request ?? true,
+    notifyFeedLike: row.notify_feed_like ?? true,
+    notifyFeedComment: row.notify_feed_comment ?? true,
+    notifyLoan: row.notify_loan ?? true,
+    notifyRank: row.notify_rank ?? false,
+    notifyAchievement: row.notify_achievement ?? true,
+    quietHoursStart: normalizeTime(row.quiet_hours_start, '22:00'),
+    quietHoursEnd: normalizeTime(row.quiet_hours_end, '08:00'),
     updatedAt: row.updated_at
   };
 }
@@ -111,6 +138,16 @@ export interface UpdatePrivacyInput {
   autoPublishTitleUp?: boolean;
   autoPublishStreak?: boolean;
   autoPublishEternal?: boolean;
+  // 階段 5F:
+  pushEnabled?: boolean;
+  notifyFriendRequest?: boolean;
+  notifyFeedLike?: boolean;
+  notifyFeedComment?: boolean;
+  notifyLoan?: boolean;
+  notifyRank?: boolean;
+  notifyAchievement?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
 }
 
 export async function updateMyPrivacy(
@@ -137,6 +174,16 @@ export async function updateMyPrivacy(
   if (input.autoPublishStreak !== undefined) updates.auto_publish_streak = input.autoPublishStreak;
   if (input.autoPublishEternal !== undefined)
     updates.auto_publish_eternal = input.autoPublishEternal;
+  // 5F
+  if (input.pushEnabled !== undefined) updates.push_enabled = input.pushEnabled;
+  if (input.notifyFriendRequest !== undefined) updates.notify_friend_request = input.notifyFriendRequest;
+  if (input.notifyFeedLike !== undefined) updates.notify_feed_like = input.notifyFeedLike;
+  if (input.notifyFeedComment !== undefined) updates.notify_feed_comment = input.notifyFeedComment;
+  if (input.notifyLoan !== undefined) updates.notify_loan = input.notifyLoan;
+  if (input.notifyRank !== undefined) updates.notify_rank = input.notifyRank;
+  if (input.notifyAchievement !== undefined) updates.notify_achievement = input.notifyAchievement;
+  if (input.quietHoursStart !== undefined) updates.quiet_hours_start = input.quietHoursStart;
+  if (input.quietHoursEnd !== undefined) updates.quiet_hours_end = input.quietHoursEnd;
 
   const { data, error } = await supabase
     .from('user_privacy_settings')

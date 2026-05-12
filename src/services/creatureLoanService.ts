@@ -17,7 +17,9 @@ import { supabase, isCloudConfigured } from '@/lib/supabase';
 import {
   earnCultivation
 } from './cultivationService';
-import { getProfilesByIds } from './profileService';
+import { getProfile, getProfilesByIds } from './profileService';
+import { notify } from './notificationService';
+import { getCreature } from '@/data/creatures';
 import {
   LOAN_DURATION_MS,
   LOAN_REWARD,
@@ -153,6 +155,28 @@ export async function loanCreature(
       .eq('id', data.id);
   } catch (e) {
     console.warn('[loan] lender reward failed:', e);
+  }
+
+  // 階段 5F:通知借入人
+  try {
+    const myProfile = await getProfile(me);
+    const nickname = myProfile?.nickname ?? '修仙者';
+    const creatureName = getCreature(creatureSpeciesId)?.name ?? creatureSpeciesId;
+    void notify({
+      targetUserId: borrowerUserId,
+      type: 'loan_received',
+      title: '🎁 收到神獸借展',
+      message: `${nickname} 借了 ${creatureName} 給你 24 小時`,
+      relatedData: {
+        fromUserId: me,
+        fromNickname: nickname,
+        loanId: data.id as number,
+        creatureSpeciesId,
+        creatureName
+      }
+    });
+  } catch (e) {
+    console.warn('[loan] notify borrower failed:', e);
   }
 
   return { ok: true, loanId: data.id as number };

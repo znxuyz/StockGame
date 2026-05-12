@@ -138,6 +138,26 @@ export {
   wasMonthlyReviewShown
 } from './monthlyStatsService';
 
+// 階段 5F:通知中心 + 推播
+export {
+  notify,
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  subscribeToMyNotifications,
+  cleanupOldNotifications
+} from './notificationService';
+export type { NotifyParams } from './notificationService';
+export {
+  isPushSupported,
+  requestNotificationPermission,
+  subscribePush,
+  unsubscribePush,
+  getCurrentSubscription
+} from './pushService';
+export type { PushSupportResult, PushSupportReason } from './pushService';
+
 // 階段 5E:持倉隱私 + 排行榜 + 神獸借展
 export { getMyPrivacy, getFriendPrivacy, updateMyPrivacy } from './privacyService';
 export type { UpdatePrivacyInput } from './privacyService';

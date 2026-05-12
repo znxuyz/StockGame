@@ -17,3 +17,4 @@ export {
   type CashFlow
 } from './finance';
 export { maskAmount, formatReturnPercent } from './amountMasker';
+export { isInQuietHours } from './quietHours';

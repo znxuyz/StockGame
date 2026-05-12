@@ -16,3 +16,4 @@ export * from './monthlyStats';
 export * from './showcase';
 export * from './feed';
 export * from './privacy';
+export * from './notification';

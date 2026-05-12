@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
 import FeedTab from './feed/FeedTab';
+import NotificationsTab from './NotificationsTab';
 import { useAuth } from '@/lib/auth';
 import { isCloudConfigured } from '@/lib/supabase';
 import { formatLastSeen } from '@/hooks/useMyProfile';
@@ -20,11 +21,12 @@ import {
   formatInviteCodeInput,
   getTitle,
   getUnreadFeedCount,
+  getUnreadCount,
   type SearchResult
 } from '@/services';
-import type { FriendEntry, FriendRequestEntry } from '@/types';
+import type { AppNotification, FriendEntry, FriendRequestEntry } from '@/types';
 
-type Tab = 'friends' | 'requests' | 'search' | 'feed';
+type Tab = 'friends' | 'requests' | 'search' | 'feed' | 'notifications';
 
 interface FriendsModalProps {
   open: boolean;
@@ -41,6 +43,12 @@ interface FriendsModalProps {
   onOpenCreature?: (creatureSpeciesId: string) => void;
   /** 階段 5D:玩家剛發完文 → 動態 tab 內容外的 caller(目前無事可做) */
   feedReloadKey?: number;
+  /** 階段 5F:點通知後 caller 決定路由 */
+  onNotificationClick?: (notif: AppNotification) => void;
+  /** 階段 5F:外部通知傳回未讀變動(realtime 或進 tab 後變 0) */
+  onUnreadCountChange?: (count: number) => void;
+  /** 階段 5F:打開時要指定 tab(從 BottomBar 紅點點進來自動切 notifications) */
+  initialTab?: Tab;
 }
 
 /**
@@ -57,17 +65,26 @@ export default function FriendsModal({
   onOpenSignIn,
   onOpenFriendProfile,
   onOpenShareComposer,
-  onOpenCreature
+  onOpenCreature,
+  onNotificationClick,
+  onUnreadCountChange,
+  initialTab
 }: FriendsModalProps) {
   const { session } = useAuth();
   const userId = session?.user?.id;
 
-  const [tab, setTab] = useState<Tab>('friends');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'friends');
   const [friends, setFriends] = useState<FriendEntry[]>([]);
   const [pending, setPending] = useState<FriendRequestEntry[]>([]);
   const [sent, setSent] = useState<FriendRequestEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedUnread, setFeedUnread] = useState(0);
+  const [notifUnread, setNotifUnread] = useState(0);
+
+  // 開啟時若有 initialTab → 切過去
+  useEffect(() => {
+    if (open && initialTab) setTab(initialTab);
+  }, [open, initialTab]);
 
   const reload = useCallback(async () => {
     if (!userId) return;
@@ -109,6 +126,22 @@ export default function FriendsModal({
       })();
       const count = await getUnreadFeedCount(last);
       if (mounted) setFeedUnread(count);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [open, userId, tab]);
+
+  // 階段 5F:打開彈窗時拉「未讀通知」count
+  useEffect(() => {
+    if (!open || !userId) {
+      setNotifUnread(0);
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      const c = await getUnreadCount();
+      if (mounted) setNotifUnread(c);
     })();
     return () => {
       mounted = false;
@@ -184,6 +217,13 @@ export default function FriendsModal({
           >
             動態
           </TabBtn>
+          <TabBtn
+            active={tab === 'notifications'}
+            onClick={() => setTab('notifications')}
+            badge={notifUnread}
+          >
+            通知
+          </TabBtn>
         </div>
       }
     >
@@ -210,6 +250,15 @@ export default function FriendsModal({
           onOpenFriendProfile={onOpenFriendProfile}
           onOpenCreature={onOpenCreature}
           onOpenShareComposer={onOpenShareComposer}
+        />
+      )}
+      {tab === 'notifications' && (
+        <NotificationsTab
+          onClick={onNotificationClick}
+          onUnreadCountChange={(c) => {
+            setNotifUnread(c);
+            onUnreadCountChange?.(c);
+          }}
         />
       )}
     </Modal>
