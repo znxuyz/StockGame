@@ -162,7 +162,8 @@ export type { PushSupportResult, PushSupportReason } from './pushService';
 export { getMyPrivacy, getFriendPrivacy, updateMyPrivacy } from './privacyService';
 export type { UpdatePrivacyInput } from './privacyService';
 export { syncMyPortfolio, getFriendPortfolio } from './portfolioSyncService';
-export { generateMySnapshot, getLeaderboard, clearLeaderboardCache } from './leaderboardService';
+export { generateMySnapshot, getLeaderboard, getLeaderboardWithSelf, clearLeaderboardCache } from './leaderboardService';
+export type { LeaderboardWithSelf } from './leaderboardService';
 export {
   loanCreature,
   recallLoan,

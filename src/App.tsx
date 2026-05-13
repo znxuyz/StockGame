@@ -772,6 +772,8 @@ function Game() {
           setSharePet(p);
           setModal('share');
         }}
+        onOpenPrivacy={() => setModal('privacy')}
+        onOpenMyProfile={() => setModal('profile')}
         onActionComplete={postAction}
       />
       <ProfileEditModal
