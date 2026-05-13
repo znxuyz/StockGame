@@ -715,6 +715,8 @@ function Game() {
         }}
         initialTab={friendsInitialTab}
         onUnreadCountChange={setUnreadNotifCount}
+        onOpenPrivacy={() => setModal('privacy')}
+        onOpenMyProfile={() => setModal('profile')}
         onNotificationClick={(notif) => {
           // 路由:
           //   friend_request / friend_accepted → 跳到請求 tab(已切過去)
@@ -772,8 +774,6 @@ function Game() {
           setSharePet(p);
           setModal('share');
         }}
-        onOpenPrivacy={() => setModal('privacy')}
-        onOpenMyProfile={() => setModal('profile')}
         onActionComplete={postAction}
       />
       <ProfileEditModal

@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
 import FriendPortfolioView from './FriendPortfolioView';
-import LeaderboardView from './LeaderboardView';
 import { db } from '@/db';
 import { useCultivation } from '@/hooks/useCultivation';
 import { formatLastSeen } from '@/hooks/useMyProfile';
@@ -35,10 +34,6 @@ interface FriendProfileModalProps {
   onRelationChanged?: () => void;
   /** 操作完成 toast */
   onActionComplete?: (message: string) => void;
-  /** 排行榜「未參加排行 + [加入]」按鈕 → caller 開 PrivacySettingsModal */
-  onOpenPrivacy?: () => void;
-  /** 排行榜內點自己那條 → caller 開 ProfileEditModal */
-  onOpenMyProfile?: () => void;
   /** 目標好友 user_id;null = 沒選 */
   friendUserId: string | null;
 }
@@ -65,8 +60,6 @@ export default function FriendProfileModal({
   onShareMyPet,
   onRelationChanged,
   onActionComplete,
-  onOpenPrivacy,
-  onOpenMyProfile,
   friendUserId
 }: FriendProfileModalProps) {
   const [data, setData] = useState<FriendFullProfile | null>(null);
@@ -160,8 +153,6 @@ export default function FriendProfileModal({
         <FriendProfileBody
           data={data}
           onShareMyPet={onShareMyPet}
-          onOpenPrivacy={onOpenPrivacy}
-          onOpenMyProfile={onOpenMyProfile}
           onRemove={handleRemove}
           onBlock={handleBlock}
           busy={busy}
@@ -176,16 +167,12 @@ export default function FriendProfileModal({
 function FriendProfileBody({
   data,
   onShareMyPet,
-  onOpenPrivacy,
-  onOpenMyProfile,
   onRemove,
   onBlock,
   busy
 }: {
   data: FriendFullProfile;
   onShareMyPet?: (pet: Pet) => void;
-  onOpenPrivacy?: () => void;
-  onOpenMyProfile?: () => void;
   onRemove: () => void;
   onBlock: () => void;
   busy: boolean;
@@ -339,14 +326,8 @@ function FriendProfileBody({
         <FriendPortfolioView friendUserId={profile.userId} />
       </section>
 
-      {/* §6.6 修煉排行榜(階段 5E,5E.x 改版:sticky 自己 + 卡片化) */}
-      <section>
-        <h4 className="text-xs text-gray-500 mb-2 font-bold">📊 修煉排行榜</h4>
-        <LeaderboardView
-          onOpenMyProfile={onOpenMyProfile}
-          onOpenPrivacy={onOpenPrivacy}
-        />
-      </section>
+      {/* §6.6 修煉排行榜 — 5E.x 改版 2:搬到 FriendsModal「排行」tab,
+          這裡不再 inline section,避免重複(對方個人頁本來就比不了好友圈) */}
 
       {/* §8 操作 */}
       <hr className="border-gray-200" />

@@ -3,6 +3,7 @@ import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
 import FeedTab from './feed/FeedTab';
 import NotificationsTab from './NotificationsTab';
+import LeaderboardView from './LeaderboardView';
 import { useAuth } from '@/lib/auth';
 import { isCloudConfigured } from '@/lib/supabase';
 import { formatLastSeen } from '@/hooks/useMyProfile';
@@ -26,7 +27,7 @@ import {
 } from '@/services';
 import type { AppNotification, FriendEntry, FriendRequestEntry } from '@/types';
 
-type Tab = 'friends' | 'requests' | 'search' | 'feed' | 'notifications';
+type Tab = 'friends' | 'requests' | 'search' | 'feed' | 'leaderboard' | 'notifications';
 
 interface FriendsModalProps {
   open: boolean;
@@ -49,6 +50,10 @@ interface FriendsModalProps {
   onUnreadCountChange?: (count: number) => void;
   /** 階段 5F:打開時要指定 tab(從 BottomBar 紅點點進來自動切 notifications) */
   initialTab?: Tab;
+  /** 階段 5E.x:排行榜「未參加 + [加入]」按鈕 → caller 開 PrivacySettingsModal */
+  onOpenPrivacy?: () => void;
+  /** 階段 5E.x:排行榜「點自己」/「我也有 ›」 → caller 開 ProfileEditModal */
+  onOpenMyProfile?: () => void;
 }
 
 /**
@@ -68,7 +73,9 @@ export default function FriendsModal({
   onOpenCreature,
   onNotificationClick,
   onUnreadCountChange,
-  initialTab
+  initialTab,
+  onOpenPrivacy,
+  onOpenMyProfile
 }: FriendsModalProps) {
   const { session } = useAuth();
   const userId = session?.user?.id;
@@ -217,6 +224,9 @@ export default function FriendsModal({
           >
             動態
           </TabBtn>
+          <TabBtn active={tab === 'leaderboard'} onClick={() => setTab('leaderboard')}>
+            排行
+          </TabBtn>
           <TabBtn
             active={tab === 'notifications'}
             onClick={() => setTab('notifications')}
@@ -250,6 +260,14 @@ export default function FriendsModal({
           onOpenFriendProfile={onOpenFriendProfile}
           onOpenCreature={onOpenCreature}
           onOpenShareComposer={onOpenShareComposer}
+        />
+      )}
+      {tab === 'leaderboard' && (
+        <LeaderboardView
+          onOpenFriendProfile={onOpenFriendProfile}
+          onOpenMyProfile={onOpenMyProfile}
+          onOpenPrivacy={onOpenPrivacy}
+          onSwitchToSearch={() => setTab('search')}
         />
       )}
       {tab === 'notifications' && (

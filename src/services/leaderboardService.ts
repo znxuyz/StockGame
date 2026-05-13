@@ -210,23 +210,24 @@ export async function getLeaderboard(
 }
 
 /**
- * 階段 5E.x:Top 10 + 自己排名(sticky 用)。
+ * 階段 5E.x:完整排行榜 + 自己排名(改版 2:獨立入口 + 完整可滾動)。
  *
- *  - topList:前 10 名(可能含自己)
- *  - self.rank:1-based 排名;沒參加(joinLeaderboard=false 且 value=null)→ 仍給 rank
- *    但 entry.value=null,UI 自己判斷 isParticipating 才顯示「未參加排行」
- *  - self.isInTopList:rank <= 10
- *  - self.hasData:有任何 snapshot 資料才 true(沒交易過 → false)
- *  - 取自同一份 getLeaderboard 結果,共用 1 分鐘 cache
+ *  - fullList:**完整排序好的列表**(含自己 + 全部好友 + joinLeaderboard=false 也在)
+ *    UI 自己滾動瀏覽,玩家可以找到自己「真實位置」
+ *  - self.rank:1-based 排名;沒 entry 時 null
+ *  - self.hasData:有任何 snapshot 資料才 true
+ *  - self.isParticipating:joinLeaderboard 設定
+ *  - 移除 isInTopList(改版 2:不論是否在 top,都 sticky 顯示自己)
+ *
+ * 共用 getLeaderboard 1 分鐘 cache。
  */
 export interface LeaderboardWithSelf {
-  topList: LeaderboardEntry[];
+  fullList: LeaderboardEntry[];
   totalCount: number;
   self: {
     /** 1-based rank;沒 entry 時 null */
     rank: number | null;
     entry: LeaderboardEntry | null;
-    isInTopList: boolean;
     hasData: boolean;
     isParticipating: boolean;
   };
@@ -240,16 +241,13 @@ export async function getLeaderboardWithSelf(
   const myIdx = me ? all.findIndex((e) => e.userId === me) : -1;
   const myEntry = myIdx >= 0 ? all[myIdx] : null;
   const myRank = myIdx >= 0 ? myIdx + 1 : null;
-  const isInTopList = myRank !== null && myRank <= 10;
-  const topList = all.slice(0, 10);
 
   return {
-    topList,
+    fullList: all,
     totalCount: all.length,
     self: {
       rank: myRank,
       entry: myEntry,
-      isInTopList,
       hasData: myEntry !== null && myEntry.value !== null,
       isParticipating: myEntry?.joinLeaderboard ?? true
     }
