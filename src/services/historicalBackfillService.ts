@@ -7,17 +7,20 @@
  *
  *  - clearOldData:清交易/持倉/神獸/snapshot,**保留** profile/cultivation/
  *    achievements/creatureUnlocks/settings/cache 等
- *  - commitBackfilledTransactions:逐筆按 date asc 透過 buyOrFeed/sell 寫入,
+ *  - commitBackfilledTransactions:逐筆按 date asc **走 BuyModal 同源** 的
+ *    `lookupStock` → `buyOrFeed`/`sell`,跟 modal 寫入 100% 同路徑,不自組
+ *    minimal stock(避免 market 誤判 / industry 為「未分類」)。
  *    `now` 設成「該交易日的 09:30(買/加碼) / 13:30(賣)」+ 台北時區
  *  - exportBackup:把所有現有資料 dump 成 JSON 給玩家手動下載備份
  */
 
 import { db } from '@/db';
+import { lookupStock } from '@/api';
 import { buyOrFeed, sell } from './portfolio';
 import { backfillSnapshotsIfNeeded, resetBackfillFlag } from './snapshotBackfill';
 import { uuid } from '@/utils';
 import type { FeeConfig } from '@/utils';
-import type { Settings, Stock } from '@/types';
+import type { Settings } from '@/types';
 
 export type PendingTxType = 'buy' | 'feed' | 'sell';
 
@@ -112,13 +115,12 @@ export async function commitBackfilledTransactions(
       importingProgress: sorted.length === 0 ? 0 : i / sorted.length
     });
     try {
-      const stock = await getOrLookupStock(tx.code, tx.stockName);
-      if (!stock) {
-        failed.push({ tx, error: `找不到股票 ${tx.code}` });
-        continue;
-      }
+      // 走跟 BuyModal 一模一樣的 lookupStock(已 cached 由 validate 階段灌進去,
+      // 命中 cache 立即回,不會多打 API);取得完整 Stock(含正確 market/industry)
+      const stock = await lookupStock(tx.code);
       const now = ymdToTimestamp(tx.date, tx.type);
       if (tx.type === 'sell') {
+        // 跟 SellModal 同源 — sell() 內部 db.stocks.get(code) 拿 market 算稅
         await sell({
           code: tx.code,
           shares: tx.shares,
@@ -127,7 +129,8 @@ export async function commitBackfilledTransactions(
           now
         });
       } else {
-        // buyOrFeed 自動判斷:沒 holding → buy(召喚新神獸);有 → feed
+        // 跟 BuyModal/FeedModal 同源 — buyOrFeed 自動判斷:
+        // 沒 holding → buy(召喚新神獸);有 → feed(加碼平均成本)
         await buyOrFeed({
           stock,
           shares: tx.shares,
@@ -158,30 +161,6 @@ export async function commitBackfilledTransactions(
     earliest: r.earliest,
     latest: r.latest
   };
-}
-
-/**
- * 嘗試從本地 db.stocks 拿;沒就用 tx 內的 code/name 兜一個 minimal stock。
- *  - 真的找不到 stock(例如玩家輸入一個錯誤代號)→ 回 null,該筆 fail
- *  - 找得到 → 用本地的(name 較準)
- *  - 沒在本地但 code 看起來合法 → 兜一個 fake stock 讓 buyOrFeed 進去後再
- *    autocorrect(不接 TWSE API 是為了讓 backfill 純離線可跑)
- */
-async function getOrLookupStock(code: string, fallbackName: string): Promise<Stock | null> {
-  const local = await db.stocks.get(code);
-  if (local) return local;
-  // 兜一個最小可用 stock,讓 buyOrFeed 寫進 holdings/pets 不 crash
-  // BuyModal 一般會走 lookupStock 補 industry/exchange,這裡 backfill 不接外部 API
-  if (!/^[0-9A-Z]{2,6}$/.test(code)) return null;
-  const minimal: Stock = {
-    code,
-    name: fallbackName || code,
-    industry: '未分類',
-    market: 'TWSE',
-    isActive: true
-  };
-  await db.stocks.put(minimal);
-  return minimal;
 }
 
 // ─── 備份匯出 ───────────────────────────────────────────
