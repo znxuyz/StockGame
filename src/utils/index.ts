@@ -14,6 +14,8 @@ export {
   computeSharpe,
   computeMaxDrawdown,
   computeDailyReturns,
+  SHARPE_MIN_SAMPLES,
+  SHARPE_UNRELIABLE_THRESHOLD,
   type CashFlow
 } from './finance';
 export { maskAmount, formatReturnPercent } from './amountMasker';

@@ -53,13 +53,20 @@ export function computeXIRR(cashflows: CashFlow[], guess = 0.1): number | null {
   return null;
 }
 
+/** Sharpe 樣本門檻 — UI 顯示「資料不足(N/30 天)」用 */
+export const SHARPE_MIN_SAMPLES = 30;
+
+/** Sharpe 異常警語門檻 — |sharpe| 超過 → 多半是現金注入扭曲,UI 顯示 ⚠️ */
+export const SHARPE_UNRELIABLE_THRESHOLD = 5;
+
 /**
  * 夏普比率（年化）。
  *  - 從每日報酬序列算平均、標準差，乘 sqrt(252) 年化
  *  - rfRate 為年化無風險利率，預設 0（台灣定存約 1.5%，使用者要的話再加）
+ *  - **改版**:最少樣本提高到 30 天(原本 5 天太少,單日異常會洗結果)
  */
 export function computeSharpe(dailyReturns: number[], rfRate = 0): number | null {
-  if (dailyReturns.length < 5) return null;
+  if (dailyReturns.length < SHARPE_MIN_SAMPLES) return null;
   const dailyRf = rfRate / 252;
   const excess = dailyReturns.map((r) => r - dailyRf);
   const mean = excess.reduce((s, v) => s + v, 0) / excess.length;
@@ -88,11 +95,16 @@ export function computeMaxDrawdown(equityCurve: number[]): number | null {
 }
 
 /**
- * 從 snapshot 序列算每日報酬率：
- *  rate(today) = (totalMarketValue + accRealized - prevTotalCost) / prevTotalCost - 1
+ * 從 snapshot 序列算每日報酬率。
  *
- * 簡化版：直接用 (today.totalPnL - prev.totalPnL) / prev.totalCost
- * 不適合有大筆現金注入的日子（會造成假報酬），但 MVP 接受誤差。
+ *  - 基本式:(today.totalPnL - prev.totalPnL) / prev.totalCost
+ *  - **改版**:排除現金注入日(totalCost 變動 > 1%)以避免買入 / 賣出當日
+ *    被誤算成假報酬
+ *      買入日:totalCost 上升 → 即使 totalMarketValue 也跟著漲,
+ *        totalPnL 可能不動(unrealized 不變)→ 看起來「停滯」拉低 mean
+ *      賣出日:totalCost 下降 → realizedPnL 跳升 → totalPnL 跳升 →
+ *        看起來「暴漲」推高 mean,std 也跟著跳
+ *      → 兩種扭曲都讓夏普比率失真;直接 skip 該日才乾淨
  */
 export function computeDailyReturns(
   snapshots: Array<{ totalPnL: number; totalCost: number; totalMarketValue: number }>
@@ -102,6 +114,9 @@ export function computeDailyReturns(
     const prev = snapshots[i - 1];
     const cur = snapshots[i];
     if (prev.totalCost <= 0) continue;
+    // 現金注入日偵測:totalCost 變動 > 1% 視為買賣日,跳過
+    const costChange = Math.abs(cur.totalCost - prev.totalCost);
+    if (costChange / prev.totalCost > 0.01) continue;
     const r = (cur.totalPnL - prev.totalPnL) / prev.totalCost;
     if (Number.isFinite(r)) out.push(r);
   }
