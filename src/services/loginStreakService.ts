@@ -18,7 +18,8 @@
  *   getYesterdayString = today - 24h(用本地 date 算,不會被 DST/午夜/UTC 干擾)
  */
 
-import { db } from '@/db';
+import { loginStreakRepo } from '@/repositories/loginStreakRepo';
+import { taskRepo } from '@/repositories/taskRepo';
 import type { LoginStreak } from '@/types';
 import { earnCultivation } from './cultivationService';
 
@@ -68,7 +69,7 @@ export interface CheckResult {
 export async function checkAndUpdateStreak(now: Date = new Date()): Promise<CheckResult> {
   const today = dateToString(now);
   const yesterday = yesterdayOf(now);
-  const existing = await db.userLoginStreak.get(SINGLETON_ID);
+  const existing = await loginStreakRepo.get();
 
   if (!existing) {
     const init: LoginStreak = {
@@ -79,7 +80,7 @@ export async function checkAndUpdateStreak(now: Date = new Date()): Promise<Chec
       todayClaimed: false,
       lifetimeLogins: 1
     };
-    await db.userLoginStreak.put(init);
+    await loginStreakRepo.put(init);
     return { isNewDay: true, streak: init };
   }
 
@@ -98,7 +99,7 @@ export async function checkAndUpdateStreak(now: Date = new Date()): Promise<Chec
     todayClaimed: false,
     lifetimeLogins: existing.lifetimeLogins + 1
   };
-  await db.userLoginStreak.put(updated);
+  await loginStreakRepo.put(updated);
   return { isNewDay: true, streak: updated };
 }
 
@@ -116,7 +117,7 @@ export interface ClaimResult {
  * 同 milestoneDay 的里程碑用 milestoneRewards.milestoneDay 唯一索引防重領。
  */
 export async function claimTodayLogin(): Promise<ClaimResult> {
-  const streak = await db.userLoginStreak.get(SINGLETON_ID);
+  const streak = await loginStreakRepo.get();
   if (!streak) return { success: false, reason: 'no_streak' };
   if (streak.todayClaimed) return { success: false, reason: 'already_claimed' };
 
@@ -131,11 +132,11 @@ export async function claimTodayLogin(): Promise<ClaimResult> {
   let claimedMilestone: MilestoneDef | undefined;
   const ms = STREAK_MILESTONES.find((m) => m.day === streak.currentStreak);
   if (ms) {
-    const existing = await db.milestoneRewards.where('milestoneDay').equals(ms.day).first();
+    const existing = await taskRepo.getMilestoneByDay(ms.day);
     if (!existing) {
       // milestoneDay 唯一索引,race 時 add 第二筆會 throw — 視為對手已領,catch 跳過
       try {
-        await db.milestoneRewards.add({ milestoneDay: ms.day, claimedAt: Date.now() });
+        await taskRepo.addMilestone({ milestoneDay: ms.day, claimedAt: Date.now() });
         await earnCultivation(ms.reward, 'streak_milestone', `🎉 ${ms.text}!`);
         claimedMilestone = ms;
       } catch {
@@ -145,12 +146,12 @@ export async function claimTodayLogin(): Promise<ClaimResult> {
   }
 
   // 3. 標記今日已領
-  await db.userLoginStreak.put({ ...streak, todayClaimed: true });
+  await loginStreakRepo.put({ ...streak, todayClaimed: true });
 
   return { success: true, baseReward: BASE_DAILY_REWARD, milestone: claimedMilestone };
 }
 
 /** 純讀,給 hook / UI 用 */
 export async function getLoginStreak(): Promise<LoginStreak | undefined> {
-  return db.userLoginStreak.get(SINGLETON_ID);
+  return loginStreakRepo.get();
 }

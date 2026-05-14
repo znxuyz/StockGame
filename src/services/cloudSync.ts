@@ -25,6 +25,7 @@ import {
   creatureUnlockRepo,
   dexieCreatureUnlocksTable
 } from '@/repositories/creatureUnlockRepo';
+import { loginStreakRepo, dexieLoginStreakTable } from '@/repositories/loginStreakRepo';
 import type {
   Stock,
   Holding,
@@ -154,7 +155,7 @@ async function readAllForSync(): Promise<CloudBlob> {
     settingsRepo.get(),
     cultivationRepo.getBalance(),
     cultivationRepo.listLogs(),
-    db.userLoginStreak.get('main'),
+    loginStreakRepo.get(),
     // 防呆:極早期 v12 → v13 過渡,creatureUnlocks 表可能還沒就緒;吞錯誤當空陣列
     creatureUnlockRepo.list().catch((e) => {
       console.warn('[cloudSync] creatureUnlocks list failed:', e);
@@ -209,7 +210,7 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       dexieSettingsTable,
       dexieUserCultivationTable,
       dexieCultivationLogTable,
-      db.userLoginStreak,
+      dexieLoginStreakTable,
       dexieCreatureUnlocksTable
     ],
     async () => {
@@ -241,8 +242,8 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       if (blob.cultivationLog?.length) await cultivationRepo.bulkPutLogs(blob.cultivationLog);
 
       // 階段 3.8:userLoginStreak 同步,userTasks / milestoneRewards 不動本地
-      await db.userLoginStreak.clear();
-      if (blob.userLoginStreak) await db.userLoginStreak.put(blob.userLoginStreak);
+      await loginStreakRepo.clear();
+      if (blob.userLoginStreak) await loginStreakRepo.put(blob.userLoginStreak);
 
       // 階段 4C.5:圖鑑故事解鎖紀錄。append-only,clear + bulkPut 同步即可。
       // 舊版 blob 沒這欄位 → 等於從零開始解鎖(換手機才登入可接受)。

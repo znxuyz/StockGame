@@ -18,7 +18,7 @@
  *   不防。若日後要嚴格,改 db.transaction('rw', userTasks, ...) 包起來。
  */
 
-import { db } from '@/db';
+import { taskRepo } from '@/repositories/taskRepo';
 import type { TaskTriggerEvent, UserTask, CultivationReason } from '@/types';
 import { earnCultivation } from './cultivationService';
 import { eventBus } from './eventBus';
@@ -111,18 +111,18 @@ interface GenerateOpts {
  *   - 沒有 → 清舊(過期未領的也放棄,玩家錯過自負)+ shuffle 抽 pickCount 個寫進
  */
 async function checkAndGenerateTasks(opts: GenerateOpts): Promise<void> {
-  const existing = await db.userTasks.where('taskType').equals(opts.taskType).toArray();
+  const existing = await taskRepo.listTasksByType(opts.taskType);
   const hasCurrentPeriod = existing.some((t) => t.generatedAt >= opts.periodStart);
   if (hasCurrentPeriod) return;
 
-  await db.userTasks.where('taskType').equals(opts.taskType).delete();
+  await taskRepo.deleteTasksByType(opts.taskType);
 
   const picked = shuffle(opts.pool).slice(0, opts.pickCount);
   const generatedAt = Date.now();
   let added = 0;
   for (const t of picked) {
     try {
-      await db.userTasks.add(
+      await taskRepo.addTask(
         buildTaskFromTemplate(t, opts.taskType, generatedAt, opts.periodResetAt)
       );
       added++;
@@ -170,15 +170,15 @@ export async function incrementTaskProgress(
 ): Promise<void> {
   if (delta <= 0) return;
 
-  const tasks = await db.userTasks
-    .filter((t) => t.triggerEvent === triggerEvent && !t.completed)
-    .toArray();
+  // triggerEvent 不是 indexed field(boolean / non-key 規範限制),memory filter 即可
+  const all = await taskRepo.listAllTasks();
+  const tasks = all.filter((t) => t.triggerEvent === triggerEvent && !t.completed);
 
   for (const task of tasks) {
     if (task.id === undefined) continue;
     const newProgress = Math.min(task.target, task.progress + delta);
     const completed = newProgress >= task.target;
-    await db.userTasks.update(task.id, { progress: newProgress, completed });
+    await taskRepo.patchTask(task.id, { progress: newProgress, completed });
     if (completed) {
       // emit 完整最新 task,UI 直接拿就能顯示「任務完成」提示
       eventBus.emit('task:completed', {
@@ -196,7 +196,7 @@ export interface ClaimTaskResult {
 
 /** 玩家點任務卡的「領取」按鈕。發修為 + 標記 claimed=true 讓進度條變灰。 */
 export async function claimTaskReward(taskId: number): Promise<ClaimTaskResult> {
-  const task = await db.userTasks.get(taskId);
+  const task = await taskRepo.getTask(taskId);
   if (!task) return { success: false, reason: 'not_found' };
   if (!task.completed) return { success: false, reason: 'not_completed' };
   if (task.claimed) return { success: false, reason: 'already_claimed' };
@@ -204,7 +204,7 @@ export async function claimTaskReward(taskId: number): Promise<ClaimTaskResult> 
   const reason: CultivationReason = task.taskType === 'daily' ? 'daily_task' : 'weekly_task';
   await earnCultivation(task.reward, reason, `完成任務:${task.title}`, undefined);
 
-  await db.userTasks.update(taskId, { claimed: true });
+  await taskRepo.patchTask(taskId, { claimed: true });
   return { success: true, reward: task.reward };
 }
 
@@ -216,8 +216,8 @@ export interface ActiveTasks {
 
 export async function getActiveTasks(): Promise<ActiveTasks> {
   const [daily, weekly] = await Promise.all([
-    db.userTasks.where('taskType').equals('daily').toArray(),
-    db.userTasks.where('taskType').equals('weekly').toArray()
+    taskRepo.listTasksByType('daily'),
+    taskRepo.listTasksByType('weekly')
   ]);
   return { daily, weekly };
 }

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { audio } from '@/services';
-import { db } from '@/db';
+import { taskRepo } from '@/repositories/taskRepo';
 
 interface BottomBarProps {
   onGame: () => void;
@@ -45,7 +45,7 @@ export default function BottomBar({
   const claimableTaskCount =
     useLiveQuery(
       async () => {
-        const tasks = await db.userTasks.toArray();
+        const tasks = await taskRepo.listAllTasks();
         return tasks.filter((t) => t.completed && !t.claimed).length;
       },
       [],

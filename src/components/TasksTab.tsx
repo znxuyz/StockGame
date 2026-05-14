@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { useDailyTasks, useWeeklyTasks } from '@/repositories/taskRepo';
 import { claimTaskReward } from '@/services';
 import { formatInt } from '@/utils';
 import type { UserTask } from '@/types';
@@ -48,18 +47,8 @@ export default function TasksTab() {
     return () => clearInterval(t);
   }, []);
 
-  const dailyTasks =
-    useLiveQuery(
-      () => db.userTasks.where('taskType').equals('daily').toArray(),
-      [],
-      [] as UserTask[]
-    ) ?? [];
-  const weeklyTasks =
-    useLiveQuery(
-      () => db.userTasks.where('taskType').equals('weekly').toArray(),
-      [],
-      [] as UserTask[]
-    ) ?? [];
+  const dailyTasks = useDailyTasks() ?? [];
+  const weeklyTasks = useWeeklyTasks() ?? [];
 
   // 同一輪所有任務 resetAt 一樣,取第一個
   const dailyResetAt = dailyTasks[0]?.resetAt;

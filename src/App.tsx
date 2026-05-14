@@ -8,6 +8,8 @@ import { useTransactions } from '@/repositories/transactionRepo';
 import { useAchievements } from '@/repositories/achievementRepo';
 import { cultivationRepo, useCultivationBalance } from '@/repositories/cultivationRepo';
 import { creatureUnlockRepo } from '@/repositories/creatureUnlockRepo';
+import { useLoginStreak } from '@/repositories/loginStreakRepo';
+import { useAllTasks, taskRepo } from '@/repositories/taskRepo';
 import {
   isMarketOpen,
   getMarketStatus,
@@ -343,9 +345,9 @@ function Game() {
   // 階段 3.8:訂閱 streak / tasks / milestones,任何變動觸發 push debounce
   // tasks 用 toArray:Dexie liveQuery 對 count 在 update 時不 retrigger,進度推進也要 push
   // milestones 是 append-only,count 即可
-  const userLoginStreak = useLiveQuery(() => db.userLoginStreak.get('main'), []);
-  const userTasksArr = useLiveQuery(() => db.userTasks.toArray(), []);
-  const milestoneCount = useLiveQuery(() => db.milestoneRewards.count(), []);
+  const userLoginStreak = useLoginStreak();
+  const userTasksArr = useAllTasks();
+  const milestoneCount = useLiveQuery(() => taskRepo.countMilestones(), []);
   // 階段 4C.5:訂閱 creatureUnlocks count,任何故事解鎖觸發 push debounce
   // 防呆:若表還沒 migrate 完(v12 → v13 過渡)當 0 處理,不讓錯誤把整個 App 炸掉
   const creatureUnlocksCount = useLiveQuery(async () => {
