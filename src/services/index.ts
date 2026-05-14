@@ -56,6 +56,12 @@ export type {
   CommitProgress,
   CommitResult
 } from './historicalBackfillService';
+
+// 階段 5G:Excel 批次匯入 — **不從 services/index re-export**,因為
+// excelImportService 內 static import ExcelJS(~900KB)。re-export 會讓
+// 主 bundle 把整包 ExcelJS 一起打包。改由 ExcelImportModal 直接 deep import
+// services/excelImportService,搭配 React.lazy 把 ExcelJS 切到 modal 的
+// lazy chunk 內(只有玩家點開 Excel 匯入才下載)
 export { checkInLoginToday } from './login';
 export { runAchievementChecks } from './achievements';
 export type { AchievementCheckResult } from './achievements';

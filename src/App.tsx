@@ -81,7 +81,8 @@ import CultivationShareModal from '@/components/feed/CultivationShareModal';
 import PrivacySettingsModal from '@/components/PrivacySettingsModal';
 import LoanCreatureModal from '@/components/LoanCreatureModal';
 import BorrowedCreaturesModal from '@/components/BorrowedCreaturesModal';
-import HistoricalTransactionBackfillModal from '@/components/HistoricalTransactionBackfillModal';
+// 階段 5G:Excel 匯入彈窗 lazy load — ExcelJS ~900KB,只在玩家打開時下載
+const ExcelImportModal = lazy(() => import('@/components/ExcelImportModal'));
 import type { Pet, Stock } from '@/types';
 
 type ModalKind =
@@ -103,7 +104,7 @@ type ModalKind =
   | 'privacy'
   | 'loan'
   | 'borrowed'
-  | 'historicalBackfill'
+  | 'excelImport'
   | null;
 
 export default function App() {
@@ -819,14 +820,18 @@ function Game() {
           setModal('monthly');
         }}
         onOpenPrivacy={() => setModal('privacy')}
-        onOpenHistoricalBackfill={() => setModal('historicalBackfill')}
+        onOpenExcelImport={() => setModal('excelImport')}
       />
-      <HistoricalTransactionBackfillModal
-        open={modal === 'historicalBackfill'}
-        onClose={() => setModal(null)}
-        settings={settings}
-        onActionComplete={postAction}
-      />
+      <Suspense fallback={null}>
+        {modal === 'excelImport' && (
+          <ExcelImportModal
+            open
+            onClose={() => setModal(null)}
+            settings={settings}
+            onActionComplete={postAction}
+          />
+        )}
+      </Suspense>
       <PrivacySettingsModal
         open={modal === 'privacy'}
         onClose={() => setModal(null)}
