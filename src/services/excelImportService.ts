@@ -13,6 +13,11 @@ import ExcelJS from 'exceljs';
 import { db } from '@/db';
 import { commitBackfilledTransactions, clearOldData, newPendingTx } from './historicalBackfillService';
 import type { CommitProgress, CommitResult, PendingTransaction, PendingTxType } from './historicalBackfillService';
+import {
+  normalizeStockCode as normCode,
+  preloadStockMaster,
+  validateStockCode
+} from './stockMasterService';
 import type { Settings } from '@/types';
 
 /** Excel 原始行(尚未 normalize / validate) */
@@ -242,13 +247,10 @@ function normalizeDateCell(v: unknown): string {
   return s; // validate 階段會抓到 invalid
 }
 
-/** 股票代號:Excel 可能存成數字(0050 → 50)→ 補回 4 位 */
+/** 股票代號:Excel 可能存成數字(0050 → 50)→ 用 stockMasterService 同款規則補回 */
 function normalizeStockCode(v: unknown): string {
-  if (typeof v === 'number') return String(v).padStart(4, '0');
-  const s = String(v ?? '').trim();
-  // 純數字 ≤ 4 碼 → 補 0;其他原樣(ETF / 興櫃)
-  if (/^\d{1,4}$/.test(s)) return s.padStart(4, '0');
-  return s;
+  if (v == null) return '';
+  return normCode(typeof v === 'number' ? v : String(v));
 }
 
 // ─── 驗證 + 預覽 ────────────────────────────────────────
@@ -289,13 +291,9 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
     for (const h of holdings) sim.set(h.code, h.shares);
   }
 
-  // 預載 stock 清單(批次查比逐筆快)
-  const allCodes = Array.from(new Set(sortedRows.map((r) => r.stockCode)));
-  const stockMap = new Map<string, boolean>();
-  for (const c of allCodes) {
-    const stock = await db.stocks.get(c);
-    stockMap.set(c, !!stock);
-  }
+  // 預載股票主檔(TWSE/TPEx 官方 ~2000 筆 + 內建 30 筆 fallback)
+  // 第一次呼叫會 fetch JSON;之後 in-memory
+  await preloadStockMaster();
 
   for (const raw of sortedRows) {
     const item: PreviewItem = { rowNum: raw.rowNum, raw, valid: false };
@@ -318,15 +316,20 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
       continue;
     }
 
-    // 3. 股票代號存在
-    if (!raw.stockCode || raw.stockCode.length < 2) {
+    // 3. 股票代號 — 走 stockMasterService 驗證(master + 內建 fallback + db.stocks)
+    if (!raw.stockCode) {
       item.error = '股票代號為空';
       continue;
     }
-    if (!stockMap.get(raw.stockCode)) {
-      item.error = `股票代號 ${raw.stockCode} 不存在於主檔`;
+    const stockCheck = await validateStockCode(raw.stockCode);
+    if (!stockCheck.valid) {
+      item.error = stockCheck.error ?? `股票代號 ${raw.stockCode} 查無此股票`;
       continue;
     }
+    // 用 master 的標準化代號(已補 0)+ 自動補名稱(玩家沒填 stockName 時)
+    const normalizedCode = stockCheck.normalizedCode;
+    const officialName = stockCheck.hit?.name ?? '';
+    const finalName = raw.stockName?.trim() || officialName;
 
     // 4. 股數 / 單價
     if (!Number.isFinite(raw.shares) || raw.shares <= 0 || !Number.isInteger(raw.shares)) {
@@ -339,27 +342,27 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
     }
 
     // 5. 業務邏輯:加碼前需有買入;同檔第二次「買入」auto-correct 為「加碼」
-    const heldShares = sim.get(raw.stockCode) ?? 0;
+    const heldShares = sim.get(normalizedCode) ?? 0;
     if (type === 'feed') {
       if (heldShares <= 0) {
-        item.error = `${raw.stockCode} 第一筆必須是「買入」,不能是「加碼」`;
+        item.error = `${normalizedCode} 第一筆必須是「買入」,不能是「加碼」`;
         continue;
       }
     } else if (type === 'sell') {
       if (heldShares < raw.shares) {
-        item.error = `${raw.stockCode} 賣出 ${raw.shares} 股,但截至 ${raw.date} 只持有 ${heldShares} 股`;
+        item.error = `${normalizedCode} 賣出 ${raw.shares} 股,但截至 ${raw.date} 只持有 ${heldShares} 股`;
         continue;
       }
     } else if (type === 'buy' && heldShares > 0) {
-      // auto-correct
+      // auto-correct(玩家對同檔誤標兩次買入 → 第二次自動視為加碼)
       type = 'feed';
     }
 
     // 通過驗證 → 更新模擬持倉
     if (type === 'buy' || type === 'feed') {
-      sim.set(raw.stockCode, heldShares + raw.shares);
+      sim.set(normalizedCode, heldShares + raw.shares);
     } else if (type === 'sell') {
-      sim.set(raw.stockCode, heldShares - raw.shares);
+      sim.set(normalizedCode, heldShares - raw.shares);
     }
 
     item.valid = true;
@@ -367,8 +370,8 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
       uiId: newPendingTx().uiId,
       date: raw.date,
       type,
-      code: raw.stockCode,
-      stockName: raw.stockName || '',
+      code: normalizedCode,
+      stockName: finalName,
       shares: raw.shares,
       pricePerShare: raw.pricePerShare
     };

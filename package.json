@@ -13,7 +13,8 @@
     "process:ui-assets": "node scripts/process-ui-assets.mjs",
     "download:sprites": "node scripts/download-sprites.mjs",
     "fetch:industries": "node scripts/fetch-industries.mjs",
-    "fetch:holidays": "node scripts/fetch-holidays.mjs"
+    "fetch:holidays": "node scripts/fetch-holidays.mjs",
+    "fetch:stocks": "node scripts/fetch-stock-master.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",
