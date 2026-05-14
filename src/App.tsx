@@ -81,6 +81,7 @@ import CultivationShareModal from '@/components/feed/CultivationShareModal';
 import PrivacySettingsModal from '@/components/PrivacySettingsModal';
 import LoanCreatureModal from '@/components/LoanCreatureModal';
 import BorrowedCreaturesModal from '@/components/BorrowedCreaturesModal';
+import HistoricalTransactionBackfillModal from '@/components/HistoricalTransactionBackfillModal';
 import type { Pet, Stock } from '@/types';
 
 type ModalKind =
@@ -102,6 +103,7 @@ type ModalKind =
   | 'privacy'
   | 'loan'
   | 'borrowed'
+  | 'historicalBackfill'
   | null;
 
 export default function App() {
@@ -817,6 +819,13 @@ function Game() {
           setModal('monthly');
         }}
         onOpenPrivacy={() => setModal('privacy')}
+        onOpenHistoricalBackfill={() => setModal('historicalBackfill')}
+      />
+      <HistoricalTransactionBackfillModal
+        open={modal === 'historicalBackfill'}
+        onClose={() => setModal(null)}
+        settings={settings}
+        onActionComplete={postAction}
       />
       <PrivacySettingsModal
         open={modal === 'privacy'}

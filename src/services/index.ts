@@ -43,6 +43,19 @@ export type { PortfolioSummary, HoldingDetail } from './summary';
 export { recordDailySnapshot } from './snapshot';
 export { backfillSnapshotsIfNeeded, resetBackfillFlag } from './snapshotBackfill';
 export type { BackfillResult } from './snapshotBackfill';
+export {
+  clearOldData,
+  commitBackfilledTransactions,
+  exportBackup,
+  downloadBackupFile,
+  newPendingTx
+} from './historicalBackfillService';
+export type {
+  PendingTransaction,
+  PendingTxType,
+  CommitProgress,
+  CommitResult
+} from './historicalBackfillService';
 export { checkInLoginToday } from './login';
 export { runAchievementChecks } from './achievements';
 export type { AchievementCheckResult } from './achievements';

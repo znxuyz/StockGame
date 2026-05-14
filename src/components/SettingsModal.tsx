@@ -32,6 +32,8 @@ interface SettingsModalProps {
   onOpenMonthlyReview?: () => void;
   /** 階段 5E:點「🔒 隱私設定」入口,關掉設定讓 App 開 PrivacySettingsModal */
   onOpenPrivacy?: () => void;
+  /** 階段 5G:點「📋 歷史交易補登」入口 */
+  onOpenHistoricalBackfill?: () => void;
 }
 
 /**
@@ -44,7 +46,8 @@ export default function SettingsModal({
   onActionComplete,
   onOpenSignIn,
   onOpenMonthlyReview,
-  onOpenPrivacy
+  onOpenPrivacy,
+  onOpenHistoricalBackfill
 }: SettingsModalProps) {
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
@@ -333,6 +336,21 @@ export default function SettingsModal({
         )}
 
         <hr className="my-4" />
+
+        {/* 階段 5G:歷史交易補登(放在「清除所有資料」之上) */}
+        {onOpenHistoricalBackfill && (
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenHistoricalBackfill();
+            }}
+            className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform mb-2"
+          >
+            <span className="text-sm text-gray-700">📋 歷史交易補登</span>
+            <span className="text-xs text-gray-500">重新輸入過去交易日期 ›</span>
+          </button>
+        )}
 
         <button
           type="button"
