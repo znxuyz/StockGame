@@ -43,7 +43,8 @@ import {
   getUnreadCount,
   subscribeToMyNotifications,
   cleanupOldNotifications,
-  backfillSnapshotsIfNeeded
+  backfillSnapshotsIfNeeded,
+  checkAndRebuildIfNeeded
 } from '@/services';
 import type { AppNotification } from '@/types';
 import { useAuth } from '@/lib/auth';
@@ -127,6 +128,12 @@ export default function App() {
         } catch (e) {
           console.warn('[snapshotBackfill] failed:', e);
         }
+        // 階段 5H.bootstrap:狀態驅動的歷史 snapshot 補抓 — 不管使用者做不做新動作,
+        // 只要 snapshots 不存在 / 比第一筆交易晚 / 比昨天舊 就 schedule rebuild。
+        // fire-and-forget(rebuild 在背景跑,圖表透過 useLiveQuery 自動更新)
+        checkAndRebuildIfNeeded().catch((e) =>
+          console.warn('[historyBootstrap] failed:', e)
+        );
         setReady(true);
       })
       .catch((e) => setSeedError(e instanceof Error ? e.message : String(e)));

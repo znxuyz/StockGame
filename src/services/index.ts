@@ -53,6 +53,7 @@ export {
 } from './historicalPriceService';
 export { rebuildDailySnapshots, scheduleRebuildHistory } from './portfolioHistoryService';
 export type { RebuildProgress, RebuildResult } from './portfolioHistoryService';
+export { checkAndRebuildIfNeeded } from './historyBootstrapService';
 export {
   clearOldData,
   commitBackfilledTransactions,

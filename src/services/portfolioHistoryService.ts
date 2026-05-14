@@ -39,18 +39,27 @@ export interface RebuildResult {
   daysRebuilt: number;
   /** 預抓失敗的代號(歷史價拿不到,該檔在歷史 MV 裡會缺) */
   failedCodes: string[];
+  /** 預抓階段:從 Yahoo 抓到並寫入 cache 的 price rows 總數 */
+  priceRowsFetched: number;
+  /** 預抓階段:cache 命中的 price rows 總數(沒打 API) */
+  priceRowsCached: number;
   earliest: string | null;
   latest: string | null;
   /** 完成時間 ms,給 UI 顯示「上次重建 N 分鐘前」 */
   finishedAt: number;
+  /** 整段重建花的毫秒 */
+  durationMs: number;
 }
 
 const EMPTY: RebuildResult = {
   daysRebuilt: 0,
   failedCodes: [],
+  priceRowsFetched: 0,
+  priceRowsCached: 0,
   earliest: null,
   latest: null,
-  finishedAt: 0
+  finishedAt: 0,
+  durationMs: 0
 };
 
 /**
@@ -73,6 +82,7 @@ const EMPTY: RebuildResult = {
 export async function rebuildDailySnapshots(
   onProgress?: (p: RebuildProgress) => void
 ): Promise<RebuildResult> {
+  const startedAt = Date.now();
   const transactions = await db.transactions.orderBy('timestamp').toArray();
   if (transactions.length === 0) return { ...EMPTY, finishedAt: Date.now() };
 
@@ -99,10 +109,12 @@ export async function rebuildDailySnapshots(
         prefetchedCodes: prefetchedCount,
         totalCodes: codes.length
       });
-      return { code, failed: r.failed };
+      return { code, ...r };
     })
   );
   const failedCodes = prefetchResults.filter((r) => r.failed).map((r) => r.code);
+  const priceRowsFetched = prefetchResults.reduce((s, r) => s + r.fetched, 0);
+  const priceRowsCached = prefetchResults.reduce((s, r) => s + r.cached, 0);
 
   // ── 3. 拉每檔的全 cache 進 in-memory map(daily loop 不再打 db)──
   const priceMaps = new Map<string, Map<string, number>>();
@@ -194,12 +206,16 @@ export async function rebuildDailySnapshots(
 
   onProgress?.({ step: 'done', daysRebuilt, totalDays });
 
+  const finishedAt = Date.now();
   return {
     daysRebuilt,
     failedCodes,
+    priceRowsFetched,
+    priceRowsCached,
     earliest: earliestStr,
     latest: todayStr,
-    finishedAt: Date.now()
+    finishedAt,
+    durationMs: finishedAt - startedAt
   };
 }
 
@@ -214,23 +230,42 @@ export async function rebuildDailySnapshots(
  */
 let rebuildPending = false;
 let rebuildNeedsAnother = false;
+type RebuildCallback = (r: RebuildResult | null) => void;
+const onCompleteCallbacks: RebuildCallback[] = [];
 
-export function scheduleRebuildHistory(): void {
+/**
+ * @param onComplete 可選回呼;coalesce 之後**最後一輪**完成時觸發。
+ *   如果這次呼叫被 coalesce 進已執行中的批次,你的 callback 仍會在那輪結束
+ *   時被叫(這正是 bootstrap 需要的行為)。失敗時參數為 null。
+ */
+export function scheduleRebuildHistory(onComplete?: RebuildCallback): void {
+  if (onComplete) onCompleteCallbacks.push(onComplete);
   if (rebuildPending) {
     rebuildNeedsAnother = true;
     return;
   }
   rebuildPending = true;
   (async () => {
+    let lastResult: RebuildResult | null = null;
     do {
       rebuildNeedsAnother = false;
       try {
-        await rebuildDailySnapshots();
+        lastResult = await rebuildDailySnapshots();
       } catch (e) {
         console.warn('[portfolioHistory] scheduled rebuild failed:', e);
+        lastResult = null;
       }
     } while (rebuildNeedsAnother);
     rebuildPending = false;
+    // 一次 flush 所有累積的 callback,清空陣列
+    const cbs = onCompleteCallbacks.splice(0);
+    for (const cb of cbs) {
+      try {
+        cb(lastResult);
+      } catch (e) {
+        console.warn('[portfolioHistory] onComplete cb threw:', e);
+      }
+    }
   })();
 }
 

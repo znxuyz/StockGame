@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { getTaipeiDateString } from '@/api';
 import {
@@ -47,14 +48,20 @@ interface Metrics {
 export default function AdvancedMetrics() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
 
+  // useLiveQuery 訂閱 — rebuildDailySnapshots bulkPut 完 / 新 tx 寫入時自動 re-fire,
+  // TWR 自動從「歷史價載入中」切到真實值,不需要重整頁面
+  const transactions = useLiveQuery(
+    () => db.transactions.orderBy('timestamp').toArray(),
+    []
+  );
+  const snapshots = useLiveQuery(() => db.snapshots.orderBy('date').toArray(), []);
+
   useEffect(() => {
+    if (!transactions || !snapshots) return;
     let cancelled = false;
     (async () => {
-      const [transactions, snapshots, summary] = await Promise.all([
-        db.transactions.orderBy('timestamp').toArray(),
-        db.snapshots.orderBy('date').toArray(),
-        computeSummary()
-      ]);
+      const summary = await computeSummary();
+      if (cancelled) return;
 
       // ── 絕對報酬率 ──
       // 未實現損益 / 總投入成本(= summary.unrealizedPnL / totalCost)
@@ -137,7 +144,7 @@ export default function AdvancedMetrics() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [transactions, snapshots]);
 
   if (!metrics) {
     return (
