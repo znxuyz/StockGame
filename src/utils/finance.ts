@@ -122,3 +122,102 @@ export function computeDailyReturns(
   }
   return out;
 }
+
+/**
+ * 偵測歷史 snapshot 是否有「真實的市值資料」可供 TWR 使用。
+ *
+ * 背景:`snapshotBackfill` 在沒歷史收盤價時,會用
+ *   `totalMarketValue = totalCost + realizedPnL`
+ * 當保守 proxy。這種 proxy snapshot 算出來的 TWR 等於累積已實現報酬率,
+ * 完全失去 TWR 的意義(無法看「持倉本身的漲跌」)。
+ *
+ * 任一歷史 snapshot 的 totalMarketValue 跟 proxy 公式差超過 1 元 → 認定有真實價,
+ * TWR 可算;否則 caller 應走 fallback(顯示絕對報酬 +「歷史價載入中」)。
+ */
+export function snapshotsHaveRealPrices(
+  snapshots: Array<{ date: string; totalMarketValue: number; totalCost: number; realizedPnL: number }>,
+  todayDate: string
+): boolean {
+  const historical = snapshots.filter((s) => s.date !== todayDate);
+  if (historical.length === 0) return false;
+  return historical.some(
+    (s) => Math.abs(s.totalMarketValue - (s.totalCost + s.realizedPnL)) >= 1
+  );
+}
+
+/**
+ * TWR(時間加權報酬率)— 排除加碼/賣出時機影響的純粹績效。
+ *
+ * 演算法:把每次有現金流的日子當切點,各段算 R_i 連乘 -1
+ *   R_i = (期末市值 - 期初市值 - 期間流入) / 期初市值
+ *
+ *   - 期初/期末市值:用 snapshot.totalMarketValue
+ *   - 期間流入:該段結束日的 net cashflow(買/加碼為正,賣為負)
+ *
+ * 段:從第一筆交易日 D_0 開始 → [D_0, D_1] / [D_1, D_2] / ... / [D_{n-1}, today]
+ * - 第一段 MV_start = snapshot[D_0]:已含 D_0 cashflow 注入,所以 cashflow_during
+ *   只算邊界(D_{i+1}),D_0 那筆當作「投入起點」不計報酬
+ * - 最後一段 MV_end = 今天的 totalMarketValue(summary.totalMarketValue);
+ *   `nowMarketValue` caller 傳進來
+ *
+ * 任何一段資料缺 / MV_start <= 0 → 整段 skip(其他段繼續)。
+ * 全部段都 skip → 回 null。
+ *
+ * Caller 應先用 `snapshotsHaveRealPrices` 確認有真實價,否則結果無意義。
+ */
+export interface TwrCashflow {
+  /** YYYY-MM-DD 該日 net cashflow:買/加碼正、賣負 */
+  date: string;
+  /** 從投資人錢包流入「持倉市值」的金額(賣出為負) */
+  netInflow: number;
+}
+
+export function computeTWR(
+  snapshotsByDate: Map<string, { totalMarketValue: number }>,
+  cashflowsByDate: TwrCashflow[],
+  nowMarketValue: number,
+  todayDate: string
+): number | null {
+  const sorted = [...cashflowsByDate].sort((a, b) => a.date.localeCompare(b.date));
+  if (sorted.length === 0) return null;
+
+  // 段邊界:cashflow 日 + 今天
+  const boundaries = sorted.map((c) => c.date);
+  if (boundaries[boundaries.length - 1] !== todayDate) {
+    boundaries.push(todayDate);
+  }
+
+  let cumulative = 1;
+  let segmentsApplied = 0;
+
+  for (let i = 0; i + 1 < boundaries.length; i++) {
+    const startDate = boundaries[i];
+    const endDate = boundaries[i + 1];
+    const startSnap = snapshotsByDate.get(startDate);
+    if (!startSnap || startSnap.totalMarketValue <= 0) continue;
+
+    // MV_end 邏輯:
+    //   - 邊界是今天 → 用 nowMarketValue
+    //   - 否則用 snapshot[endDate].totalMarketValue
+    let endMV: number;
+    if (endDate === todayDate) {
+      endMV = nowMarketValue;
+    } else {
+      const endSnap = snapshotsByDate.get(endDate);
+      if (!endSnap) continue;
+      endMV = endSnap.totalMarketValue;
+    }
+
+    // 期間流入 = 邊界終點日的 cashflow(段尾)
+    const flowAtEnd = sorted.find((c) => c.date === endDate)?.netInflow ?? 0;
+
+    const r = (endMV - startSnap.totalMarketValue - flowAtEnd) / startSnap.totalMarketValue;
+    if (!Number.isFinite(r)) continue;
+
+    cumulative *= 1 + r;
+    segmentsApplied++;
+  }
+
+  if (segmentsApplied === 0) return null;
+  return cumulative - 1;
+}

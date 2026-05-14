@@ -14,9 +14,12 @@ export {
   computeSharpe,
   computeMaxDrawdown,
   computeDailyReturns,
+  computeTWR,
+  snapshotsHaveRealPrices,
   SHARPE_MIN_SAMPLES,
   SHARPE_UNRELIABLE_THRESHOLD,
-  type CashFlow
+  type CashFlow,
+  type TwrCashflow
 } from './finance';
 export { maskAmount, formatReturnPercent } from './amountMasker';
 export { isInQuietHours } from './quietHours';

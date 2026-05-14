@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { db } from '@/db';
+import { getTaipeiDateString } from '@/api';
 import {
-  computeXIRR,
   computeSharpe,
   computeMaxDrawdown,
   computeDailyReturns,
+  computeTWR,
+  snapshotsHaveRealPrices,
   formatPercent,
   SHARPE_MIN_SAMPLES,
   SHARPE_UNRELIABLE_THRESHOLD,
-  type CashFlow
+  type TwrCashflow
 } from '@/utils';
 import { computeSummary } from '@/services';
 import MetricTooltip from './MetricTooltip';
 
 interface Metrics {
-  /** 玩了幾天(從第一筆交易算起) */
-  daysSinceFirst: number;
-  /** XIRR 結果(可能 unreliable / null) */
-  xirr: number | null;
-  /** 不年化的累積報酬,< 30 天時顯示用 */
-  rawReturn: number | null;
+  /** 絕對報酬率 = 未實現損益 / 總投入成本(可能 null:沒成本) */
+  absoluteReturn: number | null;
+  /** TWR(時間加權)— 沒歷史價時為 null,UI 走 fallback */
+  twr: number | null;
+  /** 是否走 fallback(歷史價未就緒)— UI 顯示「歷史價載入中」 */
+  twrFallback: boolean;
   /** 夏普 */
   sharpe: number | null;
   sharpeSampleCount: number;
@@ -30,17 +32,17 @@ interface Metrics {
   unrealized: number;
 }
 
-const SHORT_TERM_DAYS = 30;
-const MID_TERM_DAYS = 90;
-
 /**
- * 進階金融指標 — 改版:加短期保護 + 現金注入隔離 + tooltip
+ * 進階金融指標 — 階段「TWR 重構」:
  *
- *  - 累積報酬 / IRR 切換:< 30 天顯示累積、30-90 天 IRR + ⚠️、> 90 天 IRR
- *  - 夏普:< 30 樣本顯示「資料不足」;|sharpe| > 5 顯示 ⚠️
- *  - 最大回撤:用 (1+returnRate) 為 equity 而非 totalMarketValue,
- *    避免加碼日當天 peak 跳升被算成虛假回撤
- *  - 每個指標旁有 ℹ️,點開展開說明
+ *  上排兩格(報酬):
+ *   - 絕對報酬率:未實現損益 / 總投入成本(真實感受,不會被持有時間影響)
+ *   - TWR 時間加權報酬率:排除加碼時機的純粹績效;歷史價未到位時用絕對報酬 fallback
+ *  下排兩格(風險):
+ *   - 夏普比率:< 30 樣本顯示「資料不足」;|sharpe| > 5 顯示 ⚠️
+ *   - 最大回撤:用 (1 + returnRate) 為 equity,避免加碼日 peak 假跳
+ *
+ * 拿掉 IRR / XIRR、拿掉短期年化警告(TWR 不會被短期失真)。
  */
 export default function AdvancedMetrics() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -54,33 +56,48 @@ export default function AdvancedMetrics() {
         computeSummary()
       ]);
 
-      // 玩了幾天(從第一筆交易算起;沒交易 → 0 天)
-      const firstTs = transactions[0]?.timestamp ?? Date.now();
-      const daysSinceFirst = Math.max(
-        0,
-        Math.floor((Date.now() - firstTs) / 86_400_000)
-      );
+      // ── 絕對報酬率 ──
+      // 未實現損益 / 總投入成本(= summary.unrealizedPnL / totalCost)
+      const absoluteReturn =
+        summary.totalCost > 0 ? summary.unrealizedPnL / summary.totalCost : null;
 
-      // ── IRR / 累積報酬 ──
-      const cashflows: CashFlow[] = transactions.map((t) => ({
-        amount: t.type === 'sell' ? t.netAmount : -t.netAmount,
-        timestamp: t.timestamp
-      }));
-      if (summary.totalMarketValue > 0) {
-        cashflows.push({ amount: summary.totalMarketValue, timestamp: Date.now() });
+      // ── TWR ──
+      // 先檢查歷史 snapshot 有沒有真實 totalMarketValue(snapshotBackfill 在沒
+      // 歷史收盤價時用 totalCost+realized 當 proxy,算 TWR 等於 0,沒意義)
+      const todayDate = getTaipeiDateString(new Date());
+      const hasRealPrices = snapshotsHaveRealPrices(snapshots, todayDate);
+
+      let twr: number | null = null;
+      let twrFallback = false;
+      if (hasRealPrices) {
+        // 把交易日 cashflow 合併到 (date → netInflow) — 同日多筆 sum
+        // 流入規則:買/加碼 = +netAmount(錢從錢包進持倉);賣 = -gross(持倉市值減少)
+        // (賣的「持倉市值減少」用 gross 而非 netAmount,因為 fee/tax 是錢包扣
+        //  的,持倉市值看的是「股票本身的市值流出」)
+        const flowMap = new Map<string, number>();
+        for (const tx of transactions) {
+          const d = getTaipeiDateString(new Date(tx.timestamp));
+          const flow = tx.type === 'sell' ? -tx.grossAmount : tx.netAmount;
+          flowMap.set(d, (flowMap.get(d) ?? 0) + flow);
+        }
+        const cashflows: TwrCashflow[] = Array.from(flowMap.entries()).map(
+          ([date, netInflow]) => ({ date, netInflow })
+        );
+        const snapMap = new Map(
+          snapshots.map((s) => [s.date, { totalMarketValue: s.totalMarketValue }])
+        );
+        twr = computeTWR(snapMap, cashflows, summary.totalMarketValue, todayDate);
+      } else {
+        // Fallback:用絕對報酬率充當,UI 顯示「歷史價載入中」
+        twr = absoluteReturn;
+        twrFallback = true;
       }
-      const xirr = daysSinceFirst >= SHORT_TERM_DAYS ? computeXIRR(cashflows) : null;
-
-      // 累積報酬 = (賺到的 + 還未實現的) / 累積投入,跟 returnRate 同義
-      const rawReturn = summary.totalCost > 0 ? summary.totalPnL / summary.totalCost : null;
 
       // ── 夏普 ──
       const dailyRet = computeDailyReturns(snapshots);
       const sharpe = computeSharpe(dailyRet);
 
-      // ── 最大回撤(改用 returnRate-based equity,排除現金注入扭曲)──
-      // 用 (1 + returnRate) 為標準化 equity:加碼當天 returnRate 可能微跌
-      //(分母變大),不會像直接用 totalMarketValue 那樣 peak 暴漲再回吐
+      // ── 最大回撤(用 returnRate-based equity 排除現金注入扭曲)──
       const equity = snapshots
         .map((s) => 1 + s.returnRate)
         .filter((v) => Number.isFinite(v) && v > 0);
@@ -88,50 +105,32 @@ export default function AdvancedMetrics() {
 
       if (!cancelled) {
         setMetrics({
-          daysSinceFirst,
-          xirr,
-          rawReturn,
+          absoluteReturn,
+          twr,
+          twrFallback,
           sharpe,
           sharpeSampleCount: dailyRet.length,
           maxDrawdown: mdd,
           realized: summary.realizedPnL,
           unrealized: summary.unrealizedPnL
         });
-        // 階段 5G:診斷 log。打開紀錄彈窗 → DevTools 看分支 + 起點日對不對
-        // 若 earliestDate 不對(例如顯示 2026-05-08 但你 2025-10 就開始買)
-        //   → 該是 FeedModal/SellModal 沒勾「補登日期」造成 transaction
-        //     timestamp 變成今天 → 走交易紀錄 tab 編輯 / 重新輸入
-        // 若 daysSinceFirst < 30 但 UI 仍顯示「年化報酬 IRR」→ Service Worker
-        //   還在 serve 舊版,按 PwaUpdatePrompt「強制」更新
         // eslint-disable-next-line no-console
         console.log('[AdvancedMetrics]', {
-          earliestTxDate:
-            transactions[0]?.timestamp
-              ? new Date(transactions[0].timestamp).toISOString().slice(0, 10)
-              : '(無交易)',
-          latestTxDate:
-            transactions.length > 0
-              ? new Date(transactions[transactions.length - 1].timestamp)
-                  .toISOString()
-                  .slice(0, 10)
-              : '(無交易)',
+          totalCost: summary.totalCost,
+          totalMarketValue: summary.totalMarketValue,
+          unrealizedPnL: summary.unrealizedPnL,
+          absoluteReturnPct:
+            absoluteReturn !== null ? (absoluteReturn * 100).toFixed(2) + '%' : '—',
+          twrPct: twr !== null ? (twr * 100).toFixed(2) + '%' : '—',
+          twrSource: twrFallback ? 'fallback (absolute)' : 'real TWR',
+          hasRealHistoricalPrices: hasRealPrices,
+          snapshotCount: snapshots.length,
           transactionCount: transactions.length,
-          daysSinceFirst,
-          branch:
-            daysSinceFirst < 30 ? 'short' : daysSinceFirst < 90 ? 'medium' : 'long',
-          rawReturnPct:
-            rawReturn !== null ? (rawReturn * 100).toFixed(2) + '%' : '—',
-          xirrPct: xirr !== null ? (xirr * 100).toFixed(2) + '%' : '—(短期不算)',
           sharpe:
             sharpe !== null
               ? sharpe.toFixed(2)
               : `—(${dailyRet.length}/${SHARPE_MIN_SAMPLES} 天)`,
-          mdd: mdd !== null ? (mdd * 100).toFixed(2) + '%' : '—',
-          snapshotCount: snapshots.length,
-          snapshotDateRange:
-            snapshots.length > 0
-              ? `${snapshots[0].date} → ${snapshots[snapshots.length - 1].date}`
-              : '(無快照)'
+          mdd: mdd !== null ? (mdd * 100).toFixed(2) + '%' : '—'
         });
       }
     })();
@@ -153,40 +152,27 @@ export default function AdvancedMetrics() {
         (Math.abs(metrics.realized) + Math.abs(metrics.unrealized))
       : 0;
 
-  // ── IRR / 累積報酬 顯示分支 ──
-  const isShortTerm = metrics.daysSinceFirst < SHORT_TERM_DAYS;
-  const isMidTerm =
-    metrics.daysSinceFirst >= SHORT_TERM_DAYS &&
-    metrics.daysSinceFirst < MID_TERM_DAYS;
+  // ── 絕對報酬率 顯示 ──
+  const absValue =
+    metrics.absoluteReturn === null ? '—' : formatPercent(metrics.absoluteReturn);
+  const absColor =
+    metrics.absoluteReturn === null
+      ? 'text-gray-500'
+      : metrics.absoluteReturn >= 0
+        ? 'text-tw-up'
+        : 'text-tw-down';
 
-  let returnTitle: string;
-  let returnValue: string;
-  let returnColor: string;
-  let returnNote: string | undefined;
-  if (isShortTerm) {
-    returnTitle = '累積報酬';
-    returnValue =
-      metrics.rawReturn === null ? '—' : formatPercent(metrics.rawReturn);
-    returnColor =
-      metrics.rawReturn === null
-        ? 'text-gray-500'
-        : metrics.rawReturn >= 0
-          ? 'text-tw-up'
-          : 'text-tw-down';
-    returnNote = `玩了 ${metrics.daysSinceFirst} 天,需 30 天才能算年化`;
-  } else {
-    returnTitle = '年化報酬 (IRR)';
-    returnValue = metrics.xirr === null ? '—' : formatPercent(metrics.xirr);
-    returnColor =
-      metrics.xirr === null
-        ? 'text-gray-500'
-        : metrics.xirr >= 0
-          ? 'text-tw-up'
-          : 'text-tw-down';
-    if (isMidTerm) returnNote = '⚠️ 短期數據,年化僅供參考';
-  }
+  // ── TWR 顯示 ──
+  const twrValue = metrics.twr === null ? '—' : formatPercent(metrics.twr);
+  const twrColor =
+    metrics.twr === null
+      ? 'text-gray-500'
+      : metrics.twr >= 0
+        ? 'text-tw-up'
+        : 'text-tw-down';
+  const twrNote = metrics.twrFallback ? '歷史價載入中(暫顯絕對報酬)' : undefined;
 
-  // ── 夏普 顯示分支 ──
+  // ── 夏普 顯示 ──
   const sharpeUnreliable =
     metrics.sharpe !== null &&
     Math.abs(metrics.sharpe) > SHARPE_UNRELIABLE_THRESHOLD;
@@ -211,19 +197,32 @@ export default function AdvancedMetrics() {
   return (
     <div className="data-card p-3 space-y-2">
       <h4 className="text-sm font-bold">📐 進階指標</h4>
-      <div className="grid grid-cols-3 gap-2 text-center">
+
+      {/* 上排:報酬(絕對 / TWR) */}
+      <div className="grid grid-cols-2 gap-2 text-center">
         <Metric
-          title={returnTitle}
-          value={returnValue}
-          color={returnColor}
-          note={returnNote}
-          tooltip={`${returnTitle}說明:
-• > 0%:賺
-• +5%~+15%:穩健
-• +15%~+50%:不錯
-• > +100%:可能是短期年化放大
-短期數據(< 90 天)僅供參考`}
+          title="絕對報酬率"
+          value={absValue}
+          color={absColor}
+          tooltip={`目前帳上總共賺/賠多少百分比。
+公式:(目前市值 - 總投入成本) / 總投入成本
+
+這是「真實感受」的報酬率,不會被持有時間影響。`}
         />
+        <Metric
+          title="TWR 時間加權"
+          value={twrValue}
+          color={twrColor}
+          note={twrNote}
+          tooltip={`排除加碼時機影響的純粹績效。
+
+TWR 不在乎你「何時加碼」,只看你持有的標的本身漲跌多少。
+常用於比較選股能力,基金公司公告報酬率都用這個。`}
+        />
+      </div>
+
+      {/* 下排:風險(夏普 / 最大回撤) */}
+      <div className="grid grid-cols-2 gap-2 text-center">
         <Metric
           title="夏普比率"
           value={sharpeValue}
@@ -244,7 +243,6 @@ export default function AdvancedMetrics() {
               : formatPercent(-metrics.maxDrawdown, false)
           }
           color={metrics.maxDrawdown == null ? 'text-gray-500' : 'text-tw-down'}
-          note={undefined}
           tooltip={`歷史最高點到最低點的跌幅:
 • 0~20%:可接受
 • 20~40%:波動大
