@@ -139,6 +139,7 @@ node scripts/process-rings.mjs                       # 6 顆魂環 PNG (public/a
 | 11 | Pet 加 `boostedDays?: number` / `effectBoostUntil?: number` optional 欄位(階段 4A.3 催熟 + 4A.4 淬煉,修為消耗管道) | upgrade callback 把舊資料 `boostedDays` backfill 為 0;`effectBoostUntil` 不 backfill(undefined = 沒 boost) |
 | 12 | 進階消耗管道(階段 4B)資料層:Pet 加 `colorVariant?: PetColorVariant`(配色 5 選 1);Settings 加 `unlockedBackgrounds` / `currentBackground` / `hudTheme` / `unlockedHudThemes` 4 個 optional 欄位 | upgrade callback backfill 全部預設值:pet.colorVariant='default';settings.unlockedBackgrounds=['default'] / currentBackground='default' / hudTheme='default' / unlockedHudThemes=['default'] |
 | 13 | 深度消耗管道(階段 4C)資料層:Pet 加 `isEternal?: boolean` / `eternalDate?: number` / `finalEffect?: RingEffect`(4C.2 永恆紀念);新增 `creatureUnlocks` 表(4C.3 圖鑑故事解鎖,`++id, &creatureId` 唯一索引防重複) | upgrade callback backfill 舊 pet `isEternal=false`;eternalDate / finalEffect 不 backfill;`creatureUnlocks` 是新表自然空 |
+| 14 | **重大修正** pets 加 `speciesId` 二級索引 — `portfolio.ts buyOrFeed` 走 `db.pets.where('speciesId').equals(...).count()` 判定「第一次召喚物種」,但 v5 拔 tier 那次把 pets index 改成 `'id, code, retiredAt'` 漏掉 speciesId,結果 Excel 匯入(整批走 buyOrFeed 新檔路徑)全部 throw「KeyPath speciesId on object store pets is not indexed」 | no-op data upgrade(只重建 index,神獸 / 持倉 / 修為全保留)|
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 

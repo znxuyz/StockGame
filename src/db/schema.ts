@@ -304,6 +304,27 @@ export class StockGameDB extends Dexie {
             // eternalDate / finalEffect 不 backfill,undefined = 還沒紀念 / 還在世
           });
       });
+
+    /**
+     * v14:pets 加 `speciesId` 二級索引。
+     *
+     * Root cause:`portfolio.ts buyOrFeed` 走
+     *   `db.pets.where('speciesId').equals(species.id).count()`
+     * 判定「是否第一次召喚此物種」(發 +20 修為入圖鑑用)。但 v5 拔 tier 那次
+     * 把 pets index 整串改成 `'id, code, retiredAt'`,**沒加 speciesId**,
+     * 結果 Excel 匯入(走 buyOrFeed 第一筆新檔)整批 throw:
+     *   「KeyPath speciesId on object store pets is not indexed」
+     *
+     * 修法:加 secondary index,**不動主鍵 / 不轉資料**。Dexie 會自動從現有
+     * pets 重建 speciesId index,IndexedDB 索引修改不會丟資料 — 神獸 / 持倉 /
+     * 修為點數全部保留(這是 IndexedDB 規範,不是 Dexie 額外保證)。
+     *
+     * (CLAUDE.md「已知雷」段早有此雷的規律記錄,這次踩到也是因為 speciesId
+     *  用法是 v5 之後才從 portfolio.ts 加進來,當下沒一起補 index。)
+     */
+    this.version(14).stores({
+      pets: 'id, code, retiredAt, speciesId'
+    });
   }
 }
 
