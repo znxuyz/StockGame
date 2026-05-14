@@ -14,7 +14,8 @@ import type {
   LoginStreak,
   UserTask,
   MilestoneReward,
-  CreatureUnlock
+  CreatureUnlock,
+  HistoricalPrice
 } from '@/types';
 
 /**
@@ -51,6 +52,8 @@ export class StockGameDB extends Dexie {
   milestoneRewards!: Table<MilestoneReward, number>;
   /** 圖鑑故事解鎖紀錄(階段 4C.3,creatureId 唯一索引防重複解鎖) */
   creatureUnlocks!: Table<CreatureUnlock, number>;
+  /** 歷史日收盤價快取(階段 5H,給歷史曲線回推用) */
+  historicalPrices!: Table<HistoricalPrice, [string, string]>;
 
   constructor() {
     super('StockGameDB');
@@ -324,6 +327,24 @@ export class StockGameDB extends Dexie {
      */
     this.version(14).stores({
       pets: 'id, code, retiredAt, speciesId'
+    });
+
+    /**
+     * v15:歷史日收盤價快取 — 給「累積報酬率 / 月度損益」歷史曲線回推用(階段 5H)。
+     *
+     *   historicalPrices: '[code+date], code, date'
+     *
+     * compound primary key [code+date]:同一檔同一天最多一筆,upsert 自動覆蓋。
+     * code 二級索引:能 `db.historicalPrices.where('code').equals(...).toArray()`
+     *   一次拿某檔所有歷史價(rebuildDailySnapshots 在用)。
+     * date 二級索引:`.where('date').between(...)` 跨檔抓某段時間,目前沒用,
+     *   日後若做「市場日 K 圖」可派上用場。
+     *
+     * 純加新表,no-op data upgrade(IndexedDB 自動建)。神獸 / 持倉 / 修為 /
+     * 任務 / 圖鑑解鎖全部保留。
+     */
+    this.version(15).stores({
+      historicalPrices: '[code+date], code, date'
     });
   }
 }

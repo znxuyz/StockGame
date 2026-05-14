@@ -19,6 +19,7 @@ import { earnCultivation } from './cultivationService';
 import { emitTaskTrigger } from './taskService';
 import { pickRandomCreature, getCreature } from '@/data/creatures';
 import { getRingEffect } from './petTier';
+import { scheduleRebuildHistory } from './portfolioHistoryService';
 
 /** 修為獎勵金額(階段 2.3),改數字直接從這調 */
 const CULTIVATION_REWARD = {
@@ -235,6 +236,9 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
     if (levelsGained > 0) emitTaskTrigger('pet_level_up', levelsGained);
   }
 
+  // 階段 5H:歷史快照重建(過去日期補登 / 今天買入都會更新曲線)
+  scheduleRebuildHistory();
+
   return result;
 }
 
@@ -365,6 +369,9 @@ export async function sell(params: SellParams): Promise<ActionResult> {
   if (sellRewards.length > 0) {
     emitTaskTrigger('pet_sell_profit', 1);
   }
+
+  // 階段 5H:歷史快照重建
+  scheduleRebuildHistory();
 
   return result;
 }

@@ -43,6 +43,16 @@ export type { PortfolioSummary, HoldingDetail } from './summary';
 export { recordDailySnapshot } from './snapshot';
 export { backfillSnapshotsIfNeeded, resetBackfillFlag } from './snapshotBackfill';
 export type { BackfillResult } from './snapshotBackfill';
+
+// 階段 5H:歷史價快取 + 真實歷史快照重建(取代 snapshotBackfill 的 proxy 行為)
+export {
+  getHistoricalPrice,
+  prefetchRange,
+  getPriceMap,
+  findPriceOnOrBefore
+} from './historicalPriceService';
+export { rebuildDailySnapshots, scheduleRebuildHistory } from './portfolioHistoryService';
+export type { RebuildProgress, RebuildResult } from './portfolioHistoryService';
 export {
   clearOldData,
   commitBackfilledTransactions,

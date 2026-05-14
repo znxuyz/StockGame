@@ -13,6 +13,7 @@ import ExcelJS from 'exceljs';
 import { db } from '@/db';
 import { commitBackfilledTransactions, clearOldData, newPendingTx } from './historicalBackfillService';
 import type { CommitProgress, CommitResult, PendingTransaction, PendingTxType } from './historicalBackfillService';
+import { scheduleRebuildHistory } from './portfolioHistoryService';
 import {
   normalizeStockCode as normCode,
   validateStockCode
@@ -397,7 +398,9 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
  *  - replace:先 clearOldData(),再 commit
  *  - merge:直接 commit,保留現有資料
  *
- * 重用 historicalBackfillService.commitBackfilledTransactions(已含 snapshot backfill)
+ * 重用 historicalBackfillService.commitBackfilledTransactions(已含 snapshot backfill 的
+ * proxy 版),commit 完再觸發階段 5H 的 `rebuildDailySnapshots` 抓真實歷史價,
+ * 把 proxy snapshot 蓋成真值(累積報酬率 / 月度損益曲線才會真實)。
  */
 export async function executeImport(
   preview: PreviewResult,
@@ -409,5 +412,13 @@ export async function executeImport(
   if (mode === 'replace') {
     await clearOldData();
   }
-  return commitBackfilledTransactions(txs, settings, onProgress);
+  const commitResult = await commitBackfilledTransactions(txs, settings, onProgress);
+
+  // 階段 5H:抓 Yahoo 歷史價並重建真實 daily snapshots(覆蓋 proxy 值)
+  // 走 coalescing scheduler — commitBackfilledTransactions 內部 27 個
+  // buyOrFeed/sell 已各自呼叫過 scheduleRebuildHistory,這裡再呼叫一次
+  // 確保 final state 被 capture。fire-and-forget,不擋 UI。
+  scheduleRebuildHistory();
+
+  return commitResult;
 }

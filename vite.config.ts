@@ -137,6 +137,13 @@ export default defineConfig({
         target: 'https://mis.twse.com.tw',
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api\/mis/, '')
+      },
+      // 階段 5H:Yahoo Finance 歷史日 K(給歷史曲線回推用)
+      // 同一個 endpoint 用 .TW / .TWO 後綴區分上市/上櫃,免 per-month 串行
+      '/api/yahoo': {
+        target: 'https://query1.finance.yahoo.com',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/yahoo/, '')
       }
     }
   }
