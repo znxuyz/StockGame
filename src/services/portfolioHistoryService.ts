@@ -16,6 +16,7 @@
  */
 
 import { db } from '@/db';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import { getTaipeiDateString } from '@/api';
 import {
   prefetchRange,
@@ -83,7 +84,7 @@ export async function rebuildDailySnapshots(
   onProgress?: (p: RebuildProgress) => void
 ): Promise<RebuildResult> {
   const startedAt = Date.now();
-  const transactions = await db.transactions.orderBy('timestamp').toArray();
+  const transactions = await transactionRepo.list();
   if (transactions.length === 0) return { ...EMPTY, finishedAt: Date.now() };
 
   // ── 1. 算每檔股票需要 prefetch 的起始日(該檔第一筆交易日)──

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from '../Modal';
-import { db } from '@/db';
+import { useAllPets } from '@/repositories/petRepo';
 import {
   detectSensitiveWords,
   publishCultivationShare,
@@ -34,7 +33,7 @@ export default function CultivationShareModal({
   onActionComplete,
   onPosted
 }: CultivationShareModalProps) {
-  const allPets = useLiveQuery(() => db.pets.toArray(), [], []);
+  const allPets = useAllPets() ?? [];
 
   const [content, setContent] = useState('');
   const [tagCreatures, setTagCreatures] = useState<string[]>([]);

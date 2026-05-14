@@ -15,6 +15,9 @@
 
 import { db } from '@/db';
 import { settingsRepo } from '@/repositories/settingsRepo';
+import { holdingRepo } from '@/repositories/holdingRepo';
+import { petRepo } from '@/repositories/petRepo';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import type {
   AchievementProgress,
   Holding,
@@ -247,11 +250,11 @@ export async function runAchievementChecks(
 ): Promise<AchievementCheckResult> {
   const [holdings, activePets, allPets, prices, transactions, settings, summary] =
     await Promise.all([
-      db.holdings.toArray(),
-      db.pets.filter((p) => !p.retiredAt).toArray(),
-      db.pets.toArray(),
+      holdingRepo.list(),
+      petRepo.listActive(),
+      petRepo.list(),
       db.prices.toArray(),
-      db.transactions.orderBy('timestamp').toArray(),
+      transactionRepo.list(),
       settingsRepo.get(),
       computeSummary()
     ]);

@@ -2,6 +2,9 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
 import { useSettings } from '@/repositories/settingsRepo';
+import { useHoldings } from '@/repositories/holdingRepo';
+import { useAllPets, petRepo } from '@/repositories/petRepo';
+import { useTransactions } from '@/repositories/transactionRepo';
 import {
   isMarketOpen,
   getMarketStatus,
@@ -323,12 +326,12 @@ function Game() {
 
   // live data
   const settings = useSettings();
-  const holdings = useLiveQuery(() => db.holdings.toArray(), []);
+  const holdings = useHoldings();
   const prices = useLiveQuery(() => db.prices.toArray(), []);
   const achievements = useLiveQuery(() => db.achievements.toArray(), []);
   // 為了 push trigger,訂閱另外幾張表(只計 length 用,讓 useEffect 偵測到變動)
-  const pets = useLiveQuery(() => db.pets.toArray(), []);
-  const transactions = useLiveQuery(() => db.transactions.toArray(), []);
+  const pets = useAllPets();
+  const transactions = useTransactions();
   const snapshots = useLiveQuery(() => db.snapshots.toArray(), []);
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
   // 階段 2.6:訂閱 cultivation 兩表,任何 earn/spend 觸發 push debounce
@@ -620,7 +623,7 @@ function Game() {
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
   async function handlePetClickById(petId: string) {
-    const pet = await db.pets.get(petId);
+    const pet = await petRepo.get(petId);
     if (!pet) return;
     const stock = await db.stocks.get(pet.code);
     if (!stock) return;
@@ -738,7 +741,7 @@ function Game() {
         onOpenShareComposer={() => setModal('shareCompose')}
         onOpenCreature={async (speciesId) => {
           // 自己有這隻就開 PetInfo,沒有就靜默(沒專門「跳圖鑑詳細」入口,5E 再做)
-          const myPets = await db.pets.toArray();
+          const myPets = await petRepo.list();
           const mine = myPets.find((p) => p.speciesId === speciesId);
           if (!mine) return;
           await handlePetClickById(mine.id);

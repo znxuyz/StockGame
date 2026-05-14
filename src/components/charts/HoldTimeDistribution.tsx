@@ -1,5 +1,4 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { useHoldings } from '@/repositories/holdingRepo';
 import { daysBetween } from '@/utils';
 
 /**
@@ -10,7 +9,7 @@ import { daysBetween } from '@/utils';
  *  - 超長期：> 3 年
  */
 export default function HoldTimeDistribution() {
-  const holdings = useLiveQuery(() => db.holdings.toArray(), []);
+  const holdings = useHoldings();
 
   if (!holdings || holdings.length === 0) {
     return (

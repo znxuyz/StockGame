@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { useHoldings } from '@/repositories/holdingRepo';
 import { formatInt } from '@/utils';
 
 const INDUSTRY_LABEL: Record<string, string> = {
@@ -47,7 +48,7 @@ const COLORS = [
 export default function AllocationPie() {
   const [mode, setMode] = useState<'industry' | 'market'>('industry');
 
-  const holdings = useLiveQuery(() => db.holdings.toArray(), []);
+  const holdings = useHoldings();
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
   const prices = useLiveQuery(() => db.prices.toArray(), []);
 

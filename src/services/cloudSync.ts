@@ -12,6 +12,9 @@
 import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { db } from '@/db';
 import { settingsRepo, dexieSettingsTable } from '@/repositories/settingsRepo';
+import { holdingRepo, dexieHoldingsTable } from '@/repositories/holdingRepo';
+import { petRepo, dexiePetsTable } from '@/repositories/petRepo';
+import { transactionRepo, dexieTransactionsTable } from '@/repositories/transactionRepo';
 import type {
   Stock,
   Holding,
@@ -133,9 +136,9 @@ async function readAllForSync(): Promise<CloudBlob> {
     creatureUnlocks
   ] = await Promise.all([
     db.stocks.toArray(),
-    db.holdings.toArray(),
-    db.pets.toArray(),
-    db.transactions.toArray(),
+    holdingRepo.list(),
+    petRepo.list(),
+    transactionRepo.list(),
     db.achievements.toArray(),
     db.snapshots.toArray(),
     settingsRepo.get(),
@@ -188,9 +191,9 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
     'rw',
     [
       db.stocks,
-      db.holdings,
-      db.pets,
-      db.transactions,
+      dexieHoldingsTable,
+      dexiePetsTable,
+      dexieTransactionsTable,
       db.achievements,
       db.snapshots,
       dexieSettingsTable,
@@ -203,14 +206,14 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       await db.stocks.clear();
       if (blob.stocks?.length) await db.stocks.bulkPut(blob.stocks);
 
-      await db.holdings.clear();
-      if (blob.holdings?.length) await db.holdings.bulkPut(blob.holdings);
+      await holdingRepo.clear();
+      if (blob.holdings?.length) await holdingRepo.bulkPut(blob.holdings);
 
-      await db.pets.clear();
-      if (blob.pets?.length) await db.pets.bulkPut(blob.pets);
+      await petRepo.clear();
+      if (blob.pets?.length) await petRepo.bulkPut(blob.pets);
 
-      await db.transactions.clear();
-      if (blob.transactions?.length) await db.transactions.bulkPut(blob.transactions);
+      await transactionRepo.clear();
+      if (blob.transactions?.length) await transactionRepo.bulkPut(blob.transactions);
 
       await db.achievements.clear();
       if (blob.achievements?.length) await db.achievements.bulkPut(blob.achievements);
@@ -355,9 +358,9 @@ export async function fetchRemoteMeta(
 /** 本地有沒有「使用者建立的資料」(有買股票才算,光 settings/seed 不算) */
 export async function localHasUserData(): Promise<boolean> {
   const [holdings, pets, txns] = await Promise.all([
-    db.holdings.count(),
-    db.pets.count(),
-    db.transactions.count()
+    holdingRepo.count(),
+    petRepo.count(),
+    transactionRepo.count()
   ]);
   return holdings > 0 || pets > 0 || txns > 0;
 }

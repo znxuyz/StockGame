@@ -1,5 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { useRecentHoldings } from '@/repositories/holdingRepo';
+import { useActivePets } from '@/repositories/petRepo';
 import { getCreature } from '@/data/creatures';
 import { formatPrice } from '@/utils';
 
@@ -15,12 +17,9 @@ interface HoldingPickerProps {
  * 顯示神獸 emoji + 名稱 + 股數 + 均價，方便玩家選對股票。
  */
 export default function HoldingPicker({ value, onChange, emptyMessage }: HoldingPickerProps) {
-  const holdings = useLiveQuery(
-    () => db.holdings.orderBy('lastTransactionAt').reverse().toArray(),
-    []
-  );
+  const holdings = useRecentHoldings();
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
-  const pets = useLiveQuery(() => db.pets.filter((p) => !p.retiredAt).toArray(), []);
+  const pets = useActivePets();
 
   if (!holdings || holdings.length === 0) {
     return (

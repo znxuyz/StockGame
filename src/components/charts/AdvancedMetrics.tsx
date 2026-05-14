@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import { getTaipeiDateString } from '@/api';
 import {
   computeSharpe,
@@ -51,7 +52,7 @@ export default function AdvancedMetrics() {
   // useLiveQuery 訂閱 — rebuildDailySnapshots bulkPut 完 / 新 tx 寫入時自動 re-fire,
   // TWR 自動從「歷史價載入中」切到真實值,不需要重整頁面
   const transactions = useLiveQuery(
-    () => db.transactions.orderBy('timestamp').toArray(),
+    () => transactionRepo.list(),
     []
   );
   const snapshots = useLiveQuery(() => db.snapshots.orderBy('date').toArray(), []);

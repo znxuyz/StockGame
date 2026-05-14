@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
-import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import { spendCultivation } from '@/services';
 import { useCultivation } from '@/hooks/useCultivation';
 import { getCreature } from '@/data/creatures';
@@ -93,7 +93,7 @@ export default function RenameModal({ open, onClose, pet, onSuccess }: RenameMod
       return;
     }
 
-    await db.pets.update(pet.id, { customName: trimmed });
+    await petRepo.patch(pet.id, { customName: trimmed });
     setBusy(false);
     onSuccess?.(trimmed);
     onClose();

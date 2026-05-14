@@ -3,7 +3,7 @@ import { useSettings } from '@/repositories/settingsRepo';
 import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
 import FriendPortfolioView from './FriendPortfolioView';
-import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import { useCultivation } from '@/hooks/useCultivation';
 import { formatLastSeen } from '@/hooks/useMyProfile';
 import { CREATURES, getCreature } from '@/data/creatures';
@@ -285,7 +285,7 @@ function FriendProfileBody({
                     onShareMyPet
                       ? async () => {
                           // 找自己對應 species 的 pet,有就帶過去開 ShareModal
-                          const myPets = await db.pets.toArray();
+                          const myPets = await petRepo.list();
                           const mine = myPets.find((p) => p.speciesId === id);
                           if (mine) onShareMyPet(mine);
                         }

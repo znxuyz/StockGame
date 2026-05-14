@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
-import { db } from '@/db';
+import { useAllPets } from '@/repositories/petRepo';
 import { getCreature } from '@/data/creatures';
 
 interface AvatarSelectorModalProps {
@@ -29,7 +28,7 @@ export default function AvatarSelectorModal({
   currentAvatarId,
   onSelect
 }: AvatarSelectorModalProps) {
-  const pets = useLiveQuery(() => db.pets.toArray(), [], []);
+  const pets = useAllPets() ?? [];
 
   // 撈出 distinct speciesId(包含已退役的)
   const summonedSpeciesIds = useMemo(() => {

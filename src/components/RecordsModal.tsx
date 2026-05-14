@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
 import { db } from '@/db';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import { emitTaskTrigger } from '@/services';
 import type { TaskTriggerEvent } from '@/types';
 import { formatInt, formatPrice, formatSigned, formatPercent } from '@/utils';
@@ -113,7 +114,7 @@ export default function RecordsModal({ open, onClose }: RecordsModalProps) {
 
 function TransactionsList() {
   const txns = useLiveQuery(
-    () => db.transactions.orderBy('timestamp').reverse().limit(200).toArray(),
+    () => transactionRepo.listRecent(200),
     []
   );
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);

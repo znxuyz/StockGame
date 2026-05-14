@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
-import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import {
   spendCultivation,
   COLOR_VARIANT_LABEL,
@@ -74,7 +74,7 @@ export default function ColorVariantModal({ open, onClose, pet }: ColorVariantMo
       return;
     }
 
-    await db.pets.update(pet.id, { colorVariant: selected });
+    await petRepo.patch(pet.id, { colorVariant: selected });
     setBusy(false);
     onClose();
   }

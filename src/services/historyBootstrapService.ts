@@ -13,6 +13,7 @@
  */
 
 import { db } from '@/db';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import { getTaipeiDateString } from '@/api';
 import { scheduleRebuildHistory } from './portfolioHistoryService';
 import type { RebuildResult } from './portfolioHistoryService';
@@ -102,8 +103,8 @@ export async function checkAndRebuildIfNeeded(): Promise<void> {
 
   // 1. 拉首筆交易日 + snapshot 範圍
   // 順手記 rawCount(不加任何 filter)— 排查「畫面有資料但 bootstrap 讀不到」用
-  const rawTxCount = await db.transactions.count();
-  const firstTx = await db.transactions.orderBy('timestamp').first();
+  const rawTxCount = await transactionRepo.count();
+  const firstTx = await transactionRepo.getEarliest();
   const firstTxDate = firstTx ? getTaipeiDateString(new Date(firstTx.timestamp)) : null;
   const range = await getSnapshotRange();
   const yesterday = ymdMinusOne(getTaipeiDateString(new Date()));

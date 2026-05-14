@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
-import { db } from '@/db';
+import { useAllPets } from '@/repositories/petRepo';
 import { getMyShowcase, updateMyShowcase } from '@/services';
 import { getCreature } from '@/data/creatures';
 
@@ -23,7 +22,7 @@ const MAX_SHOWCASE = 3;
  *  - 儲存按鈕觸發 updateMyShowcase + onActionComplete
  */
 export default function ShowcaseSelector({ open, onClose, onActionComplete }: ShowcaseSelectorProps) {
-  const allPets = useLiveQuery(() => db.pets.toArray(), [], []);
+  const allPets = useAllPets() ?? [];
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);

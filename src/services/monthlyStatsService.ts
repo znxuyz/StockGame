@@ -15,6 +15,8 @@
  */
 
 import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
+import { holdingRepo } from '@/repositories/holdingRepo';
 import { getRealm, realmLabel, realmRank } from './petTier';
 import { getCreature } from '@/data/creatures';
 import type { CreatureSpecies, Pet, Holding } from '@/types';
@@ -106,8 +108,8 @@ export async function getMonthlyStats(year: number, month: number): Promise<Mont
   const { startMs, endMs, days } = monthRange(year, month);
 
   const [pets, holdings, cultivationLog] = await Promise.all([
-    db.pets.toArray(),
-    db.holdings.toArray(),
+    petRepo.list(),
+    holdingRepo.list(),
     db.cultivationLog.toArray()
   ]);
 

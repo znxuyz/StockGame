@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import { useAuth } from '@/lib/auth';
 import { useMyProfile } from '@/hooks/useMyProfile';
 
@@ -40,7 +40,7 @@ export default function ProfileSetupPrompt({ onOpenEdit, onDismiss }: ProfileSet
 
   // 撈所有 distinct speciesId(含 retired pet)
   const speciesCount = useLiveQuery(async () => {
-    const pets = await db.pets.toArray();
+    const pets = await petRepo.list();
     const set = new Set<string>();
     for (const p of pets) set.add(p.speciesId);
     return set.size;

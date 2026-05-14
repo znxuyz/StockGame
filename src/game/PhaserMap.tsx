@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Phaser from 'phaser';
 import { db } from '@/db';
 import { settingsRepo } from '@/repositories/settingsRepo';
+import { useHoldings } from '@/repositories/holdingRepo';
+import { petRepo, useActivePets } from '@/repositories/petRepo';
 import { getCreature } from '@/data/creatures';
 import {
   getPetStatus,
@@ -105,8 +107,8 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
   }, []);
 
   // 觀察持倉 / 寵物 / 價格，推到 scene
-  const holdings = useLiveQuery(() => db.holdings.toArray(), []);
-  const pets = useLiveQuery(() => db.pets.filter((p) => !p.retiredAt).toArray(), []);
+  const holdings = useHoldings();
+  const pets = useActivePets();
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
   const prices = useLiveQuery(() => db.prices.toArray(), []);
   // 階段 4B.4:訂閱 currentBackground,變動時通知 scene 動態 swap 背景
@@ -180,7 +182,7 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
             emitTaskTrigger('realm_breakthrough', 1);
           }
           // 升級 / 第一次初始化 / 降級 都寫回(下次跑不再觸發)
-          db.pets.update(pet.id, { lastRealmCheck: status.realm });
+          petRepo.patch(pet.id, { lastRealmCheck: status.realm });
         }
 
         // 階段 2.3:報酬率特效升級偵測(從低升高才獎勵,從高降低不扣,防震盪洗修為)
@@ -208,7 +210,7 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
               emitTaskTrigger('effect_unlock', 1);
             }
           }
-          db.pets.update(pet.id, { lastEffectCheck: status.naturalEffect });
+          petRepo.patch(pet.id, { lastEffectCheck: status.naturalEffect });
         }
 
         return {

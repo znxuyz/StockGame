@@ -16,6 +16,9 @@
 
 import { db } from '@/db';
 import { settingsRepo } from '@/repositories/settingsRepo';
+import { holdingRepo } from '@/repositories/holdingRepo';
+import { petRepo } from '@/repositories/petRepo';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import { lookupStock } from '@/api';
 import { buyOrFeed, sell } from './portfolio';
 import { backfillSnapshotsIfNeeded, resetBackfillFlag } from './snapshotBackfill';
@@ -55,9 +58,9 @@ export function newPendingTx(): Pick<PendingTransaction, 'uiId'> {
  */
 export async function clearOldData(): Promise<void> {
   await Promise.all([
-    db.transactions.clear(),
-    db.holdings.clear(),
-    db.pets.clear(),
+    transactionRepo.clear(),
+    holdingRepo.clear(),
+    petRepo.clear(),
     db.snapshots.clear()
   ]);
   resetBackfillFlag();
@@ -192,9 +195,9 @@ export async function exportBackup(): Promise<{ filename: string; jsonString: st
     achievements,
     creatureUnlocks
   ] = await Promise.all([
-    db.transactions.toArray(),
-    db.holdings.toArray(),
-    db.pets.toArray(),
+    transactionRepo.list(),
+    holdingRepo.list(),
+    petRepo.list(),
     db.snapshots.toArray(),
     settingsRepo.get(),
     db.userCultivation.get('main'),

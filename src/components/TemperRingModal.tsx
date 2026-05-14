@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
-import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import {
   spendCultivation,
   effectLabel,
@@ -98,7 +98,7 @@ export default function TemperRingModal({ open, onClose, pet, status }: TemperRi
     }
 
     const expiresAt = now + DURATION_DAYS * MS_PER_DAY;
-    await db.pets.update(pet.id, { effectBoostUntil: expiresAt });
+    await petRepo.patch(pet.id, { effectBoostUntil: expiresAt });
 
     setBusy(false);
     onClose();

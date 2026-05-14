@@ -19,6 +19,7 @@
  */
 
 import { db } from '@/db';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import { getTaipeiDateString } from '@/api';
 import type { DailySnapshot, Transaction } from '@/types';
 
@@ -44,7 +45,7 @@ export async function backfillSnapshotsIfNeeded(): Promise<BackfillResult> {
     return { skipped: true, backfilled: 0, earliest: null, latest: null };
   }
 
-  const transactions = await db.transactions.orderBy('timestamp').toArray();
+  const transactions = await transactionRepo.list();
   if (transactions.length === 0) {
     try {
       localStorage.setItem(FLAG_KEY, '1');

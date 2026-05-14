@@ -11,7 +11,7 @@
  *    這需要 server-side function 才能查,MVP 先省略
  */
 
-import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { getProfile } from './profileService';
 import { getShowcase } from './showcaseService';
@@ -251,7 +251,7 @@ export async function getCodexComparison(
   friendCreatures: CreatureSummary[],
   allCreatureIds: string[]
 ): Promise<{ entries: CodexEntry[]; summary: CodexComparisonSummary }> {
-  const myPets = await db.pets.toArray();
+  const myPets = await petRepo.list();
   const myOwnedIds = new Set(myPets.map((p) => p.speciesId));
   const myEternalIds = new Set(myPets.filter((p) => p.isEternal).map((p) => p.speciesId));
 
@@ -307,7 +307,7 @@ export async function getMyVsTheirMetrics(
   totalCreatures: number,
   allCreatureIds: string[]
 ): Promise<VsMetric[]> {
-  const myPets = await db.pets.toArray();
+  const myPets = await petRepo.list();
   const mySpecies = new Set(myPets.map((p) => p.speciesId));
   const myEternals = new Set(myPets.filter((p) => p.isEternal).map((p) => p.speciesId));
   void allCreatureIds; // 預留:之後可顯示圖鑑進度條

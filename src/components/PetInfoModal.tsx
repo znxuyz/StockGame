@@ -16,6 +16,7 @@ import { formatInt, formatPrice, formatSigned, formatPercent, daysBetween } from
 import type { Pet, Stock } from '@/types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import { useCultivation } from '@/hooks/useCultivation';
 import RenameModal from './RenameModal';
 import BoostRealmModal from './BoostRealmModal';
@@ -93,7 +94,7 @@ export default function PetInfoModal({
 
   // 訂閱當前 pet 的最新版本(階段 4A.2 改名 / 4A.3 催熟 / 4A.4 淬煉 寫 db 後即時更新)
   const livePet = useLiveQuery(
-    () => (petProp?.id ? db.pets.get(petProp.id) : undefined),
+    () => (petProp?.id ? petRepo.get(petProp.id) : undefined),
     [petProp?.id]
   );
   const pet = livePet ?? petProp;

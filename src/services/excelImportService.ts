@@ -10,7 +10,7 @@
  */
 
 import ExcelJS from 'exceljs';
-import { db } from '@/db';
+import { holdingRepo } from '@/repositories/holdingRepo';
 import { commitBackfilledTransactions, clearOldData, newPendingTx } from './historicalBackfillService';
 import type { CommitProgress, CommitResult, PendingTransaction, PendingTxType } from './historicalBackfillService';
 import { scheduleRebuildHistory } from './portfolioHistoryService';
@@ -287,7 +287,7 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
   // 模擬持倉(每檔股票股數)
   const sim = new Map<string, number>();
   if (mode === 'merge') {
-    const holdings = await db.holdings.toArray();
+    const holdings = await holdingRepo.list();
     for (const h of holdings) sim.set(h.code, h.shares);
   }
 

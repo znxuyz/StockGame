@@ -18,6 +18,8 @@
  */
 
 import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
+import { holdingRepo } from '@/repositories/holdingRepo';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { eventBus } from './eventBus';
 import { getRealm, realmLabel } from './petTier';
@@ -57,9 +59,9 @@ async function getPetSnapshot(petId: string): Promise<{
   realm: SoulRealmId;
   level: number;
 } | null> {
-  const pet = await db.pets.get(petId);
+  const pet = await petRepo.get(petId);
   if (!pet) return null;
-  const holding = await db.holdings.get(pet.code).catch(() => undefined);
+  const holding = await holdingRepo.get(pet.code).catch(() => undefined);
   if (!holding) {
     return { pet, realm: 'fan', level: 1 };
   }
@@ -315,7 +317,7 @@ export async function backfillProfileSync(): Promise<void> {
     .eq('user_id', userId);
   if ((count ?? 0) > 0) return;
 
-  const pets = await db.pets.toArray();
+  const pets = await petRepo.list();
   if (pets.length === 0) return;
 
   for (const pet of pets) {

@@ -13,6 +13,8 @@
  */
 
 import { db } from '@/db';
+import { holdingRepo } from '@/repositories/holdingRepo';
+import { transactionRepo } from '@/repositories/transactionRepo';
 import type { Holding, StockPrice } from '@/types';
 
 export interface PortfolioSummary {
@@ -50,9 +52,9 @@ const EMPTY_SUMMARY: PortfolioSummary = {
 
 export async function computeSummary(): Promise<PortfolioSummary> {
   const [holdings, prices, sellTxns] = await Promise.all([
-    db.holdings.toArray(),
+    holdingRepo.list(),
     db.prices.toArray(),
-    db.transactions.where('type').equals('sell').toArray()
+    transactionRepo.listByType('sell')
   ]);
 
   if (holdings.length === 0) {
@@ -122,7 +124,7 @@ export interface HoldingDetail {
 }
 
 export async function getHoldingDetail(code: string): Promise<HoldingDetail | null> {
-  const holding = await db.holdings.get(code);
+  const holding = await holdingRepo.get(code);
   if (!holding) return null;
   const price = await db.prices.get(code);
   const marketValue = price ? price.currentPrice * holding.shares : holding.avgCost * holding.shares;

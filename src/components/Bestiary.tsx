@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { useAllPets } from '@/repositories/petRepo';
 import { CREATURES, getCreature } from '@/data/creatures';
 import BestiaryPetDetail from './BestiaryPetDetail';
 import type { Pet } from '@/types';
@@ -24,7 +25,7 @@ interface BestiaryProps {
  *  - 已解鎖傳說:卡片左上 📜 角標
  */
 export default function Bestiary({ onShare }: BestiaryProps = {}) {
-  const allPets = useLiveQuery(() => db.pets.toArray(), []);
+  const allPets = useAllPets();
   const ownedSpecies = new Set((allPets ?? []).map((p) => p.speciesId));
   // 階段 4C.2:該 species 任一 pet isEternal 就標金邊
   // 防呆 ?? false:舊資料沒 isEternal 欄位時當 false 處理

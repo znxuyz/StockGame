@@ -14,6 +14,7 @@
 
 import { db } from '@/db';
 import { settingsRepo } from '@/repositories/settingsRepo';
+import { holdingRepo } from '@/repositories/holdingRepo';
 import { fetchPrices, ApiError } from '@/api';
 
 export interface PriceUpdateResult {
@@ -33,7 +34,7 @@ export interface PriceUpdateResult {
  */
 export async function runPriceUpdate(now: number = Date.now()): Promise<PriceUpdateResult> {
   // 1. 拿所有 active holdings
-  const holdings = await db.holdings.toArray();
+  const holdings = await holdingRepo.list();
   if (holdings.length === 0) {
     return {
       updated: [],

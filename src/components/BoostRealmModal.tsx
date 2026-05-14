@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
-import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import {
   spendCultivation,
   realmLabel,
@@ -87,7 +87,7 @@ export default function BoostRealmModal({ open, onClose, pet, status }: BoostRea
     }
 
     const newBoosted = (pet.boostedDays ?? 0) + BOOST_DAYS;
-    await db.pets.update(pet.id, { boostedDays: newBoosted });
+    await petRepo.patch(pet.id, { boostedDays: newBoosted });
 
     setBusy(false);
     onClose();

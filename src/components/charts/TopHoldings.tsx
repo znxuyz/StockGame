@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { useHoldings } from '@/repositories/holdingRepo';
 import { formatSigned, formatPercent } from '@/utils';
 
 interface RankRow {
@@ -11,7 +12,7 @@ interface RankRow {
 
 /** TOP 5 賺錢 / 賠錢 個股 */
 export default function TopHoldings() {
-  const holdings = useLiveQuery(() => db.holdings.toArray(), []);
+  const holdings = useHoldings();
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
   const prices = useLiveQuery(() => db.prices.toArray(), []);
 

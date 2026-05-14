@@ -12,6 +12,9 @@
  */
 
 import { db } from '@/db';
+import { holdingRepo, dexieHoldingsTable } from '@/repositories/holdingRepo';
+import { petRepo, dexiePetsTable } from '@/repositories/petRepo';
+import { transactionRepo, dexieTransactionsTable } from '@/repositories/transactionRepo';
 import type { Holding, Pet, Stock, Transaction } from '@/types';
 import { uuid, calcFee, calcTax, type FeeConfig } from '@/utils';
 import { calculateLevel } from './evolution';
@@ -95,14 +98,14 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
     petId: string;
   }> = [];
 
-  const result = await db.transaction('rw', db.holdings, db.pets, db.transactions, db.stocks, async () => {
+  const result = await db.transaction('rw', dexieHoldingsTable, dexiePetsTable, dexieTransactionsTable, db.stocks, async () => {
     // 確保 stocks 表有這檔
     const existingStock = await db.stocks.get(params.stock.code);
     if (!existingStock) {
       await db.stocks.put(params.stock);
     }
 
-    const existingHolding = await db.holdings.get(params.stock.code);
+    const existingHolding = await holdingRepo.get(params.stock.code);
     let holding: Holding;
     let pet: Pet;
     let txnType: Transaction['type'];
@@ -132,10 +135,7 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
       };
 
       // 第一次召喚此 species(包含已退役的舊 pet 也算)→ +20 修為
-      const existingSameSpeciesCount = await db.pets
-        .where('speciesId')
-        .equals(species.id)
-        .count();
+      const existingSameSpeciesCount = await petRepo.countBySpecies(species.id);
       if (existingSameSpeciesCount === 0) {
         cultivationRewards.push({
           amount: CULTIVATION_REWARD.firstSummon,
@@ -155,8 +155,8 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
         });
       }
 
-      await db.pets.put(pet);
-      await db.holdings.put(holding);
+      await petRepo.put(pet);
+      await holdingRepo.put(holding);
     } else {
       // 加碼
       txnType = 'feed';
@@ -170,9 +170,9 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
         avgCost: newAvgCost,
         lastTransactionAt: params.now
       };
-      await db.holdings.put(holding);
+      await holdingRepo.put(holding);
 
-      const existingPet = await db.pets.get(existingHolding.petId);
+      const existingPet = await petRepo.get(existingHolding.petId);
       if (!existingPet) {
         throw new Error(`資料不一致：找不到 holding ${params.stock.code} 對應的寵物`);
       }
@@ -182,7 +182,7 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
         ...existingPet,
         level: newLevel
       };
-      await db.pets.put(pet);
+      await petRepo.put(pet);
 
       // 加碼後升級 → 每升 1 級 +5 修為
       if (newLevel > oldLevel) {
@@ -209,7 +209,7 @@ export async function buyOrFeed(params: BuyParams): Promise<ActionResult> {
       realizedPnL: 0,
       timestamp: params.now
     };
-    await db.transactions.put(transaction);
+    await transactionRepo.put(transaction);
 
     return { holding, pet, transaction };
   });
@@ -262,8 +262,8 @@ export async function sell(params: SellParams): Promise<ActionResult> {
   }
   const sellRewards: SellReward[] = [];
 
-  const result = await db.transaction('rw', db.holdings, db.pets, db.transactions, db.stocks, async () => {
-    const holding = await db.holdings.get(params.code);
+  const result = await db.transaction('rw', dexieHoldingsTable, dexiePetsTable, dexieTransactionsTable, db.stocks, async () => {
+    const holding = await holdingRepo.get(params.code);
     if (!holding) {
       throw new Error(`沒有持有 ${params.code}，無法賣出`);
     }
@@ -291,7 +291,7 @@ export async function sell(params: SellParams): Promise<ActionResult> {
 
     if (remainingShares === 0) {
       // 全部賣完：刪 holding、寵物退役進圖鑑
-      const existingPet = await db.pets.get(holding.petId);
+      const existingPet = await petRepo.get(holding.petId);
       if (!existingPet) throw new Error(`資料不一致：找不到 ${params.code} 的寵物`);
       // 階段 4C.2:退役當下的魂環特效快照,圖鑑卡用這個還原動態效果
       // (退役後沒持倉/價格資料即時算了)。按賣出時的市價 / 累積投入算 returnRate。
@@ -304,8 +304,8 @@ export async function sell(params: SellParams): Promise<ActionResult> {
         retiredAt: params.now,
         finalEffect: getRingEffect(finalReturnRate)
       };
-      await db.pets.put(pet);
-      await db.holdings.delete(params.code);
+      await petRepo.put(pet);
+      await holdingRepo.delete(params.code);
       updatedHolding = null;
     } else {
       // 部分賣出：減股數、平均成本不變（會計實務）
@@ -319,15 +319,15 @@ export async function sell(params: SellParams): Promise<ActionResult> {
         realizedPnL: holding.realizedPnL + realizedPnL,
         lastTransactionAt: params.now
       };
-      await db.holdings.put(updatedHolding);
+      await holdingRepo.put(updatedHolding);
 
-      const existingPet = await db.pets.get(holding.petId);
+      const existingPet = await petRepo.get(holding.petId);
       if (!existingPet) throw new Error(`資料不一致：找不到 ${params.code} 的寵物`);
       pet = {
         ...existingPet,
         level: calculateLevel(updatedHolding.totalCost)
       };
-      await db.pets.put(pet);
+      await petRepo.put(pet);
     }
 
     const transaction: Transaction = {
@@ -343,7 +343,7 @@ export async function sell(params: SellParams): Promise<ActionResult> {
       realizedPnL,
       timestamp: params.now
     };
-    await db.transactions.put(transaction);
+    await transactionRepo.put(transaction);
 
     // 階段 2.3:該次賣出有獲利 → floor(realizedPnL / 1000) 修為(tx 完才發)
     if (realizedPnL > 0) {

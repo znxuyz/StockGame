@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Modal from './Modal';
 import HoldingPicker from './HoldingPicker';
 import { db } from '@/db';
+import { holdingRepo } from '@/repositories/holdingRepo';
 import { sell } from '@/services';
 import {
   calcFee,
@@ -70,7 +71,7 @@ export default function SellModal({
     }
   }, [open, presetCode]);
 
-  const holding = useLiveQuery(async () => (code ? db.holdings.get(code) : undefined), [code]);
+  const holding = useLiveQuery(async () => (code ? holdingRepo.get(code) : undefined), [code]);
   const stock = useLiveQuery(async () => (code ? db.stocks.get(code) : undefined), [code]);
   const livePrice = useLiveQuery(async () => (code ? db.prices.get(code) : undefined), [code]);
 

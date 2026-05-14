@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { petRepo } from '@/repositories/petRepo';
 import {
   spendCultivation,
   effectLabel,
@@ -74,7 +75,7 @@ export default function BestiaryPetDetail({ speciesId, onBack, onShare }: Bestia
   // .where 會 throw SchemaError → useLiveQuery rethrow render → 整個樹爆掉
   const pets = useLiveQuery<Pet[]>(
     async () => {
-      const all = await db.pets.toArray();
+      const all = await petRepo.list();
       return all.filter((p) => p.speciesId === speciesId);
     },
     [speciesId]
@@ -152,7 +153,7 @@ export default function BestiaryPetDetail({ speciesId, onBack, onShare }: Bestia
       return;
     }
 
-    await db.pets.update(pet.id, {
+    await petRepo.patch(pet.id, {
       isEternal: true,
       eternalDate: Date.now()
     });

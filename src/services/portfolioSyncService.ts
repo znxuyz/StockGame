@@ -11,6 +11,7 @@
 
 import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { db } from '@/db';
+import { holdingRepo } from '@/repositories/holdingRepo';
 import { getFriendPrivacy } from './privacyService';
 import { maskAmount } from '@/utils/amountMasker';
 import type { FriendPortfolioItem, PortfolioSummaryItem } from '@/types';
@@ -64,7 +65,7 @@ export async function syncMyPortfolio(): Promise<{ ok: boolean }> {
   if (!userId) return { ok: false };
 
   const [holdings, prices, stocks] = await Promise.all([
-    db.holdings.toArray(),
+    holdingRepo.list(),
     db.prices.toArray(),
     db.stocks.toArray()
   ]);
