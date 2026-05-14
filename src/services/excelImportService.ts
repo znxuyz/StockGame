@@ -295,6 +295,14 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
   // 第一次呼叫會 fetch JSON;之後 in-memory
   await preloadStockMaster();
 
+  // 平行驗證所有 unique stock code(統一資料來源後,master 沒命中會 fallback 到
+  // lookupStock 即時 API,sequential 會被串行延遲拖慢;一次 Promise.all 即可)
+  const uniqueCodes = Array.from(new Set(sortedRows.map((r) => r.stockCode).filter(Boolean)));
+  const validatePairs = await Promise.all(
+    uniqueCodes.map(async (code) => [code, await validateStockCode(code)] as const)
+  );
+  const validateCache = new Map(validatePairs);
+
   for (const raw of sortedRows) {
     const item: PreviewItem = { rowNum: raw.rowNum, raw, valid: false };
     items.push(item);
@@ -321,7 +329,7 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
       item.error = '股票代號為空';
       continue;
     }
-    const stockCheck = await validateStockCode(raw.stockCode);
+    const stockCheck = validateCache.get(raw.stockCode) ?? (await validateStockCode(raw.stockCode));
     if (!stockCheck.valid) {
       item.error = stockCheck.error ?? `股票代號 ${raw.stockCode} 查無此股票`;
       continue;

@@ -19,6 +19,8 @@
  */
 
 import { db } from '@/db';
+import { lookupStock } from '@/api';
+import { isApiError } from '@/api';
 
 /** 縮減後的 master entry — 給 UI / 驗證用,不必包到原 Stock type */
 export interface StockMasterEntry {
@@ -170,11 +172,16 @@ export interface ValidateStockResult {
 }
 
 /**
- * 驗證股票代號是否有效。
+ * 驗證股票代號是否有效。**跟 BuyModal 同源**:都走 lookupStock 即時 API 兜底。
+ *
+ * 查詢順序:
  *  1. 格式檢查:trim/uppercase/補 0
- *  2. master(JSON + 內建)有 → valid
- *  3. master 沒 → 退 db.stocks(玩家先前用 BuyModal 加過)→ 有 → valid
- *  4. 都沒 → invalid + 「查無此股票,請確認代號」
+ *  2. 靜態 master(JSON + 內建 fallback)→ 立刻回(離線也能用)
+ *  3. db.stocks(玩家先前 BuyModal / 匯入過的)→ 立刻回
+ *  4. **lookupStock(TWSE/TPEx MIS 即時 API,同 BuyModal)→ 找到回 valid +
+ *     順手寫進 db.stocks 給下次用** — 涵蓋活股的「我不知道但你可能買得到」
+ *  5. lookupStock 回 ApiError code='not-found' → invalid + 「查無此股票」
+ *     其他 ApiError(網路 / HTTP 5xx / parse)→ invalid + 「網路問題,稍後重試」
  */
 export async function validateStockCode(input: string | number): Promise<ValidateStockResult> {
   const normalizedCode = normalizeStockCode(input);
@@ -188,35 +195,67 @@ export async function validateStockCode(input: string | number): Promise<Validat
     };
   }
 
+  // 2. 靜態 master
   const master = await loadMaster();
   const hit = master.get(normalizedCode);
   if (hit) {
     return { valid: true, normalizedCode, hit };
   }
 
-  // 退 db.stocks(玩家先前用 BuyModal/lookup 已 cache 過的)
+  // 3. db.stocks cache(BuyModal / 之前匯入過的)
   try {
     const dbStock = await db.stocks.get(normalizedCode);
     if (dbStock) {
       return {
         valid: true,
         normalizedCode,
-        hit: {
-          code: dbStock.code,
-          name: dbStock.name,
-          market: (dbStock.market === 'TPEX' ? 'TPEX' : dbStock.market === 'ETF' ? 'ETF' : 'TWSE'),
-          type: dbStock.market === 'ETF' ? 'etf' : 'stock'
-        }
+        hit: dbStockToEntry(dbStock)
       };
     }
   } catch {
     // ignore;Dexie 沒這欄就退到下面
   }
 
+  // 4. lookupStock 即時 API — 跟 BuyModal 同源,任何 TWSE/TPEx 活股都能查
+  //    lookupStock 內部會自動寫 db.stocks cache,下次 step 3 就命中
+  try {
+    const stock = await lookupStock(normalizedCode);
+    return {
+      valid: true,
+      normalizedCode,
+      hit: dbStockToEntry(stock)
+    };
+  } catch (e) {
+    if (isApiError(e) && e.code === 'not-found') {
+      return {
+        valid: false,
+        normalizedCode,
+        error: `股票代號「${normalizedCode}」查無此股票(已下市 / 代號錯誤)`
+      };
+    }
+    if (isApiError(e)) {
+      return {
+        valid: false,
+        normalizedCode,
+        error: `查詢「${normalizedCode}」失敗(${e.code}),網路問題?請稍後重試`
+      };
+    }
+    return {
+      valid: false,
+      normalizedCode,
+      error: `查詢「${normalizedCode}」失敗:${e instanceof Error ? e.message : String(e)}`
+    };
+  }
+}
+
+/** db.Stock → StockMasterEntry 形狀轉換 */
+function dbStockToEntry(s: { code: string; name: string; market: string }): StockMasterEntry {
+  const market = s.market === 'TPEX' ? 'TPEX' : s.market === 'ETF' ? 'ETF' : 'TWSE';
   return {
-    valid: false,
-    normalizedCode,
-    error: `股票代號「${normalizedCode}」查無此股票,請確認代號正確(若已下市可能不在主檔)`
+    code: s.code,
+    name: s.name,
+    market,
+    type: market === 'ETF' ? 'etf' : 'stock'
   };
 }
 
