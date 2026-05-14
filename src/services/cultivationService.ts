@@ -16,7 +16,7 @@
  *  ✗ Supabase 同步          → 階段 2.6
  */
 
-import { db } from '@/db';
+import { cultivationRepo } from '@/repositories/cultivationRepo';
 import type { CultivationLog, CultivationReason, UserCultivation } from '@/types';
 import { eventBus } from './eventBus';
 
@@ -28,7 +28,7 @@ const SINGLETON_ID = 'main' as const;
  * 私有 helper:earn / spend / getDetail 都會用到。
  */
 async function ensureCultivation(): Promise<UserCultivation> {
-  const existing = await db.userCultivation.get(SINGLETON_ID);
+  const existing = await cultivationRepo.getBalance();
   if (existing) return existing;
   const init: UserCultivation = {
     id: SINGLETON_ID,
@@ -37,13 +37,13 @@ async function ensureCultivation(): Promise<UserCultivation> {
     lifetimeSpent: 0,
     lastUpdated: Date.now()
   };
-  await db.userCultivation.put(init);
+  await cultivationRepo.putBalance(init);
   return init;
 }
 
 /** 當前修為餘額。沒紀錄回 0(不會 throw)。 */
 export async function getCultivationBalance(): Promise<number> {
-  const c = await db.userCultivation.get(SINGLETON_ID);
+  const c = await cultivationRepo.getBalance();
   return c?.amount ?? 0;
 }
 
@@ -55,7 +55,7 @@ export interface CultivationDetail {
 
 /** 餘額 + lifetime 統計三件組,給紀錄 tab 顯示用 */
 export async function getCultivationDetail(): Promise<CultivationDetail> {
-  const c = await db.userCultivation.get(SINGLETON_ID);
+  const c = await cultivationRepo.getBalance();
   return {
     amount: c?.amount ?? 0,
     lifetimeEarned: c?.lifetimeEarned ?? 0,
@@ -80,13 +80,13 @@ export async function earnCultivation(
   const newAmount = current.amount + amount;
   const now = Date.now();
 
-  await db.userCultivation.put({
+  await cultivationRepo.putBalance({
     ...current,
     amount: newAmount,
     lifetimeEarned: current.lifetimeEarned + amount,
     lastUpdated: now
   });
-  await db.cultivationLog.add({
+  await cultivationRepo.addLog({
     change: amount,
     reason,
     reasonText,
@@ -128,13 +128,13 @@ export async function spendCultivation(
   const newAmount = current.amount - amount;
   const now = Date.now();
 
-  await db.userCultivation.put({
+  await cultivationRepo.putBalance({
     ...current,
     amount: newAmount,
     lifetimeSpent: current.lifetimeSpent + amount,
     lastUpdated: now
   });
-  await db.cultivationLog.add({
+  await cultivationRepo.addLog({
     change: -amount,
     reason,
     reasonText,
@@ -152,5 +152,5 @@ export async function spendCultivation(
  * 紀錄 tab 列表用,預設 50 筆,點「載入更多」可遞增 limit。
  */
 export async function getCultivationHistory(limit: number = 50): Promise<CultivationLog[]> {
-  return db.cultivationLog.orderBy('createdAt').reverse().limit(limit).toArray();
+  return cultivationRepo.listRecentLogs(limit);
 }

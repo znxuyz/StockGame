@@ -18,6 +18,7 @@ import { settingsRepo } from '@/repositories/settingsRepo';
 import { holdingRepo } from '@/repositories/holdingRepo';
 import { petRepo } from '@/repositories/petRepo';
 import { transactionRepo } from '@/repositories/transactionRepo';
+import { achievementRepo } from '@/repositories/achievementRepo';
 import type {
   AchievementProgress,
   Holding,
@@ -279,7 +280,7 @@ export async function runAchievementChecks(
   const monthlyStreak = await computeMonthlyPositiveStreak();
 
   const newlyUnlocked: string[] = [];
-  const existing = await db.achievements.toArray();
+  const existing = await achievementRepo.list();
   const existingMap = new Map(existing.map((a) => [a.id, a]));
 
   for (const def of ACHIEVEMENTS) {
@@ -310,7 +311,7 @@ export async function runAchievementChecks(
       prev.current !== next.current ||
       prev.unlockedAt !== next.unlockedAt
     ) {
-      await db.achievements.put(next);
+      await achievementRepo.put(next);
     }
     if (isUnlocked && !wasUnlocked) {
       newlyUnlocked.push(def.id);

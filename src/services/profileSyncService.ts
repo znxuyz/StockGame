@@ -17,9 +17,9 @@
  *  - 稱號升級判斷:earn 前後 lifetimeEarned 用 getTitle 比 id,跨閾值才寫
  */
 
-import { db } from '@/db';
 import { petRepo } from '@/repositories/petRepo';
 import { holdingRepo } from '@/repositories/holdingRepo';
+import { cultivationRepo } from '@/repositories/cultivationRepo';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { eventBus } from './eventBus';
 import { getRealm, realmLabel } from './petTier';
@@ -246,7 +246,7 @@ async function handleSpend(payload: {
 
 /** lifetimeEarned 跨稱號閾值 → 寫 title_up milestone(只升不寫降) */
 async function maybeRecordTitleUp(userId: string): Promise<void> {
-  const cult = await db.userCultivation.get('main');
+  const cult = await cultivationRepo.getBalance();
   if (!cult) return;
   const newLifetime = cult.lifetimeEarned;
   const newTitle = getTitle(newLifetime);
@@ -307,7 +307,7 @@ export async function backfillProfileSync(): Promise<void> {
   if (!userId) return;
 
   // 設 baseline,後續才能正確判稱號升等
-  const cult = await db.userCultivation.get('main');
+  const cult = await cultivationRepo.getBalance();
   lastLifetimeEarned = cult?.lifetimeEarned ?? 0;
 
   // 判斷是否已 backfill 過(該 user 至少有一筆 summary 就跳過)

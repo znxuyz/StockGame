@@ -8,7 +8,7 @@
  */
 
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { cultivationRepo } from '@/repositories/cultivationRepo';
 import type { CultivationDetail } from '@/services';
 
 const ZERO: CultivationDetail = {
@@ -20,7 +20,7 @@ const ZERO: CultivationDetail = {
 export function useCultivation(): CultivationDetail {
   const detail = useLiveQuery(
     async (): Promise<CultivationDetail> => {
-      const c = await db.userCultivation.get('main');
+      const c = await cultivationRepo.getBalance();
       return c
         ? {
             amount: c.amount,

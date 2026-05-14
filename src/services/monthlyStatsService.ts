@@ -17,6 +17,7 @@
 import { db } from '@/db';
 import { petRepo } from '@/repositories/petRepo';
 import { holdingRepo } from '@/repositories/holdingRepo';
+import { cultivationRepo } from '@/repositories/cultivationRepo';
 import { getRealm, realmLabel, realmRank } from './petTier';
 import { getCreature } from '@/data/creatures';
 import type { CreatureSpecies, Pet, Holding } from '@/types';
@@ -89,7 +90,7 @@ function monthRange(year: number, month: number): { startMs: number; endMs: numb
 /** 從 cultivationLog 找「<= ts」最後一筆 balanceAfter;沒紀錄回 0 */
 async function cultivationBalanceAt(ts: number): Promise<number> {
   // cultivationLog 是 append-only,id 隨 createdAt 遞增。掃全表 filter 比 where range 快(資料量小)
-  const all = await db.cultivationLog.toArray();
+  const all = await cultivationRepo.listLogs();
   let lastBalance = 0;
   for (const log of all) {
     if (log.createdAt <= ts) {
@@ -110,7 +111,7 @@ export async function getMonthlyStats(year: number, month: number): Promise<Mont
   const [pets, holdings, cultivationLog] = await Promise.all([
     petRepo.list(),
     holdingRepo.list(),
-    db.cultivationLog.toArray()
+    cultivationRepo.listLogs()
   ]);
 
   // ─── 新召喚 / 退役 ───

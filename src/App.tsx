@@ -5,6 +5,9 @@ import { useSettings } from '@/repositories/settingsRepo';
 import { useHoldings } from '@/repositories/holdingRepo';
 import { useAllPets, petRepo } from '@/repositories/petRepo';
 import { useTransactions } from '@/repositories/transactionRepo';
+import { useAchievements } from '@/repositories/achievementRepo';
+import { cultivationRepo, useCultivationBalance } from '@/repositories/cultivationRepo';
+import { creatureUnlockRepo } from '@/repositories/creatureUnlockRepo';
 import {
   isMarketOpen,
   getMarketStatus,
@@ -328,15 +331,15 @@ function Game() {
   const settings = useSettings();
   const holdings = useHoldings();
   const prices = useLiveQuery(() => db.prices.toArray(), []);
-  const achievements = useLiveQuery(() => db.achievements.toArray(), []);
+  const achievements = useAchievements();
   // 為了 push trigger,訂閱另外幾張表(只計 length 用,讓 useEffect 偵測到變動)
   const pets = useAllPets();
   const transactions = useTransactions();
   const snapshots = useLiveQuery(() => db.snapshots.toArray(), []);
   const stocks = useLiveQuery(() => db.stocks.toArray(), []);
   // 階段 2.6:訂閱 cultivation 兩表,任何 earn/spend 觸發 push debounce
-  const userCultivation = useLiveQuery(() => db.userCultivation.get('main'), []);
-  const cultivationLog = useLiveQuery(() => db.cultivationLog.count(), []);
+  const userCultivation = useCultivationBalance();
+  const cultivationLog = useLiveQuery(() => cultivationRepo.countLogs(), []);
   // 階段 3.8:訂閱 streak / tasks / milestones,任何變動觸發 push debounce
   // tasks 用 toArray:Dexie liveQuery 對 count 在 update 時不 retrigger,進度推進也要 push
   // milestones 是 append-only,count 即可
@@ -347,7 +350,7 @@ function Game() {
   // 防呆:若表還沒 migrate 完(v12 → v13 過渡)當 0 處理,不讓錯誤把整個 App 炸掉
   const creatureUnlocksCount = useLiveQuery(async () => {
     try {
-      return await db.creatureUnlocks.count();
+      return await creatureUnlockRepo.count();
     } catch (e) {
       console.warn('[App] creatureUnlocks count failed:', e);
       return 0;

@@ -19,6 +19,9 @@ import { settingsRepo } from '@/repositories/settingsRepo';
 import { holdingRepo } from '@/repositories/holdingRepo';
 import { petRepo } from '@/repositories/petRepo';
 import { transactionRepo } from '@/repositories/transactionRepo';
+import { cultivationRepo } from '@/repositories/cultivationRepo';
+import { achievementRepo } from '@/repositories/achievementRepo';
+import { creatureUnlockRepo } from '@/repositories/creatureUnlockRepo';
 import { lookupStock } from '@/api';
 import { buyOrFeed, sell } from './portfolio';
 import { backfillSnapshotsIfNeeded, resetBackfillFlag } from './snapshotBackfill';
@@ -200,10 +203,10 @@ export async function exportBackup(): Promise<{ filename: string; jsonString: st
     petRepo.list(),
     db.snapshots.toArray(),
     settingsRepo.get(),
-    db.userCultivation.get('main'),
-    db.cultivationLog.toArray(),
-    db.achievements.toArray(),
-    db.creatureUnlocks.toArray().catch(() => []) // 5B v13 表,沒 migrate 完防呆
+    cultivationRepo.getBalance(),
+    cultivationRepo.listLogs(),
+    achievementRepo.list(),
+    creatureUnlockRepo.list().catch(() => []) // 5B v13 表,沒 migrate 完防呆
   ]);
 
   const blob: BackupBlob = {

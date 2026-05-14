@@ -1,5 +1,4 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { useAchievements } from '@/repositories/achievementRepo';
 import { ACHIEVEMENTS } from '@/data/achievements';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -20,7 +19,7 @@ const CATEGORY_LABEL: Record<string, string> = {
  * R.3 從 RecordsModal 移除後只剩 GameModal 用。
  */
 export default function AchievementsList() {
-  const progress = useLiveQuery(() => db.achievements.toArray(), []);
+  const progress = useAchievements();
   const map = new Map((progress ?? []).map((a) => [a.id, a]));
   const unlockedCount = (progress ?? []).filter((a) => a.unlockedAt).length;
 

@@ -15,6 +15,16 @@ import { settingsRepo, dexieSettingsTable } from '@/repositories/settingsRepo';
 import { holdingRepo, dexieHoldingsTable } from '@/repositories/holdingRepo';
 import { petRepo, dexiePetsTable } from '@/repositories/petRepo';
 import { transactionRepo, dexieTransactionsTable } from '@/repositories/transactionRepo';
+import { achievementRepo, dexieAchievementsTable } from '@/repositories/achievementRepo';
+import {
+  cultivationRepo,
+  dexieUserCultivationTable,
+  dexieCultivationLogTable
+} from '@/repositories/cultivationRepo';
+import {
+  creatureUnlockRepo,
+  dexieCreatureUnlocksTable
+} from '@/repositories/creatureUnlockRepo';
 import type {
   Stock,
   Holding,
@@ -139,15 +149,15 @@ async function readAllForSync(): Promise<CloudBlob> {
     holdingRepo.list(),
     petRepo.list(),
     transactionRepo.list(),
-    db.achievements.toArray(),
+    achievementRepo.list(),
     db.snapshots.toArray(),
     settingsRepo.get(),
-    db.userCultivation.get('main'),
-    db.cultivationLog.toArray(),
+    cultivationRepo.getBalance(),
+    cultivationRepo.listLogs(),
     db.userLoginStreak.get('main'),
     // 防呆:極早期 v12 → v13 過渡,creatureUnlocks 表可能還沒就緒;吞錯誤當空陣列
-    db.creatureUnlocks.toArray().catch((e) => {
-      console.warn('[cloudSync] creatureUnlocks toArray failed:', e);
+    creatureUnlockRepo.list().catch((e) => {
+      console.warn('[cloudSync] creatureUnlocks list failed:', e);
       return [] as CreatureUnlock[];
     })
   ]);
@@ -194,13 +204,13 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       dexieHoldingsTable,
       dexiePetsTable,
       dexieTransactionsTable,
-      db.achievements,
+      dexieAchievementsTable,
       db.snapshots,
       dexieSettingsTable,
-      db.userCultivation,
-      db.cultivationLog,
+      dexieUserCultivationTable,
+      dexieCultivationLogTable,
       db.userLoginStreak,
-      db.creatureUnlocks
+      dexieCreatureUnlocksTable
     ],
     async () => {
       await db.stocks.clear();
@@ -215,8 +225,8 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       await transactionRepo.clear();
       if (blob.transactions?.length) await transactionRepo.bulkPut(blob.transactions);
 
-      await db.achievements.clear();
-      if (blob.achievements?.length) await db.achievements.bulkPut(blob.achievements);
+      await achievementRepo.clear();
+      if (blob.achievements?.length) await achievementRepo.bulkPut(blob.achievements);
 
       await db.snapshots.clear();
       if (blob.snapshots?.length) await db.snapshots.bulkPut(blob.snapshots);
@@ -224,11 +234,11 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       if (blob.settings) await dexieSettingsTable.put(blob.settings);
 
       // 階段 2.6:cultivation 兩表
-      await db.userCultivation.clear();
-      if (blob.userCultivation) await db.userCultivation.put(blob.userCultivation);
+      await cultivationRepo.clearBalance();
+      if (blob.userCultivation) await cultivationRepo.putBalance(blob.userCultivation);
 
-      await db.cultivationLog.clear();
-      if (blob.cultivationLog?.length) await db.cultivationLog.bulkPut(blob.cultivationLog);
+      await cultivationRepo.clearLogs();
+      if (blob.cultivationLog?.length) await cultivationRepo.bulkPutLogs(blob.cultivationLog);
 
       // 階段 3.8:userLoginStreak 同步,userTasks / milestoneRewards 不動本地
       await db.userLoginStreak.clear();
@@ -238,9 +248,9 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       // 舊版 blob 沒這欄位 → 等於從零開始解鎖(換手機才登入可接受)。
       // 防呆:若舊版 client 連上、creatureUnlocks 表還沒就緒,吞錯誤不中斷 tx
       try {
-        await db.creatureUnlocks.clear();
+        await creatureUnlockRepo.clear();
         if (blob.creatureUnlocks?.length) {
-          await db.creatureUnlocks.bulkPut(blob.creatureUnlocks);
+          await creatureUnlockRepo.bulkPut(blob.creatureUnlocks);
         }
       } catch (e) {
         console.warn('[cloudSync] creatureUnlocks restore failed:', e);

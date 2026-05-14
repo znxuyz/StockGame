@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
 import { petRepo } from '@/repositories/petRepo';
+import { creatureUnlockRepo } from '@/repositories/creatureUnlockRepo';
 import {
   spendCultivation,
   effectLabel,
@@ -86,7 +86,7 @@ export default function BestiaryPetDetail({ speciesId, onBack, onShare }: Bestia
     async () => {
       try {
         return (
-          (await db.creatureUnlocks.where('creatureId').equals(speciesId).first()) ?? null
+          (await creatureUnlockRepo.getByCreatureId(speciesId)) ?? null
         );
       } catch (e) {
         console.warn('[BestiaryPetDetail] creatureUnlocks query failed:', e);

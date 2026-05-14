@@ -6,7 +6,7 @@
  * 賣光重買仍解鎖,因為紀錄是 per-creatureId 不是 per-pet。
  */
 
-import { db } from '@/db';
+import { creatureUnlockRepo } from '@/repositories/creatureUnlockRepo';
 import { spendCultivation } from './cultivationService';
 
 export const STORY_UNLOCK_COST = 100;
@@ -29,7 +29,7 @@ export async function unlockCreatureStory(
   if (!creatureId) return { success: false, reason: 'invalid' };
 
   // idempotent:已解鎖直接 OK,不重複扣費
-  const existing = await db.creatureUnlocks.where('creatureId').equals(creatureId).first();
+  const existing = await creatureUnlockRepo.getByCreatureId(creatureId);
   if (existing) return { success: true, reason: 'already_unlocked' };
 
   const r = await spendCultivation(
@@ -42,7 +42,7 @@ export async function unlockCreatureStory(
   }
 
   try {
-    await db.creatureUnlocks.add({
+    await creatureUnlockRepo.add({
       creatureId,
       unlockedAt: Date.now()
     });

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { cultivationRepo } from '@/repositories/cultivationRepo';
 import { useCultivation } from '@/hooks/useCultivation';
 import { formatInt, formatCount, relativeTime } from '@/utils';
 import type { CultivationLog, CultivationReason } from '@/types';
@@ -56,13 +56,13 @@ export default function CultivationTab({ onPetClick, onOpenMonthlyReview }: Cult
 
   // 訂閱 cultivationLog,任何 earn/spend 寫入自動 retrigger
   const logs = useLiveQuery(
-    () => db.cultivationLog.orderBy('createdAt').reverse().limit(limit).toArray(),
+    () => cultivationRepo.listRecentLogs(limit),
     [limit],
     [] as CultivationLog[]
   );
 
   // 為了知道是否還有更多紀錄(隱藏「載入更多」按鈕用)
-  const totalCount = useLiveQuery(() => db.cultivationLog.count(), [], 0);
+  const totalCount = useLiveQuery(() => cultivationRepo.countLogs(), [], 0);
   const hasMore = logs.length < totalCount;
 
   return (

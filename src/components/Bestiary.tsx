@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
 import { useAllPets } from '@/repositories/petRepo';
+import { creatureUnlockRepo } from '@/repositories/creatureUnlockRepo';
 import { CREATURES, getCreature } from '@/data/creatures';
 import BestiaryPetDetail from './BestiaryPetDetail';
 import type { Pet } from '@/types';
@@ -36,7 +36,7 @@ export default function Bestiary({ onShare }: BestiaryProps = {}) {
   // 防呆:若表還沒 migrate 完(v12 → v13 過渡)或其他錯誤,當作沒解鎖過
   const unlocks = useLiveQuery(async () => {
     try {
-      return await db.creatureUnlocks.toArray();
+      return await creatureUnlockRepo.list();
     } catch (e) {
       console.warn('[Bestiary] creatureUnlocks query failed:', e);
       return [];
