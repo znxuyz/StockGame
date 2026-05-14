@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { db } from '@/db';
 import {
   computeXIRR,
@@ -11,6 +11,7 @@ import {
   type CashFlow
 } from '@/utils';
 import { computeSummary } from '@/services';
+import MetricTooltip from './MetricTooltip';
 
 interface Metrics {
   /** 玩了幾天(從第一筆交易算起) */
@@ -95,6 +96,20 @@ export default function AdvancedMetrics() {
           maxDrawdown: mdd,
           realized: summary.realizedPnL,
           unrealized: summary.unrealizedPnL
+        });
+        // 階段 5G:診斷 log,讓玩家在 DevTools 確認分支走對
+        // 若 console 看到 daysSinceFirst < 30 但 UI 仍顯示「年化報酬 IRR」→
+        // 99% 是 Service Worker 還在 serve 舊版,按 PwaUpdatePrompt「強制」更新
+        // eslint-disable-next-line no-console
+        console.log('[AdvancedMetrics]', {
+          daysSinceFirst,
+          branch:
+            daysSinceFirst < 30 ? 'short' : daysSinceFirst < 90 ? 'medium' : 'long',
+          rawReturnPct:
+            rawReturn !== null ? (rawReturn * 100).toFixed(2) + '%' : '—',
+          xirrPct: xirr !== null ? (xirr * 100).toFixed(2) + '%' : '—(短期不算)',
+          sharpe: sharpe !== null ? sharpe.toFixed(2) : `—(${dailyRet.length}/${SHARPE_MIN_SAMPLES} 天)`,
+          mdd: mdd !== null ? (mdd * 100).toFixed(2) + '%' : '—'
         });
       }
     })();
@@ -252,15 +267,17 @@ function Metric({
   color: string;
   /** 主要數值下方的小註解(例:「玩了 12 天」「⚠️ 異常」) */
   note?: string;
-  /** 點 ℹ️ 展開的長說明 */
+  /** 點 ℹ️ 展開的長說明(走 Portal,不會被父容器 overflow 切掉) */
   tooltip: string;
 }) {
   const [open, setOpen] = useState(false);
+  const iconRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className="bg-sand-50 rounded p-2 relative">
+    <div className="bg-sand-50 rounded p-2">
       <div className="flex items-center justify-center gap-1 text-[10px] text-gray-500">
         <span>{title}</span>
         <button
+          ref={iconRef}
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="w-3.5 h-3.5 rounded-full bg-gray-300 text-white text-[9px] font-bold leading-none flex items-center justify-center active:scale-95"
@@ -271,14 +288,12 @@ function Metric({
       </div>
       <div className={`text-base font-bold ${color}`}>{value}</div>
       {note && <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{note}</div>}
-      {open && (
-        <div
-          className="absolute top-full left-0 right-0 mt-1 z-10 text-left bg-gray-800 text-white text-[10px] leading-relaxed rounded-md p-2 shadow-lg whitespace-pre-line"
-          onClick={() => setOpen(false)}
-        >
-          {tooltip}
-        </div>
-      )}
+      <MetricTooltip
+        anchorRef={iconRef}
+        open={open}
+        content={tooltip}
+        onClose={() => setOpen(false)}
+      />
     </div>
   );
 }
