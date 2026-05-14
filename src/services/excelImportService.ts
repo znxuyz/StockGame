@@ -15,7 +15,6 @@ import { commitBackfilledTransactions, clearOldData, newPendingTx } from './hist
 import type { CommitProgress, CommitResult, PendingTransaction, PendingTxType } from './historicalBackfillService';
 import {
   normalizeStockCode as normCode,
-  preloadStockMaster,
   validateStockCode
 } from './stockMasterService';
 import type { Settings } from '@/types';
@@ -291,12 +290,8 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
     for (const h of holdings) sim.set(h.code, h.shares);
   }
 
-  // 預載股票主檔(TWSE/TPEx 官方 ~2000 筆 + 內建 30 筆 fallback)
-  // 第一次呼叫會 fetch JSON;之後 in-memory
-  await preloadStockMaster();
-
-  // 平行驗證所有 unique stock code(統一資料來源後,master 沒命中會 fallback 到
-  // lookupStock 即時 API,sequential 會被串行延遲拖慢;一次 Promise.all 即可)
+  // 平行驗證所有 unique stock code — validateStockCode 直接打 TWSE/TPEx 即時 API
+  // (跟 BuyModal 同源 lookupStock),sequential 會被串行延遲拖慢;一次 Promise.all 即可
   const uniqueCodes = Array.from(new Set(sortedRows.map((r) => r.stockCode).filter(Boolean)));
   const validatePairs = await Promise.all(
     uniqueCodes.map(async (code) => [code, await validateStockCode(code)] as const)
@@ -324,7 +319,7 @@ export async function previewImport(rows: ExcelRow[], mode: ImportMode): Promise
       continue;
     }
 
-    // 3. 股票代號 — 走 stockMasterService 驗證(master + 內建 fallback + db.stocks)
+    // 3. 股票代號 — 走 stockMasterService 驗證(格式檢查 + lookupStock 即時 API)
     if (!raw.stockCode) {
       item.error = '股票代號為空';
       continue;
