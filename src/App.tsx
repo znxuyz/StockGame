@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
+import { useSettings } from '@/repositories/settingsRepo';
 import {
   isMarketOpen,
   getMarketStatus,
@@ -321,7 +322,7 @@ function Game() {
   }, []);
 
   // live data
-  const settings = useLiveQuery(() => db.settings.get('singleton'), []);
+  const settings = useSettings();
   const holdings = useLiveQuery(() => db.holdings.toArray(), []);
   const prices = useLiveQuery(() => db.prices.toArray(), []);
   const achievements = useLiveQuery(() => db.achievements.toArray(), []);

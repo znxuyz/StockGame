@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { settingsRepo, useSettings } from '@/repositories/settingsRepo';
 import { spendCultivation, BACKGROUNDS } from '@/services';
 import { useCultivation } from '@/hooks/useCultivation';
 import type { Settings } from '@/types';
@@ -23,7 +22,7 @@ interface BackgroundSectionProps {
  *    動態載入 texture + swap;檔案不存在 fallback 維持原 bg
  */
 export default function BackgroundSection({ onBack }: BackgroundSectionProps) {
-  const settings = useLiveQuery(() => db.settings.get('singleton'), []);
+  const settings = useSettings();
   const cultivation = useCultivation();
   const balance = cultivation.amount;
   const [busy, setBusy] = useState<string | null>(null);
@@ -38,7 +37,7 @@ export default function BackgroundSection({ onBack }: BackgroundSectionProps) {
     if (id === currentBg) return;
     setError(null);
     const next: Settings = { ...settings!, currentBackground: id };
-    await db.settings.put(next);
+    await settingsRepo.put(next);
   }
 
   async function unlockAndSelect(id: string, cost: number, label: string) {
@@ -63,7 +62,7 @@ export default function BackgroundSection({ onBack }: BackgroundSectionProps) {
       unlockedBackgrounds: newUnlocked,
       currentBackground: id
     };
-    await db.settings.put(next);
+    await settingsRepo.put(next);
     setBusy(null);
   }
 

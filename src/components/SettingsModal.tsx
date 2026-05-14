@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import type { Settings } from '@/types';
 import { isCloudConfigured, supabase } from '@/lib/supabase';
 import { useAuth, signOut } from '@/lib/auth';
@@ -134,7 +135,7 @@ export default function SettingsModal({
         brokerageMinFee: safeMinFee,
         soundEnabled
       };
-      await db.settings.put(next);
+      await settingsRepo.put(next);
       onActionComplete('⚙ 設定已儲存');
       onClose();
     } finally {

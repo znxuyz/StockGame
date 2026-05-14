@@ -14,6 +14,7 @@
  */
 
 import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import type {
   AchievementProgress,
   Holding,
@@ -251,7 +252,7 @@ export async function runAchievementChecks(
       db.pets.toArray(),
       db.prices.toArray(),
       db.transactions.orderBy('timestamp').toArray(),
-      db.settings.get('singleton'),
+      settingsRepo.get(),
       computeSummary()
     ]);
 

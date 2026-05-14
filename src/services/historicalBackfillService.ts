@@ -15,6 +15,7 @@
  */
 
 import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import { lookupStock } from '@/api';
 import { buyOrFeed, sell } from './portfolio';
 import { backfillSnapshotsIfNeeded, resetBackfillFlag } from './snapshotBackfill';
@@ -195,7 +196,7 @@ export async function exportBackup(): Promise<{ filename: string; jsonString: st
     db.holdings.toArray(),
     db.pets.toArray(),
     db.snapshots.toArray(),
-    db.settings.get('singleton'),
+    settingsRepo.get(),
     db.userCultivation.get('main'),
     db.cultivationLog.toArray(),
     db.achievements.toArray(),

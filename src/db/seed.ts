@@ -1,4 +1,4 @@
-import { db } from './schema';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import type { Settings } from '@/types';
 
 /**
@@ -9,7 +9,7 @@ import type { Settings } from '@/types';
  * 後續每次啟動如果 settings 已存在就略過，避免覆蓋玩家設定。
  */
 export async function seedIfEmpty(): Promise<void> {
-  const settingsCount = await db.settings.count();
+  const settingsCount = await settingsRepo.count();
   if (settingsCount === 0) {
     const initial: Settings = {
       id: 'singleton',
@@ -25,6 +25,6 @@ export async function seedIfEmpty(): Promise<void> {
       hudTheme: 'default',
       unlockedHudThemes: ['default']
     };
-    await db.settings.put(initial);
+    await settingsRepo.put(initial);
   }
 }

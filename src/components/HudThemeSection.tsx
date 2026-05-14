@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
+import { settingsRepo, useSettings } from '@/repositories/settingsRepo';
 import { spendCultivation } from '@/services';
 import { useCultivation } from '@/hooks/useCultivation';
 import type { HudTheme, Settings } from '@/types';
@@ -42,7 +41,7 @@ const THEMES: ThemeMeta[] = [
  *    document.documentElement.dataset.theme,index.css CSS 變數即時生效
  */
 export default function HudThemeSection({ onBack }: HudThemeSectionProps) {
-  const settings = useLiveQuery(() => db.settings.get('singleton'), []);
+  const settings = useSettings();
   const cultivation = useCultivation();
   const balance = cultivation.amount;
   const [busy, setBusy] = useState<HudTheme | null>(null);
@@ -57,7 +56,7 @@ export default function HudThemeSection({ onBack }: HudThemeSectionProps) {
     if (theme === currentTheme) return;
     setError(null);
     const next: Settings = { ...settings!, hudTheme: theme };
-    await db.settings.put(next);
+    await settingsRepo.put(next);
   }
 
   async function unlockAndSelect(theme: HudTheme) {
@@ -82,7 +81,7 @@ export default function HudThemeSection({ onBack }: HudThemeSectionProps) {
       unlockedHudThemes: newUnlocked,
       hudTheme: theme
     };
-    await db.settings.put(next);
+    await settingsRepo.put(next);
     setBusy(null);
   }
 

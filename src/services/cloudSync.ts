@@ -11,6 +11,7 @@
 
 import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { db } from '@/db';
+import { settingsRepo, dexieSettingsTable } from '@/repositories/settingsRepo';
 import type {
   Stock,
   Holding,
@@ -137,7 +138,7 @@ async function readAllForSync(): Promise<CloudBlob> {
     db.transactions.toArray(),
     db.achievements.toArray(),
     db.snapshots.toArray(),
-    db.settings.get('singleton'),
+    settingsRepo.get(),
     db.userCultivation.get('main'),
     db.cultivationLog.toArray(),
     db.userLoginStreak.get('main'),
@@ -192,7 +193,7 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       db.transactions,
       db.achievements,
       db.snapshots,
-      db.settings,
+      dexieSettingsTable,
       db.userCultivation,
       db.cultivationLog,
       db.userLoginStreak,
@@ -217,7 +218,7 @@ async function writeAllFromSync(blob: CloudBlob): Promise<void> {
       await db.snapshots.clear();
       if (blob.snapshots?.length) await db.snapshots.bulkPut(blob.snapshots);
 
-      if (blob.settings) await db.settings.put(blob.settings);
+      if (blob.settings) await dexieSettingsTable.put(blob.settings);
 
       // 階段 2.6:cultivation 兩表
       await db.userCultivation.clear();

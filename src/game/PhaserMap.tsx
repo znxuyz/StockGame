@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Phaser from 'phaser';
 import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import { getCreature } from '@/data/creatures';
 import {
   getPetStatus,
@@ -110,7 +111,7 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
   const prices = useLiveQuery(() => db.prices.toArray(), []);
   // 階段 4B.4:訂閱 currentBackground,變動時通知 scene 動態 swap 背景
   const currentBackground = useLiveQuery(
-    async () => (await db.settings.get('singleton'))?.currentBackground ?? 'default',
+    async () => (await settingsRepo.get())?.currentBackground ?? 'default',
     []
   );
 

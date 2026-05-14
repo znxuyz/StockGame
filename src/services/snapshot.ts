@@ -8,6 +8,7 @@
  */
 
 import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import { computeSummary } from './summary';
 import { getTaipeiDateString } from '@/api';
 import type { DailySnapshot } from '@/types';
@@ -27,10 +28,10 @@ export async function recordDailySnapshot(now: Date = new Date()): Promise<Daily
   };
   await db.snapshots.put(snapshot);
 
-  // 同步更新 settings.lastSnapshotDate
-  const settings = await db.settings.get('singleton');
+  // 同步更新 settings.lastSnapshotDate(patch 沒既有 settings 自動 noop)
+  const settings = await settingsRepo.get();
   if (settings && settings.lastSnapshotDate !== date) {
-    await db.settings.put({ ...settings, lastSnapshotDate: date });
+    await settingsRepo.patch({ lastSnapshotDate: date });
   }
   return snapshot;
 }

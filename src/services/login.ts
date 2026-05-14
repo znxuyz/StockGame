@@ -6,7 +6,7 @@
  *  - maxConsecutiveDays: 史上最高連續天數
  */
 
-import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import { getTaipeiDateString } from '@/api';
 
 /**
@@ -15,7 +15,7 @@ import { getTaipeiDateString } from '@/api';
  */
 export async function checkInLoginToday(now: Date = new Date()): Promise<void> {
   const today = getTaipeiDateString(now);
-  const settings = await db.settings.get('singleton');
+  const settings = await settingsRepo.get();
   if (!settings) return;
 
   if (settings.lastLoginDate === today) {
@@ -31,8 +31,7 @@ export async function checkInLoginToday(now: Date = new Date()): Promise<void> {
   }
 
   const max = Math.max(settings.maxConsecutiveDays, consecutive);
-  await db.settings.put({
-    ...settings,
+  await settingsRepo.patch({
     lastLoginDate: today,
     consecutiveDays: consecutive,
     maxConsecutiveDays: max

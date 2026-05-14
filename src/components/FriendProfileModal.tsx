@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { useSettings } from '@/repositories/settingsRepo';
 import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
 import FriendPortfolioView from './FriendPortfolioView';
@@ -183,7 +183,7 @@ function FriendProfileBody({
 
   // 我自己的 lifetime / streak / 神獸 — 給「我 vs 他」用
   const myCult = useCultivation();
-  const settings = useLiveQuery(() => db.settings.get('singleton'), []);
+  const settings = useSettings();
   const myConsecutiveDays = settings?.consecutiveDays ?? 0;
 
   // 展示神獸:對方有自選 → 用它;沒選 → fallback 對方等級最高 3 隻

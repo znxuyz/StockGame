@@ -1,5 +1,5 @@
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import type { UserProfile } from '@/types';
 import { generateUniqueInviteCode } from './inviteCodeService';
 
@@ -92,7 +92,7 @@ export async function getProfilesByIds(userIds: string[]): Promise<Map<string, U
  */
 async function pickInitialNickname(): Promise<string> {
   try {
-    const s = await db.settings.get('singleton');
+    const s = await settingsRepo.get();
     const legacy = s?.playerName?.trim();
     if (legacy && legacy.length >= 1 && legacy.length <= 20) return legacy;
   } catch {

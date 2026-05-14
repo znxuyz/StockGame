@@ -13,6 +13,7 @@
  */
 
 import { db } from '@/db';
+import { settingsRepo } from '@/repositories/settingsRepo';
 import { fetchPrices, ApiError } from '@/api';
 
 export interface PriceUpdateResult {
@@ -58,12 +59,8 @@ export async function runPriceUpdate(now: number = Date.now()): Promise<PriceUpd
     await db.prices.bulkPut(result.prices);
   }
 
-  // 5. 更新 settings.lastPriceUpdateAt（簡易追蹤）
-  const settings = await db.settings.get('singleton');
-  if (settings) {
-    settings.lastPriceUpdateAt = now;
-    await db.settings.put(settings);
-  }
+  // 5. 更新 settings.lastPriceUpdateAt(簡易追蹤;patch 沒既有 settings 自動 noop)
+  await settingsRepo.patch({ lastPriceUpdateAt: now });
 
   return {
     updated: result.prices.map((p) => p.code),
