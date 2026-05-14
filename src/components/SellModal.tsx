@@ -31,6 +31,23 @@ interface SellModalProps {
  *
  * 階段 R.7:支援 presetCode 預選(從 PetInfoModal 快速進入)。
  */
+/** 同 BuyModal:今天 YYYY-MM-DD(台北時區) */
+function todayYMD(): string {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return fmt.format(new Date());
+}
+
+/** YYYY-MM-DD → unix ms,固定當日 13:30 GMT+8(台股收盤,賣出常用) */
+function parseTradeDate(ymd: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return NaN;
+  return new Date(`${ymd}T05:30:00Z`).getTime();
+}
+
 export default function SellModal({
   open,
   onClose,
@@ -41,6 +58,7 @@ export default function SellModal({
   const [code, setCode] = useState<string | null>(null);
   const [shares, setShares] = useState('');
   const [price, setPrice] = useState('');
+  const [sellDate, setSellDate] = useState(todayYMD());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +78,7 @@ export default function SellModal({
     setCode(null);
     setShares('');
     setPrice('');
+    setSellDate(todayYMD());
     setError(null);
   }
 
@@ -86,7 +105,16 @@ export default function SellModal({
       return;
     }
     if (sharesNum > holding.shares) {
-      setError(`持有 ${holding.shares} 股，無法賣出 ${sharesNum} 股`);
+      setError(`持有 ${holding.shares} 股,無法賣出 ${sharesNum} 股`);
+      return;
+    }
+    const tradeMs = parseTradeDate(sellDate);
+    if (!Number.isFinite(tradeMs)) {
+      setError('賣出日期格式不對');
+      return;
+    }
+    if (tradeMs > Date.now() + 86_400_000) {
+      setError('賣出日期不能是未來');
       return;
     }
     setBusy(true);
@@ -101,7 +129,7 @@ export default function SellModal({
         shares: sharesNum,
         price: priceNum,
         feeConfig,
-        now: Date.now()
+        now: tradeMs
       });
       const isAllSold = result.holding === null;
       onActionComplete(
@@ -195,6 +223,22 @@ export default function SellModal({
                   disabled={busy}
                 />
               </div>
+            </div>
+
+            {/* 階段 5G:賣出日期(預設今天,補登歷史賣出用) */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">賣出日期</label>
+              <input
+                type="date"
+                value={sellDate}
+                onChange={(e) => setSellDate(e.target.value)}
+                max={todayYMD()}
+                className="input-field"
+                disabled={busy}
+              />
+              <p className="text-[11px] text-gray-500 mt-1">
+                預設今天。補登過去賣出就改實際日期,讓 IRR 正確。
+              </p>
             </div>
 
             {grossAmount > 0 && (

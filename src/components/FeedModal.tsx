@@ -20,11 +20,29 @@ interface FeedModalProps {
   presetCode?: string | null;
 }
 
+/** 同 BuyModal:今天 YYYY-MM-DD(台北時區) */
+function todayYMD(): string {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return fmt.format(new Date());
+}
+
+/** YYYY-MM-DD → unix ms,固定當日 09:30 GMT+8(台股開盤) */
+function parseTradeDate(ymd: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return NaN;
+  return new Date(`${ymd}T01:30:00Z`).getTime();
+}
+
 /**
  * 加碼彈窗 — 對應「餵食加碼」按鈕。
- * 從持倉清單選一檔，輸入股數 + 成本價，計算新的平均成本後寫入。
+ * 從持倉清單選一檔,輸入股數 + 成本價,計算新的平均成本後寫入。
  *
  * 階段 R.7:支援 presetCode 預選(從 PetInfoModal 快速進入)。
+ * 階段 5G 修:加日期欄,讓玩家補登歷史加碼(對 IRR / 持有天數正確性至關)。
  */
 export default function FeedModal({
   open,
@@ -36,6 +54,7 @@ export default function FeedModal({
   const [code, setCode] = useState<string | null>(null);
   const [shares, setShares] = useState('');
   const [price, setPrice] = useState('');
+  const [feedDate, setFeedDate] = useState(todayYMD());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +73,7 @@ export default function FeedModal({
     setCode(null);
     setShares('');
     setPrice('');
+    setFeedDate(todayYMD());
     setError(null);
   }
 
@@ -71,6 +91,15 @@ export default function FeedModal({
       setError('股數與價格都要大於 0');
       return;
     }
+    const tradeMs = parseTradeDate(feedDate);
+    if (!Number.isFinite(tradeMs)) {
+      setError('加碼日期格式不對');
+      return;
+    }
+    if (tradeMs > Date.now() + 86_400_000) {
+      setError('加碼日期不能是未來');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -83,7 +112,7 @@ export default function FeedModal({
         shares: sharesNum,
         price: priceNum,
         feeConfig,
-        now: Date.now()
+        now: tradeMs
       });
       onActionComplete(`🍖 ${stock.name} 加碼 ${sharesNum} 股 @ ${priceNum}`);
       reset();
@@ -151,6 +180,22 @@ export default function FeedModal({
                   disabled={busy}
                 />
               </div>
+            </div>
+
+            {/* 階段 5G:加碼日期(預設今天,補登歷史加碼用) */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">加碼日期</label>
+              <input
+                type="date"
+                value={feedDate}
+                onChange={(e) => setFeedDate(e.target.value)}
+                max={todayYMD()}
+                className="input-field"
+                disabled={busy}
+              />
+              <p className="text-[11px] text-gray-500 mt-1">
+                預設今天。補登過去加碼就改實際日期,讓 IRR / 持有天數正確。
+              </p>
             </div>
 
             <div className="bg-sand-50 rounded-lg p-3 text-sm space-y-1">

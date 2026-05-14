@@ -97,19 +97,41 @@ export default function AdvancedMetrics() {
           realized: summary.realizedPnL,
           unrealized: summary.unrealizedPnL
         });
-        // 階段 5G:診斷 log,讓玩家在 DevTools 確認分支走對
-        // 若 console 看到 daysSinceFirst < 30 但 UI 仍顯示「年化報酬 IRR」→
-        // 99% 是 Service Worker 還在 serve 舊版,按 PwaUpdatePrompt「強制」更新
+        // 階段 5G:診斷 log。打開紀錄彈窗 → DevTools 看分支 + 起點日對不對
+        // 若 earliestDate 不對(例如顯示 2026-05-08 但你 2025-10 就開始買)
+        //   → 該是 FeedModal/SellModal 沒勾「補登日期」造成 transaction
+        //     timestamp 變成今天 → 走交易紀錄 tab 編輯 / 重新輸入
+        // 若 daysSinceFirst < 30 但 UI 仍顯示「年化報酬 IRR」→ Service Worker
+        //   還在 serve 舊版,按 PwaUpdatePrompt「強制」更新
         // eslint-disable-next-line no-console
         console.log('[AdvancedMetrics]', {
+          earliestTxDate:
+            transactions[0]?.timestamp
+              ? new Date(transactions[0].timestamp).toISOString().slice(0, 10)
+              : '(無交易)',
+          latestTxDate:
+            transactions.length > 0
+              ? new Date(transactions[transactions.length - 1].timestamp)
+                  .toISOString()
+                  .slice(0, 10)
+              : '(無交易)',
+          transactionCount: transactions.length,
           daysSinceFirst,
           branch:
             daysSinceFirst < 30 ? 'short' : daysSinceFirst < 90 ? 'medium' : 'long',
           rawReturnPct:
             rawReturn !== null ? (rawReturn * 100).toFixed(2) + '%' : '—',
           xirrPct: xirr !== null ? (xirr * 100).toFixed(2) + '%' : '—(短期不算)',
-          sharpe: sharpe !== null ? sharpe.toFixed(2) : `—(${dailyRet.length}/${SHARPE_MIN_SAMPLES} 天)`,
-          mdd: mdd !== null ? (mdd * 100).toFixed(2) + '%' : '—'
+          sharpe:
+            sharpe !== null
+              ? sharpe.toFixed(2)
+              : `—(${dailyRet.length}/${SHARPE_MIN_SAMPLES} 天)`,
+          mdd: mdd !== null ? (mdd * 100).toFixed(2) + '%' : '—',
+          snapshotCount: snapshots.length,
+          snapshotDateRange:
+            snapshots.length > 0
+              ? `${snapshots[0].date} → ${snapshots[snapshots.length - 1].date}`
+              : '(無快照)'
         });
       }
     })();

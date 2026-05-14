@@ -42,7 +42,8 @@ import {
   getMyPrivacy,
   getUnreadCount,
   subscribeToMyNotifications,
-  cleanupOldNotifications
+  cleanupOldNotifications,
+  backfillSnapshotsIfNeeded
 } from '@/services';
 import type { AppNotification } from '@/types';
 import { useAuth } from '@/lib/auth';
@@ -112,6 +113,17 @@ export default function App() {
       .then(async () => {
         await checkInLoginToday();
         await runAchievementChecks();
+        // 階段 5G:把 snapshots 缺漏的歷史日補回來(只跑一次,flag 在 localStorage)
+        // 不擋啟動 — 失敗只 warn
+        try {
+          const r = await backfillSnapshotsIfNeeded();
+          if (!r.skipped) {
+            // eslint-disable-next-line no-console
+            console.log('[snapshotBackfill]', r);
+          }
+        } catch (e) {
+          console.warn('[snapshotBackfill] failed:', e);
+        }
         setReady(true);
       })
       .catch((e) => setSeedError(e instanceof Error ? e.message : String(e)));
