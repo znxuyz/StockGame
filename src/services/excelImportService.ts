@@ -50,8 +50,27 @@ export type ImportMode = 'merge' | 'replace';
 
 /**
  * 生成範本 .xlsx 並觸發瀏覽器下載。
- * Sheet 1「交易紀錄」含標題列 + 1 行範例;Sheet 2「說明」含欄位定義。
+ * Sheet 1「交易紀錄」含標題列 + 3 行通用範例;Sheet 2「說明」含欄位定義。
+ *
+ * **範例資料是寫死的 const**,刻意不放開發者真實持倉,避免洩漏個資。
+ * 選 2330 台積電 + 2024 日期是因為:
+ *   - 國民股,大家認得不會跟自己持倉混淆
+ *   - 2024 明顯是「歷史範例」,不會被誤當成最新建議
+ *   - 一買、一加碼、一部分賣出 — 三種類型一次示範
  */
+const SAMPLE_ROWS: Array<{
+  date: string;
+  type: string;
+  code: string;
+  name: string;
+  shares: number;
+  price: number;
+}> = [
+  { date: '2024/01/15', type: '買入', code: '2330', name: '台積電', shares: 100, price: 600.0 },
+  { date: '2024/03/20', type: '加碼', code: '2330', name: '台積電', shares: 50, price: 650.0 },
+  { date: '2024/06/10', type: '賣出', code: '2330', name: '台積電', shares: 30, price: 700.0 }
+];
+
 export async function generateAndDownloadTemplate(): Promise<void> {
   const wb = new ExcelJS.Workbook();
   wb.creator = '神獸股市';
@@ -77,11 +96,11 @@ export async function generateAndDownloadTemplate(): Promise<void> {
     pattern: 'solid',
     fgColor: { argb: 'FFFFF4D6' }
   };
-  // 範例資料(讓玩家照樣式填)
-  ws1.addRow({ date: '2025/10/13', type: '買入', code: '0050', name: '元大台灣50', shares: 200, price: 60.10 });
-  ws1.addRow({ date: '2025/10/27', type: '加碼', code: '0050', name: '元大台灣50', shares: 62, price: 63.74 });
-  ws1.addRow({ date: '2025/11/18', type: '加碼', code: '0050', name: '元大台灣50', shares: 100, price: 60.50 });
-  // 留幾個空白行讓玩家填(ExcelJS 不需要明確空白行,直接後面 add 即可)
+  // 範例資料 — 通用 2330 台積電 + 三種交易類型,跟真實玩家持倉不會混淆
+  // **const 寫死,不要動態從用戶資料抓**(以免洩漏個資)
+  for (const row of SAMPLE_ROWS) {
+    ws1.addRow(row);
+  }
 
   // Sheet 2:說明
   const ws2 = wb.addWorksheet('說明');
@@ -104,6 +123,11 @@ export async function generateAndDownloadTemplate(): Promise<void> {
   ws2.addRow(['4. 賣出股數不能超過目前持有']);
   ws2.addRow(['5. 同一檔股票賣光後又買回 → 用「買入」(會召喚新神獸)']);
   ws2.addRow(['6. 日期不能是未來']);
+  ws2.addRow([]);
+  ws2.addRow(['以上範例僅供格式參考']).font = { bold: true };
+  ws2.addRow(['• 2024/01/15 起 2330 台積電的三筆只是示範,並非真實交易建議']);
+  ws2.addRow(['• 填寫自己的紀錄前,請刪除範例列(第 2-4 列)']);
+  ws2.addRow(['• 或直接從第二列開始覆蓋,把範例改成你的交易']);
 
   const buffer = await wb.xlsx.writeBuffer();
   triggerDownload(buffer, 'stockgame_import_template.xlsx');
