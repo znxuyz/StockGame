@@ -516,6 +516,13 @@ function Game() {
           } catch (e) {
             console.warn('[cloud] post-pull task re-init failed:', e);
           }
+          // 階段 5H.bootstrap fix:第一次的 checkAndRebuildIfNeeded 在 App 初始化階段
+          // 跑過,但那時 cloud pullNow 還沒發生 → db.transactions 是空的 → 決策成
+          // "noop"。雲端資料拉完才能真的偵測有沒有歷史 → 再叫一次。重複呼叫安全
+          // (decision='skip' 直接 return,沒 cost)
+          checkAndRebuildIfNeeded().catch((e) =>
+            console.warn('[historyBootstrap post-pull] failed:', e)
+          );
           setToast({ message: '☁ 已從雲端載入資料', variant: 'info' });
         } else {
           // 雲端是空的(全新帳號)→ 第一次把本機資料推上去當初始備份

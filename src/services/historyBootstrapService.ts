@@ -87,6 +87,13 @@ function decide(
 /**
  * 啟動時呼叫一次。fire-and-forget — 失敗只 console.warn 不擋 UI / 不擋遊戲載入。
  *
+ * **要叫兩次**:
+ *  1. App 初始化完(local-only / 還沒登入的玩家)
+ *  2. 雲端 pullNow 完(登入的玩家;此時 transactions 才從雲端拉下來)
+ *
+ * 重複呼叫安全 — scheduleRebuildHistory 內部 coalesce,且 decision='skip' 時
+ * 直接 return 不浪費 API 額度。
+ *
  * 不會 await rebuild;由 useLiveQuery 訂閱 `db.snapshots` 自動讓圖表 / AdvancedMetrics
  * 在 bulkPut 完時 re-render(無需 emit event)。
  */
@@ -94,6 +101,8 @@ export async function checkAndRebuildIfNeeded(): Promise<void> {
   const startedAt = Date.now();
 
   // 1. 拉首筆交易日 + snapshot 範圍
+  // 順手記 rawCount(不加任何 filter)— 排查「畫面有資料但 bootstrap 讀不到」用
+  const rawTxCount = await db.transactions.count();
   const firstTx = await db.transactions.orderBy('timestamp').first();
   const firstTxDate = firstTx ? getTaipeiDateString(new Date(firstTx.timestamp)) : null;
   const range = await getSnapshotRange();
@@ -103,6 +112,8 @@ export async function checkAndRebuildIfNeeded(): Promise<void> {
   const decision = decide(firstTxDate, range, yesterday);
   // eslint-disable-next-line no-console
   console.log('[historyBootstrap] inspect:', {
+    txTableName: 'db.transactions',
+    rawTxCount,
     firstTx: firstTxDate ?? '(none)',
     snapshotOldest: range.oldest ?? '(empty)',
     snapshotLatest: range.latest ?? '(empty)',
