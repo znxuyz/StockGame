@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
 import { useSettings } from '@/repositories/settingsRepo';
@@ -57,6 +57,7 @@ import {
 } from '@/services';
 import type { AppNotification } from '@/types';
 import { useAuth } from '@/lib/auth';
+import { isCloudConfigured } from '@/lib/supabase';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
 import CultivationFloater from '@/components/CultivationFloater';
@@ -171,9 +172,61 @@ export default function App() {
   return (
     <>
       <PwaUpdatePrompt />
-      <Game />
+      <AuthGate>
+        <Game />
+      </AuthGate>
     </>
   );
+}
+
+/**
+ * 階段 3A:強制登入閘門。
+ *
+ *  - `isCloudConfigured=false`(dev 沒設 env)→ console.warn 一次後直接 render children,
+ *    維持離線模式(production Cloudflare Pages 永遠是 true,不會走這條)
+ *  - auth loading → 短暫顯示「登入狀態載入中⋯」
+ *  - 沒 session → 全屏 SignInModal(forceLogin=true,藏關閉鈕),children 不 render
+ *    避免 Game / phaser 在沒 auth 的狀態 mount(會跟 cloudSync 的 userId 邏輯打架)
+ *  - 有 session → children 正常 render
+ *
+ * 登出由 SettingsModal 內既有的「登出」按鈕觸發。useAuth 的 onAuthStateChange
+ * 訂閱會把 session 變 null → AuthGate 自動切回登入畫面,**不需要額外邏輯**。
+ *
+ * 同理,token 過期 / refresh 失敗也都會 fire session=null,自動處理。
+ */
+/** module-level flag,讓 AuthGate 多次 render 也只 warn 一次 */
+let authBypassWarned = false;
+
+function AuthGate({ children }: { children: ReactNode }) {
+  const { session, loading } = useAuth();
+
+  if (!isCloudConfigured) {
+    if (!authBypassWarned) {
+      console.warn(
+        '[auth] isCloudConfigured=false — 跳過登入閘門(dev 模式)。production 部署請務必設定 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY env'
+      );
+      authBypassWarned = true;
+    }
+    return <>{children}</>;
+  }
+
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-sand-100 text-gray-500">
+        登入狀態載入中⋯
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="w-full h-full bg-sand-100">
+        <SignInModal open onClose={() => {}} forceLogin />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
 
 function Game() {

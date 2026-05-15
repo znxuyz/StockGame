@@ -12,6 +12,13 @@ import {
 interface SignInModalProps {
   open: boolean;
   onClose: () => void;
+  /**
+   * 階段 3A:強制登入模式。
+   *  - `true`:藏關閉鈕(右上 X / 背景點擊 / Esc 都失效),
+   *    標題改為「請登入以同步資料」。給 AuthGate 用。
+   *  - `false`:可關閉的一般登入彈窗。
+   */
+  forceLogin?: boolean;
 }
 
 /** 'signin' = 主畫面(email + 密碼 + 登入/註冊雙鈕);'reset' = 重設密碼(只剩 email) */
@@ -46,7 +53,7 @@ const SHOW_GOOGLE = import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === 'true';
  *  - App.tsx 的 useEffect 偵測 userId + modal === 'signin' → 自動關彈窗
  *  - cloud sync useEffect 跑 pullNow + 重抽 daily/weekly 任務(不是這裡的責任)
  */
-export default function SignInModal({ open, onClose }: SignInModalProps) {
+export default function SignInModal({ open, onClose, forceLogin = false }: SignInModalProps) {
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -169,7 +176,7 @@ export default function SignInModal({ open, onClose }: SignInModalProps) {
   // ── reset mode:單獨畫面,只要 email 輸入框 + 寄送按鈕 ──
   if (mode === 'reset') {
     return (
-      <Modal open={open} onClose={handleClose} title="重設密碼">
+      <Modal open={open} onClose={handleClose} title="重設密碼" hideClose={forceLogin}>
         <form onSubmit={handleResetSubmit} className="space-y-3 text-sm">
           <p className="text-gray-600 leading-relaxed">
             輸入註冊用的 Email,我們寄一封重設連結給你。
@@ -231,7 +238,12 @@ export default function SignInModal({ open, onClose }: SignInModalProps) {
           : null;
 
   return (
-    <Modal open={open} onClose={handleClose} title="登入帳號">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title={forceLogin ? '請登入以同步資料' : '登入帳號'}
+      hideClose={forceLogin}
+    >
       <div className="space-y-4 text-sm">
         {/* ── 第三方登入(預設藏起來,env flag 開啟才渲染) ── */}
         {showThirdParty && (
