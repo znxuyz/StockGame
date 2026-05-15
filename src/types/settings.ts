@@ -43,6 +43,15 @@ export interface Settings {
    * 解鎖後 append 進此 array,可隨時切換不再扣費。
    */
   unlockedHudThemes?: HudTheme[];
+  /**
+   * 階段 3B:本機端寫入時間(unix millis)。
+   *
+   * **不是 Dexie schema 變動**(IndexedDB 對 document store 不檢查 shape),
+   * 純 TS 型別新增 optional 欄位。settingsRepo 的 cloud-first 實作每次 `put`/
+   * `patch` 自動寫入 `Date.now()`,讓 stale-while-revalidate 能跟雲端
+   * `updated_at` 比對誰新。舊資料沒這個欄位 → 視為最舊(0),雲端值勝出。
+   */
+  updatedAt?: number;
 }
 
 /** HUD 主題 4 選 1(階段 4B.3)。CSS variables 在 index.css [data-theme="..."] 區段 */
