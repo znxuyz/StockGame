@@ -135,9 +135,14 @@ export default function SettingsModal({
         brokerageMinFee: safeMinFee,
         soundEnabled
       };
-      await settingsRepo.put(next);
-      onActionComplete('⚙ 設定已儲存');
-      onClose();
+      try {
+        await settingsRepo.put(next);
+        onActionComplete('⚙ 設定已儲存');
+        onClose();
+      } catch (e) {
+        console.error('[SettingsModal] save failed:', e);
+        onActionComplete('⚠️ 設定同步失敗,本機已還原');
+      }
     } finally {
       setBusy(false);
     }

@@ -34,8 +34,9 @@ export async function getCultivationDetail(): Promise<CultivationDetail> {
 }
 
 /**
- * 賺取修為。透過 Repository 走 RPC `earn_cultivation`(雲端 atomically upsert balance + log)。
- * amount <= 0 視為 no-op,回當前餘額。回傳變動後餘額。
+ * 賺取修為。透過 Repository 樂觀更新本機 + upsert 雲端 user_cultivation 表。
+ * amount <= 0 視為 no-op,回當前餘額。回傳變動後餘額(若雲端失敗已 rollback,
+ * 回的就是 rollback 後的舊餘額;repo 已 emit toast)。
  */
 export async function earnCultivation(
   amount: number,
@@ -46,7 +47,10 @@ export async function earnCultivation(
   if (amount <= 0) return getCultivationBalance();
 
   const result = await cultivationRepo.earn(amount, reason, reasonText, relatedPetId);
-  // earn 永遠回 ok(invalid_amount 已被上面擋掉);雲端失敗 throw 已由 Repo 處理
+  if (!result.ok) {
+    // 雲端失敗已 rollback + toast,別 emit 'cultivation:earn'(避免飄字 + 任務觸發誤判)
+    return result.newAmount;
+  }
   eventBus.emit('cultivation:earn', { amount, reason, reasonText, relatedPetId });
   return result.newAmount;
 }
@@ -54,14 +58,16 @@ export async function earnCultivation(
 export interface SpendResult {
   success: boolean;
   /** 失敗原因(僅 success=false 時填) */
-  reason?: 'invalid_amount' | 'insufficient';
+  reason?: 'invalid_amount' | 'insufficient' | 'cloud_failed';
   /** 變動後餘額(僅 success=true 時填) */
   newBalance?: number;
 }
 
 /**
- * 消耗修為。透過 Repository 走 RPC `spend_cultivation`(雲端 atomic check + 扣)。
- * 餘額不足 → 回 success=false,不會扣到負數(RPC 端 WHERE amount >= delta 保證)。
+ * 消耗修為。樂觀更新本機 + 雲端 upsert。
+ * 餘額不足 → success=false reason='insufficient'(本機預檢)。
+ * 雲端寫失敗 → repo 已 rollback + emit toast,本 service 回 success=false
+ *   reason='cloud_failed';caller(RenameModal 等)看到非 success 就停止業務動作。
  */
 export async function spendCultivation(
   amount: number,
@@ -73,8 +79,11 @@ export async function spendCultivation(
 
   const result = await cultivationRepo.spend(amount, reason, reasonText, relatedPetId);
   if (!result.ok) {
-    // Repo 的 'no_row' 對外視為 insufficient(玩家視角沒差別,都是錢不夠)
-    const uiReason = result.reason === 'invalid_amount' ? 'invalid_amount' : 'insufficient';
+    // 'no_row' 對玩家視角等同 insufficient(都是「錢不夠」)— UI 訊息可以共用
+    let uiReason: SpendResult['reason'];
+    if (result.reason === 'invalid_amount') uiReason = 'invalid_amount';
+    else if (result.reason === 'cloud_failed') uiReason = 'cloud_failed';
+    else uiReason = 'insufficient';
     return { success: false, reason: uiReason };
   }
 

@@ -56,7 +56,12 @@ export default function HudThemeSection({ onBack }: HudThemeSectionProps) {
     if (theme === currentTheme) return;
     setError(null);
     const next: Settings = { ...settings!, hudTheme: theme };
-    await settingsRepo.put(next);
+    try {
+      await settingsRepo.put(next);
+    } catch (e) {
+      console.error('[HudThemeSection] selectTheme failed:', e);
+      setError('同步失敗,請稍後重試');
+    }
   }
 
   async function unlockAndSelect(theme: HudTheme) {
@@ -81,7 +86,12 @@ export default function HudThemeSection({ onBack }: HudThemeSectionProps) {
       unlockedHudThemes: newUnlocked,
       hudTheme: theme
     };
-    await settingsRepo.put(next);
+    try {
+      await settingsRepo.put(next);
+    } catch (e) {
+      console.error('[HudThemeSection] unlockAndSelect failed:', e);
+      setError('同步失敗,但修為已扣 — 請稍後重整網頁');
+    }
     setBusy(null);
   }
 

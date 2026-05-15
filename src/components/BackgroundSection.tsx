@@ -37,7 +37,12 @@ export default function BackgroundSection({ onBack }: BackgroundSectionProps) {
     if (id === currentBg) return;
     setError(null);
     const next: Settings = { ...settings!, currentBackground: id };
-    await settingsRepo.put(next);
+    try {
+      await settingsRepo.put(next);
+    } catch (e) {
+      console.error('[BackgroundSection] selectBg failed:', e);
+      setError('同步失敗,請稍後重試');
+    }
   }
 
   async function unlockAndSelect(id: string, cost: number, label: string) {
@@ -62,7 +67,12 @@ export default function BackgroundSection({ onBack }: BackgroundSectionProps) {
       unlockedBackgrounds: newUnlocked,
       currentBackground: id
     };
-    await settingsRepo.put(next);
+    try {
+      await settingsRepo.put(next);
+    } catch (e) {
+      console.error('[BackgroundSection] unlockAndSelect failed:', e);
+      setError('同步失敗,但修為已扣 — 請稍後重整網頁');
+    }
     setBusy(null);
   }
 

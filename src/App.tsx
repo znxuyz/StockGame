@@ -30,6 +30,7 @@ import {
   checkAndGenerateWeeklyTasks,
   attachTaskListeners,
   emitTaskTrigger,
+  eventBus,
   type PortfolioSummary
 } from '@/services';
 import type { LoginStreak } from '@/types';
@@ -123,24 +124,24 @@ export default function App() {
   const [seedError, setSeedError] = useState<string | null>(null);
 
   useEffect(() => {
+    // 階段 3D 緊急修復:**每一個 init 步驟獨立 try/catch**,任一失敗只 warn,
+    // 不再把整段 init chain 灌進 setSeedError → 不會出現「初始化失敗」全屏彈窗。
+    // 唯一會 setSeedError 的是 seedIfEmpty 本身 throw(Dexie 開不起來 — catastrophic)。
     seedIfEmpty()
       .then(async () => {
-        await checkInLoginToday();
-        await runAchievementChecks();
-        // 階段 5G:把 snapshots 缺漏的歷史日補回來(只跑一次,flag 在 localStorage)
-        // 不擋啟動 — 失敗只 warn
+        try { await checkInLoginToday(); }
+        catch (e) { console.warn('[init] checkInLoginToday failed:', e); }
+
+        try { await runAchievementChecks(); }
+        catch (e) { console.warn('[init] runAchievementChecks failed:', e); }
+
         try {
           const r = await backfillSnapshotsIfNeeded();
-          if (!r.skipped) {
-            // eslint-disable-next-line no-console
-            console.log('[snapshotBackfill]', r);
-          }
+          if (!r.skipped) console.log('[snapshotBackfill]', r);
         } catch (e) {
           console.warn('[snapshotBackfill] failed:', e);
         }
-        // 階段 5H.bootstrap:狀態驅動的歷史 snapshot 補抓 — 不管使用者做不做新動作,
-        // 只要 snapshots 不存在 / 比第一筆交易晚 / 比昨天舊 就 schedule rebuild。
-        // fire-and-forget(rebuild 在背景跑,圖表透過 useLiveQuery 自動更新)
+
         checkAndRebuildIfNeeded().catch((e) =>
           console.warn('[historyBootstrap] failed:', e)
         );
@@ -242,6 +243,20 @@ function Game() {
   const [checkInStreak, setCheckInStreak] = useState<LoginStreak | null>(null);
 
   const [toast, setToast] = useState<{ message: string; variant: 'info' | 'error' } | null>(null);
+
+  // 階段 3D 緊急修復:Repository 雲端同步失敗會 emit 'toast:show',這邊訂閱 +
+  // 30 秒 dedupe(同訊息短時間內重複觸發只顯示一次)。
+  useEffect(() => {
+    const recent = new Map<string, number>();
+    return eventBus.on('toast:show', ({ message, variant }) => {
+      const now = Date.now();
+      const last = recent.get(message);
+      if (last && now - last < 30_000) return;
+      recent.set(message, now);
+      setToast({ message, variant: variant ?? 'error' });
+    });
+  }, []);
+
   const [refreshing, setRefreshing] = useState(false);
   const [marketStatus, setMarketStatus] = useState<MarketStatus>(getMarketStatus());
   /**

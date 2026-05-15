@@ -50,12 +50,24 @@ export interface TaskCompletedEvent {
   task: UserTask;
 }
 
+/**
+ * 階段 3D 緊急修復:Repository 雲端同步失敗時 emit,App.tsx 訂閱後顯示 Toast。
+ *
+ * **不直接 throw 到 React tree**,避免 init 卡死 / 元件 unmount。
+ * App.tsx 訂閱端做 30 秒 dedupe(同訊息短時間內重複觸發只顯示一次)。
+ */
+export interface ToastShowEvent {
+  message: string;
+  variant?: 'info' | 'error';
+}
+
 /** 集中註冊所有 event 名 + payload 型別,emit/on 都吃這張 map 確保型別 */
 export interface EventMap {
   'cultivation:earn': CultivationEarnEvent;
   'cultivation:spend': CultivationSpendEvent;
   'task:trigger': TaskTriggerEvent_Payload;
   'task:completed': TaskCompletedEvent;
+  'toast:show': ToastShowEvent;
 }
 
 type Listener<T> = (payload: T) => void;

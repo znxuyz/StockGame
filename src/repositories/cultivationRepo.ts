@@ -1,53 +1,72 @@
 /**
- * 階段 3D 批 1 — `cultivationRepo`:Singleton 餘額 + append-only log,雲端為主。
+ * 階段 3D 緊急修復 — `cultivationRepo`:白名單 toRemote + 寫失敗不 throw +
+ * 移除依賴不存在的 RPC,改成直接 upsert balance 表 + 本機 log。
  *
- * 跟 settingsRepo 模板的差異:
- *  - 修為餘額是「原子操作」(避免兩裝置同時花修為導致餘額負數 race),
- *    透過 Supabase RPC `earn_cultivation` / `spend_cultivation` 在雲端 atomically
- *    upsert balance + insert log。本機 `db.userCultivation` + `db.cultivationLog`
- *    仍 樂觀更新 + cloud 失敗 rollback。
- *  - cultivation_log 是 append-only history,RPC 自動寫入雲端 log;本機 addLog
- *    也樂觀寫一筆,跟雲端最後 row 對齊(若 server log_id 跟 local id 不同,
- *    現階段不 reconcile — 本機 id 只給 UI key 用,業務不依賴)。
- *
- * Interface 新增兩個 atomic 方法:
- *   `earn(delta, reason, reasonText, relatedPetId?) → Promise<EarnResult>`
- *   `spend(delta, reason, reasonText, relatedPetId?) → Promise<SpendResult>`
- *
- * 既有方法(`getBalance`/`putBalance`/`addLog`/`listLogs`/...)保留,給
- *  - cloudSync 之類「整包搬資料」場景
- *  - 非業務 mutation 場景(極罕見)
- *  服務層(`cultivationService`)的 `earnCultivation`/`spendCultivation` 改成
- *  call repo 的 `earn`/`spend`,確保原子性。
+ * 前一輪批 1 假設雲端有 `earn_cultivation` / `spend_cultivation` RPC,實際沒有;
+ * 加上雙寫整包碰到 schema cache 找不到 column 就炸 → 把 App init 卡死。
+ * 本次緊急修復:
+ *   1. 白名單 toRemote(只送 user_id / total_points / lifetime_earned / lifetime_spent)
+ *   2. 拿掉 RPC 依賴,直接走 supabase.from('user_cultivation').upsert(...)
+ *   3. cloud log writes 整段拿掉(雲端 cultivation_log 表 schema 不確定;留階段
+ *      之後再對齊 — 本機 log 仍正常累積)
+ *   4. 寫失敗一律「console.error + 回滾本機 + emit toast」,**不 throw**
  *
  * ──────────── 雲端 vs 本機欄位範圍 ────────────
  *
- *  ✅ 上雲(`user_cultivation` + `cultivation_log`):
- *     - amount / lifetime_earned / lifetime_spent / last_updated
- *     - log: change / reason / reason_text / balance_after / related_pet_id / created_at
+ *  ✅ 上雲(`user_cultivation` 表;`toRemoteBalance` 白名單):
+ *     - user_id
+ *     - total_points          ← UserCultivation.amount(雲端命名是 total_)
+ *     - lifetime_earned       ← UserCultivation.lifetimeEarned
+ *     - lifetime_spent        ← UserCultivation.lifetimeSpent
  *
- *  ❌ 不上雲(本機 only):
- *     - cultivationLog.id(Dexie auto-increment;雲端用 bigserial,各記各的)
+ *  ❌ 不上雲(本機限定):
+ *     - lastUpdated           Settings 風格的同步時間戳,本機 stale-while-revalidate 用
+ *     - id 'main'             本機 singleton 主鍵
+ *
+ *  ❌ cultivation_log:**完全不上雲**(本批先這樣;本機 db.cultivationLog 照常 append)
+ *
+ *  ⚠️ 加新雲端欄位前,必先在 Supabase `user_cultivation` 表 ALTER 確認對應 column 存在
+ *
+ * ──────────── 原子性 trade-off ────────────
+ *
+ *  抽掉 RPC 之後,兩裝置同時花修為 race 沒有 PG-level 防線(只有本機預檢
+ *  「餘額 >= delta」)。兩裝置同時花同一筆會雙方都 ok,雲端餘額可能變成負數。
+ *  風險可控:單人玩遊戲多裝置同時花修為的機率極低;且 settingsRepo / loginStreakRepo
+ *  也沒有原子防線。後續(階段 5 / 階段 4 之後)再評估 RPC 補強。
+ *
+ * ──────────── 錯誤處理 ────────────
+ *
+ *  `earn` / `spend`:雲端失敗 → console.error + 本機 balance / log rollback + emit toast,
+ *  **不 throw**。Caller 拿到 `{ ok: false, reason: 'cloud_failed' }`(或 spend 拿
+ *  `{ ok: false, reason: 'cloud_failed', current }`)決定要不要走業務拒絕路徑。
+ *
+ *  `getBalance`:外層 try/catch,永遠不 throw。
+ *
+ *  `putBalance` / `addLog` / 其他 raw 方法:雲端失敗 console.warn,**不 throw**,
+ *  不影響本機資料。
  */
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
+import { eventBus } from '@/services/eventBus';
 import type { UserCultivation, CultivationLog, CultivationReason } from '@/types';
 
-// ─── 公開 interface(新增 earn/spend atomic 方法)──────
+// ─── 公開 interface(批 1 加的 earn/spend 保留)─────
 
-export interface EarnResult {
-  ok: true;
-  newAmount: number;
-}
+export type EarnResult =
+  | { ok: true; newAmount: number }
+  | { ok: false; reason: 'cloud_failed'; newAmount: number };
 
 export type SpendResult =
   | { ok: true; newAmount: number }
-  | { ok: false; reason: 'invalid_amount' | 'insufficient' | 'no_row'; current?: number };
+  | {
+      ok: false;
+      reason: 'invalid_amount' | 'insufficient' | 'no_row' | 'cloud_failed';
+      current?: number;
+    };
 
 export interface CultivationRepository {
-  // 原子操作(階段 3D 新增 — 業務優先用這兩個)
   earn(
     delta: number,
     reason: CultivationReason,
@@ -61,12 +80,10 @@ export interface CultivationRepository {
     relatedPetId?: string
   ): Promise<SpendResult>;
 
-  // userCultivation(singleton)
   getBalance(): Promise<UserCultivation | undefined>;
   putBalance(u: UserCultivation): Promise<void>;
   clearBalance(): Promise<void>;
 
-  // cultivationLog(append-only)
   addLog(entry: Omit<CultivationLog, 'id'>): Promise<number>;
   bulkPutLogs(entries: CultivationLog[]): Promise<void>;
   listLogs(): Promise<CultivationLog[]>;
@@ -85,22 +102,50 @@ async function getCurrentUserId(): Promise<string> {
   return uid;
 }
 
+// ─── 雲端 ↔ 本機 mapper ──────────────────────────────
+
+/**
+ * 雲端 `user_cultivation` row shape — 只列已知存在的欄位。
+ * **不要加** amount / last_updated 之類本機命名 — 跟雲端 schema 命名對齊用。
+ */
 interface RemoteCultivation {
   user_id: string;
-  amount: number;
+  total_points: number;
   lifetime_earned: number;
   lifetime_spent: number;
-  last_updated: number;
-  updated_at: string;
+  // updated_at 可能存在也可能沒,SELECT 時 ?. 取即可
+  updated_at?: string;
 }
 
-function toLocalBalance(remote: RemoteCultivation): UserCultivation {
-  return {
+function toLocalBalance(
+  remote: RemoteCultivation,
+  existingLocal: UserCultivation | undefined
+): UserCultivation {
+  const baseline: UserCultivation = existingLocal ?? {
     id: 'main',
-    amount: remote.amount,
+    amount: 0,
+    lifetimeEarned: 0,
+    lifetimeSpent: 0,
+    lastUpdated: Date.now()
+  };
+  return {
+    ...baseline,
+    amount: remote.total_points,
     lifetimeEarned: remote.lifetime_earned,
     lifetimeSpent: remote.lifetime_spent,
-    lastUpdated: remote.last_updated
+    lastUpdated: remote.updated_at ? new Date(remote.updated_at).getTime() : baseline.lastUpdated
+  };
+}
+
+function toRemoteBalance(
+  local: UserCultivation,
+  userId: string
+): Omit<RemoteCultivation, 'updated_at'> {
+  return {
+    user_id: userId,
+    total_points: local.amount,
+    lifetime_earned: local.lifetimeEarned,
+    lifetime_spent: local.lifetimeSpent
   };
 }
 
@@ -113,7 +158,6 @@ class DexieCultivationRepo implements CultivationRepository {
     reasonText: string,
     relatedPetId?: string
   ): Promise<EarnResult> {
-    if (delta <= 0) return { ok: true, newAmount: (await this.getBalance())?.amount ?? 0 };
     const current = (await this.getBalance()) ?? {
       id: 'main' as const,
       amount: 0,
@@ -200,7 +244,7 @@ class DexieCultivationRepo implements CultivationRepository {
   }
 }
 
-// ─── Cloud-first impl ──────────────────
+// ─── Cloud-first impl(沒 RPC,直接 upsert 表)─────
 
 const REVALIDATE_INTERVAL_MS = 10_000;
 let lastRevalidateAt = 0;
@@ -225,73 +269,53 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       lifetimeSpent: 0,
       lastUpdated: Date.now()
     };
-    const optimisticAmount = baseline.amount + delta;
+    const newAmount = baseline.amount + delta;
     const now = Date.now();
-    await db.userCultivation.put({
+    const newBalance: UserCultivation = {
       ...baseline,
-      amount: optimisticAmount,
+      amount: newAmount,
       lifetimeEarned: baseline.lifetimeEarned + delta,
       lastUpdated: now
-    });
+    };
+    await db.userCultivation.put(newBalance);
     const localLogId = await db.cultivationLog.add({
       change: delta,
       reason,
       reasonText,
-      balanceAfter: optimisticAmount,
+      balanceAfter: newAmount,
       createdAt: now,
       relatedPetId
     } as CultivationLog);
 
-    // 2. 沒登入 → 本機已寫,不上雲不 throw
+    // 2. 沒登入 → 本機已寫,不上雲
+    let userId: string;
     try {
-      await getCurrentUserId();
-    } catch (e) {
-      console.warn(
-        '[cultivationRepo] not signed in — local-only earn, will reconcile after sign-in:',
-        e
-      );
-      return { ok: true, newAmount: optimisticAmount };
+      userId = await getCurrentUserId();
+    } catch {
+      return { ok: true, newAmount };
     }
 
-    // 3. RPC 雲端 atomic
+    // 3. upsert 雲端 balance(白名單)— 失敗 rollback + toast,**不 throw**
     try {
-      const { data, error } = await supabase.rpc('earn_cultivation', {
-        p_delta: delta,
-        p_reason: reason,
-        p_reason_text: reasonText,
-        p_related_pet_id: relatedPetId ?? null
-      });
-      if (error) throw new Error(error.message);
-      const result = data as { ok: boolean; new_amount?: number; reason?: string };
-      if (!result.ok) {
-        throw new Error(`earn_cultivation 拒絕:${result.reason}`);
-      }
-
-      // 雲端的 new_amount 才是真相 — 若跟本機樂觀值不同(多裝置 race),信雲端
-      const serverAmount = result.new_amount!;
-      if (serverAmount !== optimisticAmount) {
-        console.warn(
-          `[cultivationRepo] server amount ${serverAmount} ≠ optimistic ${optimisticAmount}, server wins`
-        );
-        await db.userCultivation.put({
-          ...baseline,
-          amount: serverAmount,
-          lifetimeEarned: baseline.lifetimeEarned + delta,
-          lastUpdated: now
-        });
-      }
-      return { ok: true, newAmount: serverAmount };
+      await this.uploadBalanceToCloud(newBalance, userId);
+      return { ok: true, newAmount };
     } catch (e) {
-      // 4. rollback 本機 balance + log
+      console.error('[cultivationRepo] earn cloud upload failed:', e);
       if (previousBalance) {
         await db.userCultivation.put(previousBalance);
       } else {
         await db.userCultivation.delete('main');
       }
       await db.cultivationLog.delete(localLogId);
-      throw new Error(
-        `修為同步失敗,請重試:${e instanceof Error ? e.message : String(e)}`
-      );
+      eventBus.emit('toast:show', {
+        message: '修為同步失敗(已還原本機)',
+        variant: 'error'
+      });
+      return {
+        ok: false,
+        reason: 'cloud_failed',
+        newAmount: previousBalance?.amount ?? 0
+      };
     }
   }
 
@@ -303,7 +327,7 @@ class CloudFirstCultivationRepo implements CultivationRepository {
   ): Promise<SpendResult> {
     if (delta <= 0) return { ok: false, reason: 'invalid_amount' };
 
-    // 預檢:本機餘額不足直接拒,不上雲(避免無謂 RPC)
+    // 預檢本機餘額(雲端沒 RPC 做 atomic check,只靠本機 + 雲端 upsert)
     const previousBalance = await db.userCultivation.get('main');
     if (!previousBalance) return { ok: false, reason: 'no_row' };
     if (previousBalance.amount < delta) {
@@ -311,80 +335,49 @@ class CloudFirstCultivationRepo implements CultivationRepository {
     }
 
     // 1. 樂觀更新本機
-    const optimisticAmount = previousBalance.amount - delta;
+    const newAmount = previousBalance.amount - delta;
     const now = Date.now();
-    await db.userCultivation.put({
+    const newBalance: UserCultivation = {
       ...previousBalance,
-      amount: optimisticAmount,
+      amount: newAmount,
       lifetimeSpent: previousBalance.lifetimeSpent + delta,
       lastUpdated: now
-    });
+    };
+    await db.userCultivation.put(newBalance);
     const localLogId = await db.cultivationLog.add({
       change: -delta,
       reason,
       reasonText,
-      balanceAfter: optimisticAmount,
+      balanceAfter: newAmount,
       createdAt: now,
       relatedPetId
     } as CultivationLog);
 
-    // 2. 沒登入 → 本機-only
+    // 2. 沒登入 → 本機 only
+    let userId: string;
     try {
-      await getCurrentUserId();
-    } catch (e) {
-      console.warn(
-        '[cultivationRepo] not signed in — local-only spend, will reconcile after sign-in:',
-        e
-      );
-      return { ok: true, newAmount: optimisticAmount };
+      userId = await getCurrentUserId();
+    } catch {
+      return { ok: true, newAmount };
     }
 
-    // 3. RPC
+    // 3. upsert 雲端 — 失敗 rollback + toast,**不 throw**
     try {
-      const { data, error } = await supabase.rpc('spend_cultivation', {
-        p_delta: delta,
-        p_reason: reason,
-        p_reason_text: reasonText,
-        p_related_pet_id: relatedPetId ?? null
-      });
-      if (error) throw new Error(error.message);
-      const result = data as {
-        ok: boolean;
-        new_amount?: number;
-        reason?: 'invalid_amount' | 'insufficient' | 'no_row';
-        current?: number;
-      };
-      if (!result.ok) {
-        // 雲端拒絕(可能多裝置 race 把錢花光了)→ rollback 本機 + 回拒絕
-        await db.userCultivation.put(previousBalance);
-        await db.cultivationLog.delete(localLogId);
-        return {
-          ok: false,
-          reason: result.reason ?? 'insufficient',
-          current: result.current
-        };
-      }
-
-      const serverAmount = result.new_amount!;
-      if (serverAmount !== optimisticAmount) {
-        console.warn(
-          `[cultivationRepo] server amount ${serverAmount} ≠ optimistic ${optimisticAmount}, server wins`
-        );
-        await db.userCultivation.put({
-          ...previousBalance,
-          amount: serverAmount,
-          lifetimeSpent: previousBalance.lifetimeSpent + delta,
-          lastUpdated: now
-        });
-      }
-      return { ok: true, newAmount: serverAmount };
+      await this.uploadBalanceToCloud(newBalance, userId);
+      return { ok: true, newAmount };
     } catch (e) {
-      // 技術錯誤(網路 / RLS / ...)→ rollback + throw
+      console.error('[cultivationRepo] spend cloud upload failed:', e);
       await db.userCultivation.put(previousBalance);
       await db.cultivationLog.delete(localLogId);
-      throw new Error(
-        `修為同步失敗,請重試:${e instanceof Error ? e.message : String(e)}`
-      );
+      eventBus.emit('toast:show', {
+        message: '修為同步失敗(已還原本機)',
+        variant: 'error'
+      });
+      return {
+        ok: false,
+        reason: 'cloud_failed',
+        current: previousBalance.amount
+      };
     }
   }
 
@@ -403,61 +396,28 @@ class CloudFirstCultivationRepo implements CultivationRepository {
   }
 
   async putBalance(u: UserCultivation): Promise<void> {
-    // 直接 putBalance(非 earn/spend 路徑)— 用於 cloudSync 整包搬資料、test seed 等
-    // 本機更新 + 嘗試 sync 雲端;cloud 失敗 throw(可被 cloudSync 整段 transaction 處理)
     await db.userCultivation.put(u);
     try {
       const userId = await getCurrentUserId();
-      const { error } = await supabase
-        .from('user_cultivation')
-        .upsert(
-          {
-            user_id: userId,
-            amount: u.amount,
-            lifetime_earned: u.lifetimeEarned,
-            lifetime_spent: u.lifetimeSpent,
-            last_updated: u.lastUpdated
-          },
-          { onConflict: 'user_id' }
-        );
-      if (error) throw new Error(error.message);
+      await this.uploadBalanceToCloud(u, userId);
     } catch (e) {
       console.warn('[cultivationRepo] putBalance cloud sync failed:', e);
-      // 不 throw — putBalance 主要給 cloudSync / 整包寫入用,失敗只 warn
     }
   }
 
   async clearBalance(): Promise<void> {
     await db.userCultivation.clear();
-    // 雲端不主動 delete(換裝置仍能拉回)
   }
 
-  // ─ Log ─
+  // ─ Log(雲端本批不寫,本機照常)─
 
   async addLog(entry: Omit<CultivationLog, 'id'>): Promise<number> {
-    // 直接 addLog 通常是 cloudSync 整包寫入 / 測試。**業務 caller 應該用 earn/spend**,
-    // 它們會原子寫 balance + log 上雲。這裡只寫本機 + 嘗試雲端 INSERT;雲端失敗只 warn。
-    const localId = await db.cultivationLog.add(entry as CultivationLog);
-    try {
-      const userId = await getCurrentUserId();
-      const { error } = await supabase.from('cultivation_log').insert({
-        user_id: userId,
-        change: entry.change,
-        reason: entry.reason,
-        reason_text: entry.reasonText,
-        balance_after: entry.balanceAfter,
-        related_pet_id: entry.relatedPetId ?? null
-      });
-      if (error) throw new Error(error.message);
-    } catch (e) {
-      console.warn('[cultivationRepo] addLog cloud sync failed:', e);
-    }
-    return localId;
+    // **雲端 log 寫入暫停**:cultivation_log schema 未對齊。本機正常 append。
+    return db.cultivationLog.add(entry as CultivationLog);
   }
 
   async bulkPutLogs(entries: CultivationLog[]): Promise<void> {
     await db.cultivationLog.bulkPut(entries);
-    // 雲端不批次同步(cloudSync 整檔改寫後此 method 退場)
   }
 
   listLogs(): Promise<CultivationLog[]> {
@@ -465,9 +425,6 @@ class CloudFirstCultivationRepo implements CultivationRepository {
   }
 
   listRecentLogs(limit: number): Promise<CultivationLog[]> {
-    // 階段 3D 批 1:本機 cache 為主。新裝置剛登入時本機沒 log,
-    // earnRPC / spendRPC 之後會逐筆累積本機。一次性「拉雲端 log 全部下來」
-    // 留階段 3D 批 2 處理。
     return db.cultivationLog.orderBy('createdAt').reverse().limit(limit).toArray();
   }
 
@@ -492,10 +449,6 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       const localUpdated = local?.lastUpdated ?? 0;
       if (remote.lastUpdated > localUpdated) {
         await db.userCultivation.put(remote);
-      } else if (local && localUpdated > remote.lastUpdated) {
-        console.warn(
-          `[cultivationRepo] local newer than cloud (local=${localUpdated} > cloud=${remote.lastUpdated}), reconcile deferred`
-        );
       }
     } catch (e) {
       console.warn('[cultivationRepo] revalidate failed:', e);
@@ -510,13 +463,25 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       .eq('user_id', userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (data) return toLocalBalance(data as RemoteCultivation);
 
-    // 雲端沒 row(舊用戶,trigger 沒回填)→ 本機若有資料 seed 上去
     const existingLocal = await db.userCultivation.get('main');
+    if (data) return toLocalBalance(data as RemoteCultivation, existingLocal);
+
+    // 雲端沒 row → 本機 seed 上去
     if (!existingLocal) return undefined;
-    await this.putBalance(existingLocal);
+    try {
+      await this.uploadBalanceToCloud(existingLocal, userId);
+    } catch (e) {
+      console.warn('[cultivationRepo] seed upload failed:', e);
+    }
     return existingLocal;
+  }
+
+  private async uploadBalanceToCloud(u: UserCultivation, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_cultivation')
+      .upsert(toRemoteBalance(u, userId), { onConflict: 'user_id' });
+    if (error) throw new Error(error.message);
   }
 }
 
