@@ -1,26 +1,32 @@
--- 階段 3B:user_settings — 把 user_data blob 內的 settings 欄位升級成 normalized table。
+-- 階段 3B:user_settings — 外觀設定的 normalized table(cross-device 同步用)。
+--
 -- 為什麼:settingsRepo 改成「雲端為主 + 本機快取」,需要可 query 的 normalized 表
 -- (blob row 沒辦法 SELECT 單欄位、沒法部分 update、不能跨欄位 indexing)。
 --
--- 過渡期(階段 3B-3D):cloudSync 仍會把整包 settings 寫進 user_data.blob,新的
--- user_settings 表並行存在。3D 完成後 cloudSync 整檔改寫,user_data 表退場。
+-- ──────────── 範圍 ────────────
+--
+--  ✅ 上雲(cross-device 同步合理 / 玩家會期待跟著走的「外觀設定」):
+--     - brokerage_fee_discount / brokerage_min_fee   手續費設定
+--     - sound_enabled                                音效
+--     - unlocked_backgrounds / current_background    家園背景(花修為解鎖)
+--     - hud_theme / unlocked_hud_themes              HUD 主題(花修為解鎖)
+--
+--  ❌ 不上雲(本機狀態 / 設備元資料 / 待搬其他表):
+--     - consecutive_days / max_consecutive_days /
+--       last_login_date                            連登 → 階段 3D 搬 user_login_streak
+--     - last_price_update_at / last_snapshot_date    本機同步狀態,每裝置各自記
+--     - created_at_ms                                帳戶元資料,沒必要跨裝置
+--     - player_name                                  deprecated,改用 user_profile.nickname
+--
+-- 過渡期(階段 3B-3D):cloudSync 仍會把整包 settings 寫進 user_data.blob,
+-- 新的 user_settings 表並行存在。3D 完成後 cloudSync 整檔改寫,user_data 表退場。
 
 create table if not exists public.user_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
 
-  -- 對應 Dexie Settings 的 camelCase 欄位(snake_case 對應)
   brokerage_fee_discount real not null default 1.0,
   brokerage_min_fee integer not null default 20,
   sound_enabled boolean not null default true,
-  -- nullable optional 欄位(對應 Settings.lastPriceUpdateAt? 等):
-  last_price_update_at bigint,
-  last_snapshot_date text,
-  player_name text,                                -- deprecated 但保留(types/settings.ts 註解)
-  -- 帳戶建立時間(對應 Settings.createdAt,unix millis)
-  created_at_ms bigint not null default (extract(epoch from now()) * 1000)::bigint,
-  last_login_date text,
-  consecutive_days integer not null default 0,
-  max_consecutive_days integer not null default 0,
 
   -- 階段 4B 進階消耗管道:背景 / HUD 主題解鎖
   unlocked_backgrounds text[] not null default array['default'],

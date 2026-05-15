@@ -5,38 +5,53 @@
  *  - 階段 2:Dexie 是唯一資料源,Repository 只是 wrapper
  *  - 階段 3B:Supabase `user_settings` 表是真實來源,本機 Dexie 降級為「加速 cache」
  *
- * 為什麼:
- *  - 一裝置改主題色 → 另一裝置立刻看見(blob sync 要 pullNow 才會更新)
- *  - 雲端可單欄位 query / 部分 update,blob 做不到
+ * ──────────── 雲端 vs 本機 欄位範圍 ────────────
  *
- * Public interface 不變(`get` / `put` / `patch` / `count`),caller 完全無感。
+ *  ✅ 上雲(`user_settings` 表 + cross-device 同步;`CLOUD_FIELDS`):
+ *     - brokerageFeeDiscount / brokerageMinFee     手續費設定
+ *     - soundEnabled                                音效
+ *     - unlockedBackgrounds / currentBackground    家園背景(花修為解鎖)
+ *     - hudTheme / unlockedHudThemes               HUD 主題(花修為解鎖)
+ *
+ *  ❌ 不上雲(本機 Dexie 才有,Supabase 表沒這些欄位):
+ *     - consecutiveDays / maxConsecutiveDays /
+ *       lastLoginDate                              連登 → 階段 3D 搬 loginStreakRepo
+ *     - lastPriceUpdateAt / lastSnapshotDate        本機同步狀態,每裝置各自記
+ *     - createdAt                                   帳戶元資料,沒必要跨裝置
+ *     - playerName                                  deprecated,改用 user_profile.nickname
+ *
+ *  toRemote 用白名單(只送上面 ✅ 的欄位)避免發 unknown column 給 PostgREST。
+ *  toLocal 回 merge with `existingLocal`,雲端只覆蓋外觀欄位,本機既有的連登
+ *  / lastLoginDate 等保留。
+ *
+ *  ⚠️ 在 toRemote 加新欄位前,務必先在 Supabase `user_settings` 表 ALTER ADD
+ *     COLUMN(否則 PostgREST schema cache 找不到欄位,寫入會 throw 卡住整個
+ *     boot — 見階段 3B emergency fix)。
  *
  * ──────────── 樂觀更新策略 ────────────
  *
  *  `put` / `patch`:
  *    1. 立刻更新本機(UI 即時反應)
- *    2. 同步 upsert 雲端
- *    3. 雲端失敗 → rollback 本機 + throw「設定同步失敗,請重試」
+ *    2. 取 userId;沒登入(boot init 階段 auth 還沒 ready)→ 本機更新算完成,
+ *       **不**上雲、**不** throw(讓 App 還能啟動)。等下次 auth ready 時的
+ *       下一次 put 就會把本機狀態推上雲端
+ *    3. 有 userId → upsert 雲端
+ *    4. 雲端失敗(網路 / 4xx / RLS / 任何其他原因)→ rollback 本機 + throw
+ *       「設定同步失敗,請重試」
  *
  *  `get`:
  *    1. 本機 cache 立刻返回(stale)
- *    2. 背景非同步呼叫雲端 revalidate(while-revalidate)
+ *    2. 背景非同步 revalidate(while-revalidate,throttle 10s 防 rerender 風暴)
  *    3. 雲端較新 → 寫回本機(useLiveQuery 自動重渲染 UI)
  *    4. 本機較新 → 現階段只 console.warn(階段 3D 處理 reconcile 上傳)
  *
- * ──────────── 過渡期注意事項 ────────────
- *
- *  - cloudSync.ts 仍然在 `user_data.blob` 寫整包 settings,跟新表並存。階段 3D
- *    完成後 cloudSync 整檔改寫,blob 退場
- *  - cloudSync 的 pullNow 在登入時把 blob.settings 寫進 db.settings(沒 updatedAt
- *    → 視為 0)。settingsRepo 隨後 revalidate 時雲端 user_settings 的版本贏
- *    → 本機被覆蓋成 user_settings 的值(可能是 trigger 建的預設,或別台裝置
- *      已更新過的值)。這是正確行為:user_settings 是新真實來源
+ *  整個 get() 包外層 try/catch,**永遠不會 throw** — 即便雲端錯也只 console.warn,
+ *  回本機 cache 或 undefined(boot 容錯)。
  *
  * ──────────── 開發模式 fallback ────────────
  *
- *  `isCloudConfigured=false` → 退回階段 2 的 Dexie-only 行為(`DexieSettingsRepo`)。
- *  讓 dev 環境沒設 env 也能跑(production 必然 `true`,不會走這條)。
+ *  `isCloudConfigured=false` → 退回階段 2 的 Dexie-only 行為(`DexieSettingsRepo`),
+ *  讓 dev 環境沒設 env 也能跑(production 必然 `true`)。
  */
 
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -57,11 +72,7 @@ export interface SettingsRepository {
 
 /**
  * 從 `supabase.auth.getSession()` 拿目前登入 user_id。
- * 非 hook,可在 Repository 內呼叫。沒登入 → throw。
- *
- * Note:這個 helper 假設 auth 已 ready(階段 3A 的 AuthGate 已 enforce 玩家
- * 進到 Game 必定已 signed in)。理論上 auth 仍可能在 race 下回 null
- * (token expired exactly during a write),caller 看到 throw 即可。
+ * 沒登入 → throw。caller 視情境決定要不要靜默(boot init 階段就靜默)。
  */
 async function getCurrentUserId(): Promise<string> {
   const { data, error } = await supabase.auth.getSession();
@@ -74,25 +85,14 @@ async function getCurrentUserId(): Promise<string> {
 // ─── 雲端 ↔ 本機 mapper ──────────────────────────────
 
 /**
- * 雲端 `user_settings` row 的 shape。snake_case 對應 PG 表欄位。
- * 跟 Dexie `Settings` 一對一(欄位數、型別都對齊),只是命名 convention 不同。
- *
- * `id: 'singleton'` 是純本機概念(Dexie 主鍵需要),雲端用 `user_id` 當 PK
- * 不需要這個欄位。`updated_at` 雲端有(PG trigger 自動 touch),本機是 Repository
- * 自己塞 `updatedAt: Date.now()`。
+ * 雲端表的 shape(snake_case 對應 PG 欄位)— 只有外觀設定的欄位。
+ * 階段 3D 加新欄位時同步加進這裡 + Supabase migration ALTER。
  */
 interface RemoteSettings {
   user_id: string;
   brokerage_fee_discount: number;
   brokerage_min_fee: number;
   sound_enabled: boolean;
-  last_price_update_at: number | null;
-  last_snapshot_date: string | null;
-  player_name: string | null;
-  created_at_ms: number;
-  last_login_date: string | null;
-  consecutive_days: number;
-  max_consecutive_days: number;
   unlocked_backgrounds: string[];
   current_background: string;
   hud_theme: HudTheme;
@@ -100,20 +100,30 @@ interface RemoteSettings {
   updated_at: string; // ISO timestamptz
 }
 
-/** 雲端 → 本機。`updatedAt` 用雲端 `updated_at` 的 ms */
-function toLocal(remote: RemoteSettings): Settings {
-  return {
+/**
+ * 雲端 → 本機。`existingLocal` 提供「本機限定欄位」的當前值
+ * (連登 / lastLoginDate / lastPriceUpdateAt / lastSnapshotDate / createdAt /
+ * playerName / consecutiveDays / maxConsecutiveDays),merge 保留之。
+ *
+ * 沒 `existingLocal`(極罕見:本機 Dexie 是空的且全新註冊)→ 用 Dexie schema
+ * 預設值(從 seed.ts 對齊)。
+ */
+function toLocal(remote: RemoteSettings, existingLocal: Settings | undefined): Settings {
+  const baseline: Settings = existingLocal ?? {
     id: 'singleton',
+    brokerageFeeDiscount: 1.0,
+    brokerageMinFee: 20,
+    soundEnabled: true,
+    createdAt: Date.now(),
+    consecutiveDays: 0,
+    maxConsecutiveDays: 0
+  };
+  return {
+    ...baseline,
+    // 只覆蓋雲端有對應的「外觀」欄位
     brokerageFeeDiscount: remote.brokerage_fee_discount,
     brokerageMinFee: remote.brokerage_min_fee,
     soundEnabled: remote.sound_enabled,
-    lastPriceUpdateAt: remote.last_price_update_at ?? undefined,
-    lastSnapshotDate: remote.last_snapshot_date ?? undefined,
-    playerName: remote.player_name ?? undefined,
-    createdAt: remote.created_at_ms,
-    lastLoginDate: remote.last_login_date ?? undefined,
-    consecutiveDays: remote.consecutive_days,
-    maxConsecutiveDays: remote.max_consecutive_days,
     unlockedBackgrounds: remote.unlocked_backgrounds,
     currentBackground: remote.current_background,
     hudTheme: remote.hud_theme,
@@ -122,7 +132,10 @@ function toLocal(remote: RemoteSettings): Settings {
   };
 }
 
-/** 本機 → 雲端 upsert payload。`user_id` caller 帶進 */
+/**
+ * 本機 → 雲端 upsert payload。**白名單**:只送雲端 schema 有的欄位,
+ * 避免 PostgREST 報「column not found」(連登 / createdAt 等本機限定欄位不送)。
+ */
 function toRemote(
   local: Settings,
   userId: string
@@ -132,13 +145,6 @@ function toRemote(
     brokerage_fee_discount: local.brokerageFeeDiscount,
     brokerage_min_fee: local.brokerageMinFee,
     sound_enabled: local.soundEnabled,
-    last_price_update_at: local.lastPriceUpdateAt ?? null,
-    last_snapshot_date: local.lastSnapshotDate ?? null,
-    player_name: local.playerName ?? null,
-    created_at_ms: local.createdAt,
-    last_login_date: local.lastLoginDate ?? null,
-    consecutive_days: local.consecutiveDays,
-    max_consecutive_days: local.maxConsecutiveDays,
     unlocked_backgrounds: local.unlockedBackgrounds ?? ['default'],
     current_background: local.currentBackground ?? 'default',
     hud_theme: local.hudTheme ?? 'default',
@@ -177,18 +183,19 @@ let lastRevalidateAt = 0;
 
 class CloudFirstSettingsRepo implements SettingsRepository {
   async get(): Promise<Settings | undefined> {
-    const local = await db.settings.get('singleton');
-
-    // 背景 revalidate(fire-and-forget,有 throttle 防 rerender 風暴)
-    void this.scheduleRevalidate(local);
-
-    if (local) return local;
-
-    // 本機沒資料(理論上 seedIfEmpty 已跑,實務上極罕見)→ await 雲端
+    // 整個 get 包外層 try/catch,**永遠不 throw**(boot 容錯)
     try {
+      const local = await db.settings.get('singleton');
+
+      // 背景 revalidate(fire-and-forget,有 throttle 防 rerender 風暴)
+      void this.scheduleRevalidate(local);
+
+      if (local) return local;
+
+      // 本機沒資料(理論上 seedIfEmpty 已跑,實務上極罕見)→ 嘗試雲端
       return await this.fetchFromCloud();
     } catch (e) {
-      console.warn('[settingsRepo] cloud fetch failed for empty local:', e);
+      console.error('[settingsRepo] get failed, returning undefined:', e);
       return undefined;
     }
   }
@@ -200,11 +207,23 @@ class CloudFirstSettingsRepo implements SettingsRepository {
     // 1. 樂觀更新本機 — UI 立刻反應
     await db.settings.put(stamped);
 
-    // 2. upsert 雲端
+    // 2. 取 userId — 沒登入(boot init 階段)→ 本機更新算完成,不上雲、不 throw
+    let userId: string;
     try {
-      await this.uploadToCloud(stamped);
+      userId = await getCurrentUserId();
     } catch (e) {
-      // 3. rollback 本機
+      console.warn(
+        '[settingsRepo] not signed in — local-only write, will sync after next sign-in:',
+        e
+      );
+      return;
+    }
+
+    // 3. upsert 雲端
+    try {
+      await this.uploadToCloud(stamped, userId);
+    } catch (e) {
+      // 4. rollback 本機
       if (previous) {
         await db.settings.put(previous);
       } else {
@@ -255,7 +274,9 @@ class CloudFirstSettingsRepo implements SettingsRepository {
 
   /**
    * 從雲端拉,沒 row → seed 本機資料上去當初始(處理「舊用戶無 trigger backfill」場景)。
-   * 完全沒本機資料 → 回 undefined(極罕見,seedIfEmpty 通常已先跑)。
+   * 完全沒本機資料且雲端也沒 → 回 undefined(極罕見,seedIfEmpty 通常已先跑)。
+   *
+   * 沒登入 → throw「未登入」(caller 端的 get() 外層 try/catch 會吞掉)。
    */
   private async fetchFromCloud(): Promise<Settings | undefined> {
     const userId = await getCurrentUserId();
@@ -265,18 +286,18 @@ class CloudFirstSettingsRepo implements SettingsRepository {
       .eq('user_id', userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (data) return toLocal(data as RemoteSettings);
+
+    const existingLocal = await db.settings.get('singleton');
+    if (data) return toLocal(data as RemoteSettings, existingLocal);
 
     // 雲端沒 row(舊用戶,trigger 沒回填過)→ 用本機資料 seed 上去
-    const local = await db.settings.get('singleton');
-    if (!local) return undefined;
-    const stamped: Settings = { ...local, updatedAt: Date.now() };
-    await this.uploadToCloud(stamped);
+    if (!existingLocal) return undefined;
+    const stamped: Settings = { ...existingLocal, updatedAt: Date.now() };
+    await this.uploadToCloud(stamped, userId);
     return stamped;
   }
 
-  private async uploadToCloud(settings: Settings): Promise<void> {
-    const userId = await getCurrentUserId();
+  private async uploadToCloud(settings: Settings, userId: string): Promise<void> {
     const { error } = await supabase
       .from('user_settings')
       .upsert(toRemote(settings, userId), { onConflict: 'user_id' });
