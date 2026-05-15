@@ -20,11 +20,20 @@ export interface Settings {
   playerName?: string;
   /** 帳戶建立時間（成就：週年） */
   createdAt: number;
-  /** 上次登入日期 YYYY-MM-DD（用於計算連續登入） */
+  /**
+   * @deprecated 階段 3D 批 1 起改用 `LoginStreak.lastLoginDate`。
+   * `login.ts:migrateLegacyFromSettings` 第一次 boot 後把這欄位的舊值搬到
+   * LoginStreak,之後本欄位 stale 不再更新。階段 3D 批 2 後從型別刪除。
+   */
   lastLoginDate?: string;
-  /** 目前連續登入天數 */
+  /**
+   * @deprecated 階段 3D 批 1 起改用 `LoginStreak.currentStreak`。
+   * 同 lastLoginDate 的搬遷策略。
+   */
   consecutiveDays: number;
-  /** 歷史最高連續登入天數 */
+  /**
+   * @deprecated 階段 3D 批 1 起改用 `LoginStreak.longestStreak`。
+   */
   maxConsecutiveDays: number;
   /**
    * 階段 4B.4:已解鎖的家園背景 id 清單。預設 ['default'],

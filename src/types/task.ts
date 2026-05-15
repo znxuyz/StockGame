@@ -20,6 +20,14 @@ export interface LoginStreak {
   todayClaimed: boolean;
   /** 累計登入過幾天(unique day) */
   lifetimeLogins: number;
+  /**
+   * 階段 3D 批 1:本機端寫入時間(unix millis)。
+   *
+   * 純 TS 型別擴充(不是 Dexie schema 變動 — IndexedDB document store 不檢查
+   * shape)。`loginStreakRepo` 每次 `put`/`patch` 自動寫 `Date.now()`,讓
+   * stale-while-revalidate 跟雲端 `updated_at` 比對誰新。同 settingsRepo 的設計。
+   */
+  updatedAt?: number;
 }
 
 /**

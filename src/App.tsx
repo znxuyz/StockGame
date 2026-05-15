@@ -698,7 +698,7 @@ function Game() {
       <TopBar
         summary={summary}
         marketStatus={marketStatus}
-        consecutiveDays={settings.consecutiveDays}
+        consecutiveDays={userLoginStreak?.currentStreak ?? 0}
         unlockedAchievements={unlockedCount}
         totalAchievements={ACHIEVEMENTS.length}
         lastPriceUpdateAt={settings.lastPriceUpdateAt}
