@@ -282,12 +282,16 @@ class CloudFirstHoldingRepo implements HoldingRepository {
   private async scheduleRevalidate(): Promise<void> {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 標記延後到 userId 取得之後再蓋。
+    // 之前 `lastRevalidateAt = now` 寫在 userId check 之前,
+    // 若 boot 時 cachedUserId 還沒填(auth race),revalidate 早退
+    // 但 throttle 已被吃掉 → 接下來 10s 都不會再 retry,seed 永遠跑不到。
+    const userId = cachedUserId;
+    if (!userId) return;
     lastRevalidateAt = now;
 
     try {
-      const userId = cachedUserId;
-      if (!userId) return;
-
       const { data, error } = await supabase
         .from('holdings')
         .select('*')
@@ -296,14 +300,41 @@ class CloudFirstHoldingRepo implements HoldingRepository {
       if (!data) return;
 
       if (data.length === 0) {
-        // 雲端空 → 從本機 seed 一次(舊用戶第一次上雲)
+        // 雲端空 → 從本機 seed(舊用戶第一次上雲)。
+        // **Bug B 修正**:逐 row upsert + 個別錯誤紀錄。
+        // 之前用 batch upsert(rows)一筆撞 constraint 全部失敗 → 0 holdings 上雲。
         const local = await db.holdings.toArray();
-        if (local.length > 0) {
-          const rows = local.map((h) => toRemote(h, userId));
+        if (local.length === 0) return;
+
+        let ok = 0;
+        const failed: { code: string; reason: string }[] = [];
+        for (const h of local) {
           const { error: upErr } = await supabase
             .from('holdings')
-            .upsert(rows, { onConflict: 'user_id,code' });
-          if (upErr) throw new Error(upErr.message);
+            .upsert(toRemote(h, userId), { onConflict: 'user_id,code' });
+          if (upErr) {
+            failed.push({ code: h.code, reason: `${upErr.code ?? '?'} ${upErr.message}` });
+          } else {
+            ok++;
+          }
+        }
+        if (failed.length > 0) {
+          console.warn(
+            `[holdingRepo] self-heal 不完整:本機 ${local.length} 筆,上傳成功 ${ok},失敗 ${failed.length}`
+          );
+          for (const f of failed) {
+            console.warn(`[holdingRepo] self-heal 失敗 code=${f.code}: ${f.reason}`);
+          }
+        }
+        // 確認雲端筆數(用 count head 避免拉回 payload)
+        const { count, error: cntErr } = await supabase
+          .from('holdings')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        if (!cntErr && count !== null && count !== local.length) {
+          console.warn(
+            `[holdingRepo] self-heal 結束驗證:本機 ${local.length} 筆,雲端 ${count} 筆(不一致)`
+          );
         }
         return;
       }

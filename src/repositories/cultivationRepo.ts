@@ -527,14 +527,82 @@ class CloudFirstCultivationRepo implements CultivationRepository {
   private async scheduleRevalidate(local: UserCultivation | undefined): Promise<void> {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 標記延後到 userId 拿到之後再蓋。
+    // 之前先蓋 throttle 再做 auth check,boot race 時 throttle 被吃掉
+    // 但 fetch 早退 → 10s 內不再重試,seed 永遠跑不到(同 holdingRepo / petRepo)。
+    let userId: string;
+    try {
+      userId = await getCurrentUserId();
+    } catch {
+      return; // 未登入,讓下次 revalidate 自動重試,不消耗 throttle
+    }
     lastRevalidateAt = now;
 
     try {
-      const remote = await this.fetchBalanceFromCloud();
-      if (!remote) return;
+      // 直接查雲端 raw row,不走 toLocalBalance(它會無條件覆寫 amount)
+      const { data, error } = await supabase
+        .from('user_cultivation')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+
+      // 情境 A:雲端**沒**這個 user 的 row → 本機若有資料,推上去 seed
+      if (!data) {
+        if (local && (local.amount > 0 || local.lifetimeEarned > 0 || local.lifetimeSpent > 0)) {
+          try {
+            await this.uploadBalanceToCloud(local, userId);
+          } catch (e) {
+            console.warn('[cultivationRepo] seed upload failed:', e);
+          }
+        }
+        return;
+      }
+
+      const remote = data as RemoteCultivation;
+      // **Bug C 修正**:偵測雲端 row 是「auto-default 空殼」(trigger 自動建立
+      // 但沒寫過修為)。三欄全 0 + 本機有正值 → 本機才是真實資料,推回雲端,
+      // 不要被 cloud 0 蓋掉。
+      const cloudIsAutoDefault =
+        remote.total_points === 0 &&
+        remote.lifetime_earned === 0 &&
+        remote.lifetime_spent === 0;
+      const localHasData =
+        !!local &&
+        (local.amount > 0 || local.lifetimeEarned > 0 || local.lifetimeSpent > 0);
+
+      if (cloudIsAutoDefault && localHasData) {
+        console.warn(
+          `[cultivationRepo] 雲端 row 是 auto-default 空殼(0/0/0),本機有資料 (${local.amount}/${local.lifetimeEarned}/${local.lifetimeSpent}) → 推本機上雲`
+        );
+        try {
+          await this.uploadBalanceToCloud(local!, userId);
+        } catch (e) {
+          console.warn('[cultivationRepo] heal upload failed:', e);
+        }
+        return;
+      }
+
+      // 同理:雲端 lifetimeEarned 比本機**少** → 本機才是新,推上去
+      // (lifetimeEarned 是 monotonic 只增不減,本機 > 雲端只可能是雲端被舊資料蓋掉)
+      if (local && local.lifetimeEarned > remote.lifetime_earned) {
+        console.warn(
+          `[cultivationRepo] 本機 lifetimeEarned (${local.lifetimeEarned}) > 雲端 (${remote.lifetime_earned}) → 推本機上雲`
+        );
+        try {
+          await this.uploadBalanceToCloud(local, userId);
+        } catch (e) {
+          console.warn('[cultivationRepo] heal-by-lifetime upload failed:', e);
+        }
+        return;
+      }
+
+      // 正常路徑:雲端較新 → 採用雲端
+      const remoteLocal = toLocalBalance(remote, local);
       const localUpdated = local?.lastUpdated ?? 0;
-      if (remote.lastUpdated > localUpdated) {
-        await db.userCultivation.put(remote);
+      if (remoteLocal.lastUpdated > localUpdated) {
+        await db.userCultivation.put(remoteLocal);
       }
     } catch (e) {
       console.warn('[cultivationRepo] revalidate failed:', e);

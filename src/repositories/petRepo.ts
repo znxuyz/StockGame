@@ -394,32 +394,50 @@ class CloudFirstPetRepo implements PetRepository {
     const { error } = await supabase
       .from('pets')
       .upsert(toRemote(pet, userId), { onConflict: 'id' });
-    if (error && error.code !== '23505') throw new Error(error.message);
+    // **23505 修正**:之前 swallow 全部 23505 視為 OK,但 NULLS NOT DISTINCT
+    // 撞 UNIQUE (user_id, custom_name) 也是 23505 — 真實同步失敗變看不見。
+    // 改 only swallow when conflict 是預期的(by PK id,upsert 該成功),其他
+    // 一律 throw 給 caller 處理 rollback / toast。
+    if (error) throw new Error(`${error.code ?? '?'} ${error.message}`);
   }
 
   /**
    * Seed 用 per-pet 個別 upsert,不批次 — 避免某筆撞 UNIQUE (user_id, custom_name)
-   * NULLS NOT DISTINCT 把整批失敗。
+   * NULLS NOT DISTINCT 把整批失敗。每筆失敗都會收集 + 印 console + toast,
+   * 不再 silent swallow 23505。
    */
   private async seedFromLocal(local: Pet[], userId: string): Promise<void> {
-    const failed: string[] = [];
+    const failed: { id: string; reason: string }[] = [];
+    let ok = 0;
     for (const pet of local) {
       try {
         const { error } = await supabase
           .from('pets')
           .upsert(toRemote(pet, userId), { onConflict: 'id' });
-        if (error && error.code !== '23505') throw new Error(error.message);
+        if (error) {
+          failed.push({
+            id: `${pet.id} (code=${pet.code}, customName=${pet.customName ?? 'null'})`,
+            reason: `${error.code ?? '?'} ${error.message}`
+          });
+        } else {
+          ok++;
+        }
       } catch (e) {
-        console.warn(
-          `[petRepo] seed upload failed for pet ${pet.id} (code=${pet.code}, customName=${pet.customName ?? 'null'}):`,
-          e
-        );
-        failed.push(pet.id);
+        failed.push({
+          id: `${pet.id} (code=${pet.code}, customName=${pet.customName ?? 'null'})`,
+          reason: e instanceof Error ? e.message : String(e)
+        });
       }
     }
     if (failed.length > 0) {
+      console.warn(
+        `[petRepo] self-heal 不完整:本機 ${local.length} 隻,上傳成功 ${ok},失敗 ${failed.length}`
+      );
+      for (const f of failed) {
+        console.warn(`[petRepo] self-heal 失敗 ${f.id}: ${f.reason}`);
+      }
       eventBus.emit('toast:show', {
-        message: `${failed.length} 隻神獸雲端同步失敗(可能撞 custom_name UNIQUE 限制)`,
+        message: `${failed.length} 隻神獸雲端同步失敗(看 console)`,
         variant: 'error'
       });
     }
@@ -428,12 +446,14 @@ class CloudFirstPetRepo implements PetRepository {
   private async scheduleRevalidate(): Promise<void> {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 標記延後到 userId 取得之後再蓋,
+    // 避免 boot race 把 throttle 吃掉導致 seed 永遠跑不到(同 holdingRepo)。
+    const userId = cachedUserId;
+    if (!userId) return;
     lastRevalidateAt = now;
 
     try {
-      const userId = cachedUserId;
-      if (!userId) return;
-
       const { data, error } = await supabase
         .from('pets')
         .select('*')
@@ -446,6 +466,16 @@ class CloudFirstPetRepo implements PetRepository {
         const local = await db.pets.toArray();
         if (local.length > 0) {
           await this.seedFromLocal(local, userId);
+          // 驗證雲端筆數(可能撞 UNIQUE constraint 只進部分)
+          const { count, error: cntErr } = await supabase
+            .from('pets')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+          if (!cntErr && count !== null && count !== local.length) {
+            console.warn(
+              `[petRepo] self-heal 結束驗證:本機 ${local.length} 隻,雲端 ${count} 隻(不一致,可能撞 custom_name UNIQUE)`
+            );
+          }
         }
         return;
       }

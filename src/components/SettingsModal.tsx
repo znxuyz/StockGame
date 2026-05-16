@@ -10,6 +10,7 @@ import { useAuth, signOut } from '@/lib/auth';
 import HudThemeSection from './HudThemeSection';
 import BackgroundSection from './BackgroundSection';
 import { BACKGROUNDS } from '@/services';
+import { forceSyncAllToCloud } from '@/repositories/syncAll';
 
 /**
  * 設定彈窗 sub-view 切換。
@@ -61,6 +62,8 @@ export default function SettingsModal({
   /** 雙擊確認刪帳號:第一擊 → confirmingDelete = true 並 5 秒後自動 reset */
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  /** 強制同步進行中(防重複點) */
+  const [forceSyncing, setForceSyncing] = useState(false);
   /** 子頁切換(取代之前的 nested Modal) */
   const [subView, setSubView] = useState<SubView>('main');
   useEffect(() => {
@@ -81,6 +84,39 @@ export default function SettingsModal({
   async function handleSignOut() {
     await signOut();
     onActionComplete('已登出雲端');
+  }
+
+  /**
+   * 階段 4-B 緊急救援:把本機所有 Repository 的資料**強推**到雲端,
+   * 修復 self-heal 靜默失敗造成的雲端資料缺失。
+   * 跑完看 console「[forceSync]」log 詳細逐 table 報告。
+   */
+  async function handleForceSync() {
+    if (forceSyncing) return;
+    setForceSyncing(true);
+    try {
+      const result = await forceSyncAllToCloud();
+      if (!result.userId) {
+        onActionComplete('⚠️ 強制同步失敗:未登入雲端');
+        return;
+      }
+      if (result.ok) {
+        onActionComplete(
+          `☁ 強制同步完成:推 ${result.totalSucceeded}/${result.totalAttempted} 筆(${result.durationMs}ms)`
+        );
+      } else {
+        onActionComplete(
+          `⚠️ 強制同步部分失敗:成功 ${result.totalSucceeded}/${result.totalAttempted},失敗 ${result.totalFailed} 筆(看 console)`
+        );
+      }
+    } catch (e) {
+      console.error('[forceSync] handler threw:', e);
+      onActionComplete(
+        `⚠️ 強制同步出錯:${e instanceof Error ? e.message : String(e)}`
+      );
+    } finally {
+      setForceSyncing(false);
+    }
   }
 
   async function handleDeleteAccount() {
@@ -301,6 +337,20 @@ export default function SettingsModal({
                   >
                     登出
                   </button>
+                  {/* 階段 4-B 緊急救援:強制同步本機資料到雲端
+                      (self-heal 失敗時手動觸發,跑完看 console [forceSync] log) */}
+                  <button
+                    type="button"
+                    onClick={handleForceSync}
+                    disabled={busy || deletingAccount || forceSyncing}
+                    className="w-full py-2 bg-amber-100 text-amber-800 rounded-lg text-sm border border-amber-300 disabled:opacity-50"
+                  >
+                    {forceSyncing ? '同步中⋯' : '☁⤴ 強制同步全部資料到雲端'}
+                  </button>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    若發現雲端資料缺失(換裝置看不到神獸 / 修為),
+                    手動強推一次。跑完看瀏覽器 console 詳細報告。
+                  </p>
                   {/* 雙擊確認的刪帳號鈕(只在已登入時顯示) */}
                   <button
                     type="button"
