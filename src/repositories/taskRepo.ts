@@ -344,12 +344,18 @@ class CloudFirstTaskRepo implements TaskRepository {
   private async scheduleTasksRevalidate(): Promise<void> {
     const now = Date.now();
     if (now - lastTasksRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋(同其他 repo)
+    let userId: string | null;
+    try {
+      userId = await getCurrentUserId();
+    } catch {
+      return;
+    }
+    if (!userId) return;
     lastTasksRevalidateAt = now;
 
     try {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
-
       const { data, error } = await supabase
         .from('user_tasks')
         .select('*')
@@ -403,12 +409,18 @@ class CloudFirstTaskRepo implements TaskRepository {
   private async scheduleMilestonesRevalidate(): Promise<void> {
     const now = Date.now();
     if (now - lastMilestonesRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋(同其他 repo)
+    let userId: string | null;
+    try {
+      userId = await getCurrentUserId();
+    } catch {
+      return;
+    }
+    if (!userId) return;
     lastMilestonesRevalidateAt = now;
 
     try {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
-
       const { data, error } = await supabase
         .from('milestone_rewards')
         .select('*')

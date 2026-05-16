@@ -148,12 +148,18 @@ class CloudFirstAchievementRepo implements AchievementRepository {
   private async scheduleRevalidate(): Promise<void> {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋,避免 boot race(同其他 repo)
+    let userId: string | null;
+    try {
+      userId = await getCurrentUserId();
+    } catch {
+      return;
+    }
+    if (!userId) return;
     lastRevalidateAt = now;
 
     try {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
-
       const { data, error } = await supabase
         .from('achievements')
         .select('*')

@@ -7,6 +7,7 @@ import { petRepo } from '@/repositories/petRepo';
 import { useTransactions } from '@/repositories/transactionRepo';
 import { useAchievements } from '@/repositories/achievementRepo';
 import { useLoginStreak } from '@/repositories/loginStreakRepo';
+import { forceFetchAllFromCloud } from '@/repositories/syncAll';
 import {
   isMarketOpen,
   getMarketStatus,
@@ -541,6 +542,18 @@ function Game() {
     if (initialSyncDoneForUserRef.current === userId) return;
 
     (async () => {
+      // **新裝置 / 無痕視窗首次登入 self-heal**:把雲端所有 user-owned 表
+      // 拉進本機 Dexie。各 Repository 的 stale-while-revalidate 在 boot race
+      // 時會被 throttle 擋住、settingsRepo「local newer than cloud」邏輯也
+      // 會把 seedIfEmpty 預設覆蓋雲端,所以這裡必須主動先拉一次,讓後續
+      // checkAndUpdateStreak / portfolio / pets 看到的是雲端真實資料。
+      // idempotent — 同 user 重複 boot 只 overwrite local 為 cloud,無副作用。
+      try {
+        await forceFetchAllFromCloud();
+      } catch (e) {
+        console.warn('[init] forceFetchAllFromCloud failed:', e);
+      }
+
       try {
         const after = await checkAndUpdateStreak();
         await checkAndGenerateDailyTasks();

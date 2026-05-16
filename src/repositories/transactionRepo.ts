@@ -283,12 +283,14 @@ class CloudFirstTransactionRepo implements TransactionRepository {
   private async scheduleRevalidate(): Promise<void> {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 標記延後到 userId 拿到之後再蓋,
+    // 避免 boot race 時 throttle 被吃掉導致 seed 永遠跑不到(同 holdingRepo / petRepo)。
+    const userId = cachedUserId;
+    if (!userId) return;
     lastRevalidateAt = now;
 
     try {
-      const userId = cachedUserId;
-      if (!userId) return;
-
       const { data, error } = await supabase
         .from('transactions')
         .select('*')

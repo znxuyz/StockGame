@@ -250,6 +250,13 @@ class CloudFirstSettingsRepo implements SettingsRepository {
   private async scheduleRevalidate(local: Settings | undefined): Promise<void> {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+
+    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋(同其他 repo)
+    try {
+      await getCurrentUserId();
+    } catch {
+      return;
+    }
     lastRevalidateAt = now;
 
     try {
