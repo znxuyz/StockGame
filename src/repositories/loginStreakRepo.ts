@@ -199,14 +199,14 @@ class CloudFirstLoginStreakRepo implements LoginStreakRepository {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
 
-    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋(同其他 repo)。
-    // fetchFromCloud 內部會 getCurrentUserId,先預判 throw 早退避免吃 throttle。
+    // **Race fix**:throttle slot 同步 claim,auth 失敗才 release(見 cultivationRepo)
+    lastRevalidateAt = now;
     try {
       await getCurrentUserId();
     } catch {
+      lastRevalidateAt = 0;
       return;
     }
-    lastRevalidateAt = now;
 
     try {
       const remote = await this.fetchFromCloud();

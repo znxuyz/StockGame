@@ -447,11 +447,13 @@ class CloudFirstPetRepo implements PetRepository {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
 
-    // **Bug A 修正**:throttle 標記延後到 userId 取得之後再蓋,
-    // 避免 boot race 把 throttle 吃掉導致 seed 永遠跑不到(同 holdingRepo)。
-    const userId = cachedUserId;
-    if (!userId) return;
+    // **Race fix**:throttle slot 同步 claim,沒 userId 才 release(見 cultivationRepo)
     lastRevalidateAt = now;
+    const userId = cachedUserId;
+    if (!userId) {
+      lastRevalidateAt = 0;
+      return;
+    }
 
     try {
       const { data, error } = await supabase

@@ -451,16 +451,19 @@ class CloudFirstCultivationRepo implements CultivationRepository {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
 
-    // **Bug A 修正**:throttle 標記延後到 userId 拿到之後再蓋。
-    // 之前先蓋 throttle 再做 auth check,boot race 時 throttle 被吃掉
-    // 但 fetch 早退 → 10s 內不再重試,seed 永遠跑不到(同 holdingRepo / petRepo)。
+    // **Race fix**:throttle slot 同步 claim — 多個 useLiveQuery 訂閱者(HUD +
+    // 修為 tab 等)同 tick 內可能都通過 throttle check,各自跑 fetch/push
+    // 同樣 cloud value → 噴 N 次 `推本機上雲` warning。先佔 slot,auth 失敗
+    // 才 release 讓下次重試(Bug A boot race 仍然處理到)。
+    lastRevalidateAt = now;
+
     let userId: string;
     try {
       userId = await getCurrentUserId();
     } catch {
-      return; // 未登入,讓下次 revalidate 自動重試,不消耗 throttle
+      lastRevalidateAt = 0;
+      return;
     }
-    lastRevalidateAt = now;
 
     try {
       // 直接查雲端 raw row,不走 toLocalBalance(它會無條件覆寫 amount)

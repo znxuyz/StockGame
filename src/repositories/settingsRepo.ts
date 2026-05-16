@@ -251,13 +251,14 @@ class CloudFirstSettingsRepo implements SettingsRepository {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
 
-    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋(同其他 repo)
+    // **Race fix**:throttle slot 同步 claim,auth 失敗才 release(見 cultivationRepo)
+    lastRevalidateAt = now;
     try {
       await getCurrentUserId();
     } catch {
+      lastRevalidateAt = 0;
       return;
     }
-    lastRevalidateAt = now;
 
     try {
       const remote = await this.fetchFromCloud();

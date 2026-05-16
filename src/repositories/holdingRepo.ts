@@ -283,13 +283,14 @@ class CloudFirstHoldingRepo implements HoldingRepository {
     const now = Date.now();
     if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
 
-    // **Bug A 修正**:throttle 標記延後到 userId 取得之後再蓋。
-    // 之前 `lastRevalidateAt = now` 寫在 userId check 之前,
-    // 若 boot 時 cachedUserId 還沒填(auth race),revalidate 早退
-    // 但 throttle 已被吃掉 → 接下來 10s 都不會再 retry,seed 永遠跑不到。
-    const userId = cachedUserId;
-    if (!userId) return;
+    // **Race fix**:throttle slot 同步 claim,沒 userId 才 release
+    // (見 cultivationRepo 同 pattern 註解)
     lastRevalidateAt = now;
+    const userId = cachedUserId;
+    if (!userId) {
+      lastRevalidateAt = 0;
+      return;
+    }
 
     try {
       const { data, error } = await supabase

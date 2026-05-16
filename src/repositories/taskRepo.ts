@@ -345,15 +345,19 @@ class CloudFirstTaskRepo implements TaskRepository {
     const now = Date.now();
     if (now - lastTasksRevalidateAt < REVALIDATE_INTERVAL_MS) return;
 
-    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋(同其他 repo)
+    // **Race fix**:throttle slot 同步 claim,auth 失敗才 release(見 cultivationRepo)
+    lastTasksRevalidateAt = now;
     let userId: string | null;
     try {
       userId = await getCurrentUserId();
     } catch {
+      lastTasksRevalidateAt = 0;
       return;
     }
-    if (!userId) return;
-    lastTasksRevalidateAt = now;
+    if (!userId) {
+      lastTasksRevalidateAt = 0;
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -410,15 +414,19 @@ class CloudFirstTaskRepo implements TaskRepository {
     const now = Date.now();
     if (now - lastMilestonesRevalidateAt < REVALIDATE_INTERVAL_MS) return;
 
-    // **Bug A 修正**:throttle 延後到 userId 拿到再蓋(同其他 repo)
+    // **Race fix**:throttle slot 同步 claim,auth 失敗才 release(見 cultivationRepo)
+    lastMilestonesRevalidateAt = now;
     let userId: string | null;
     try {
       userId = await getCurrentUserId();
     } catch {
+      lastMilestonesRevalidateAt = 0;
       return;
     }
-    if (!userId) return;
-    lastMilestonesRevalidateAt = now;
+    if (!userId) {
+      lastMilestonesRevalidateAt = 0;
+      return;
+    }
 
     try {
       const { data, error } = await supabase
