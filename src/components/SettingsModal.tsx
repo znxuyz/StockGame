@@ -5,7 +5,8 @@ import { settingsRepo } from '@/repositories/settingsRepo';
 import type { Settings } from '@/types';
 import { isCloudConfigured, supabase } from '@/lib/supabase';
 import { useAuth, signOut } from '@/lib/auth';
-import { cancelPendingPush } from '@/services/cloudSync';
+// 階段 4-B:blob pushDebounced 停用後沒有 pending push 要 cancel,
+// 原 cancelPendingPush() callsite 全移除
 import HudThemeSection from './HudThemeSection';
 import BackgroundSection from './BackgroundSection';
 import { BACKGROUNDS } from '@/services';
@@ -78,7 +79,6 @@ export default function SettingsModal({
   }, [open]);
 
   async function handleSignOut() {
-    cancelPendingPush();
     await signOut();
     onActionComplete('已登出雲端');
   }
@@ -105,8 +105,7 @@ export default function SettingsModal({
         throw new Error(errBody.error ?? `HTTP ${res.status}`);
       }
 
-      // 成功 → 取消任何未跑的 push、清本機 IndexedDB、登出、reload
-      cancelPendingPush();
+      // 成功 → 清本機 IndexedDB、登出、reload
       await db.delete();
       await signOut().catch(() => {});
       window.location.reload();

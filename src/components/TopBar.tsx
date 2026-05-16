@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { formatCount, formatSigned, formatPercent } from '@/utils';
 import type { PortfolioSummary } from '@/services';
-import { subscribeSyncStatus, type SyncStatus } from '@/services/cloudSync';
-import { isCloudConfigured } from '@/lib/supabase';
+// 階段 4-B:blob 整包 sync 停用 — HUD 不再顯示「☁✓ 已同步」狀態
+// (Repository 各自上雲,沒有單一全域 sync 狀態可顯示;
+//  個別 repo 失敗會 emit toast)
 import { useCultivation } from '@/hooks/useCultivation';
 import CultivationCounter from './CultivationCounter';
 import type { MarketStatus } from '@/api';
@@ -17,8 +18,6 @@ interface TopBarProps {
   lastPriceUpdateAt: number | undefined;
   /** 是否正在抓價(顯示「更新中⋯」) */
   refreshing: boolean;
-  /** 是否登入雲端(沒登入就不顯示雲端 icon) */
-  cloudSignedIn: boolean;
   /** 階段 5A.2:點左上角掌印 → 開個人檔案彈窗 */
   onOpenProfile?: () => void;
   /**
@@ -59,21 +58,6 @@ function compactAgo(ts: number, now: number): string {
 /** 超過幾毫秒視為「資料太舊」要標紅 */
 const STALE_THRESHOLD_MS = 10 * 60_000;
 
-/** 同步狀態 → icon + tooltip */
-function syncDisplay(status: SyncStatus): { icon: string; label: string; cls: string } {
-  switch (status) {
-    case 'syncing':
-      return { icon: '☁⟳', label: '同步中', cls: 'text-mythic-gold-500' };
-    case 'error':
-      return { icon: '☁✗', label: '同步失敗', cls: 'text-red-600' };
-    case 'offline':
-      return { icon: '☁⊘', label: '離線', cls: 'text-gray-400' };
-    case 'idle':
-    default:
-      return { icon: '☁✓', label: '已同步', cls: 'text-mythic-jade-400' };
-  }
-}
-
 /**
  * 玻璃擬態 HUD — 完全棄用 frame_card.png:
  *  - .hud 容器:半透明米白 + backdrop-blur + 下緣金色細線(無外框 PNG、無內卡)
@@ -91,7 +75,6 @@ export default function TopBar({
   totalAchievements,
   lastPriceUpdateAt,
   refreshing,
-  cloudSignedIn,
   onOpenProfile,
   flashPawToken
 }: TopBarProps) {
@@ -102,18 +85,6 @@ export default function TopBar({
     const id = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(id);
   }, []);
-
-  // 訂閱雲端同步狀態
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
-  const [syncErr, setSyncErr] = useState<string | null>(null);
-  useEffect(() => {
-    if (!isCloudConfigured) return;
-    return subscribeSyncStatus((s, e) => {
-      setSyncStatus(s);
-      setSyncErr(e);
-    });
-  }, []);
-  const sync = syncDisplay(syncStatus);
 
   // 訂閱修為餘額(階段 2.2):earn/spend 寫入 Dexie 後 hook 自動 re-render
   const cultivation = useCultivation();
@@ -225,11 +196,6 @@ export default function TopBar({
           <span className={`whitespace-nowrap shrink-0 ${todayClass}`}>
             · 今 {formatSigned(summary.todayPnL)} ({formatPercent(summary.todayReturnRate)})
           </span>
-          {cloudSignedIn && (
-            <span className={`whitespace-nowrap shrink-0 ${sync.cls}`} title={syncErr ?? sync.label}>
-              · {sync.icon}
-            </span>
-          )}
           <span className="whitespace-nowrap shrink-0">
             · 💎{' '}
             <CultivationCounter

@@ -3,13 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedIfEmpty } from '@/db';
 import { useSettings } from '@/repositories/settingsRepo';
 import { useHoldings } from '@/repositories/holdingRepo';
-import { useAllPets, petRepo } from '@/repositories/petRepo';
+import { petRepo } from '@/repositories/petRepo';
 import { useTransactions } from '@/repositories/transactionRepo';
 import { useAchievements } from '@/repositories/achievementRepo';
-import { cultivationRepo, useCultivationBalance } from '@/repositories/cultivationRepo';
-import { creatureUnlockRepo } from '@/repositories/creatureUnlockRepo';
 import { useLoginStreak } from '@/repositories/loginStreakRepo';
-import { useAllTasks, taskRepo } from '@/repositories/taskRepo';
 import {
   isMarketOpen,
   getMarketStatus,
@@ -34,14 +31,11 @@ import {
   type PortfolioSummary
 } from '@/services';
 import type { LoginStreak } from '@/types';
-import {
-  pullNow,
-  pushNow,
-  pushDebounced,
-  cancelPendingPush,
-  fetchRemoteMeta,
-  localHasUserData
-} from '@/services/cloudSync';
+// 階段 4-B:cloudSync(user_data blob 整包同步)整段停用 — 批 1-3 完成後
+// settingsRepo / cultivationRepo / loginStreakRepo / holdingRepo / petRepo /
+// transactionRepo / achievementRepo / creatureUnlockRepo / taskRepo 各自上雲,
+// 已不需要 blob 路徑。cloudSync.ts 檔案保留(階段 6 統一清掉),呼叫端在
+// App.tsx 內全部移除。
 import {
   createProfileIfNeeded,
   attachProfileSyncListeners,
@@ -283,10 +277,8 @@ function Game() {
   // 雲端同步狀態
   const { session } = useAuth();
   const userId = session?.user?.id;
-  /** 同一 user 的初始 pull/push 只跑一次,避免 React strict mode / re-render 重觸發 */
+  /** 同一 user 的 post-login init 只跑一次,避免 React strict mode / re-render 重觸發 */
   const initialSyncDoneForUserRef = useRef<string | null>(null);
-  /** 阻擋初始 sync 完成前的 push(避免空本地把雲端清掉) */
-  const allowAutoPushRef = useRef(false);
 
   // OAuth / Email+密碼登入成功 → SIGNED_IN 事件 → useAuth 更新 session →
   // 自動關掉 SignInModal(supabase-js 已自行清乾淨 URL hash/window URL hash/query)
@@ -397,35 +389,16 @@ function Game() {
     };
   }, []);
 
-  // live data
+  // live data — 主畫面持倉 / 成就用
+  // 階段 4-B:blob pushDebounced 停用後,之前為了觸發 push 而訂閱的 pets /
+  // snapshots / stocks / cultivation / tasks / milestones / creatureUnlocks
+  // 共 7 個 useLiveQuery 已移除(原本只是 push trigger,沒被讀取)。
   const settings = useSettings();
   const holdings = useHoldings();
   const prices = useLiveQuery(() => db.prices.toArray(), []);
   const achievements = useAchievements();
-  // 為了 push trigger,訂閱另外幾張表(只計 length 用,讓 useEffect 偵測到變動)
-  const pets = useAllPets();
   const transactions = useTransactions();
-  const snapshots = useLiveQuery(() => db.snapshots.toArray(), []);
-  const stocks = useLiveQuery(() => db.stocks.toArray(), []);
-  // 階段 2.6:訂閱 cultivation 兩表,任何 earn/spend 觸發 push debounce
-  const userCultivation = useCultivationBalance();
-  const cultivationLog = useLiveQuery(() => cultivationRepo.countLogs(), []);
-  // 階段 3.8:訂閱 streak / tasks / milestones,任何變動觸發 push debounce
-  // tasks 用 toArray:Dexie liveQuery 對 count 在 update 時不 retrigger,進度推進也要 push
-  // milestones 是 append-only,count 即可
   const userLoginStreak = useLoginStreak();
-  const userTasksArr = useAllTasks();
-  const milestoneCount = useLiveQuery(() => taskRepo.countMilestones(), []);
-  // 階段 4C.5:訂閱 creatureUnlocks count,任何故事解鎖觸發 push debounce
-  // 防呆:若表還沒 migrate 完(v12 → v13 過渡)當 0 處理,不讓錯誤把整個 App 炸掉
-  const creatureUnlocksCount = useLiveQuery(async () => {
-    try {
-      return await creatureUnlockRepo.count();
-    } catch (e) {
-      console.warn('[App] creatureUnlocks count failed:', e);
-      return 0;
-    }
-  }, []);
 
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   useEffect(() => {
@@ -542,163 +515,76 @@ function Game() {
     };
   }, [hasHoldings, silentRefresh]);
 
-  // ─── 雲端同步:登入後初始 pull/push/conflict ───
-  /**
-   * 階段 3D 修:雲端警告只在「真斷網」彈。
-   *
-   * cloudSync 是舊的 blob-based 同步,還在打階段 3D 批 2-4 未建好的表
-   * (transactions / feed / notifications),會撞 404。但用戶實際**有網**,
-   * settingsRepo / cultivationRepo / loginStreakRepo 雲端同步都正常 — 個別 API
-   * 404 不該嚇使用者「無法連接雲端」。
-   *
-   * 規則:
-   *   - navigator.onLine === false → 真斷網,彈警告
-   *   - 其他失敗(404 / RLS / 500 / 401)→ console.warn 不彈
-   *   - 401 / auth 失效會被 AuthGate 處理,Game 內不重複提示
-   *
-   * 階段 3D 完成後 cloudSync 整檔改寫,這個 helper 一起退場。
-   */
-  const maybeCloudWarning = useCallback(
-    (context: string) => {
-      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-      if (!offline) {
-        console.warn(`[cloud] ${context} failed but navigator.onLine=true — suppress warning`);
-        return;
-      }
-      setToast({
-        message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
-        variant: 'error'
-      });
-    },
-    [setToast]
-  );
-
+  // ─── 階段 4-B:登入後 post-init(blob sync 已停用)─────
+  //
+  //   階段 3D 把 9 個 Repository 各自上雲(white-list + cloud-first)後,
+  //   舊的 user_data blob 整包 pull/push 路徑(fetchRemoteMeta / pullNow /
+  //   pushNow / pushDebounced)已不再需要,整段停用。`maybeCloudWarning`
+  //   helper 也一起退場(沒有 caller 了)。
+  //
+  //   仍然需要在 user login 後跑的非-blob init 步驟保留:
+  //   - checkAndUpdateStreak / checkAndGenerateDailyTasks / Weekly
+  //     (跨裝置 lastLoginDate 可能不同,做一次同步檢查)
+  //   - checkAndRebuildIfNeeded(歷史快照狀態驅動補抓)
+  //   - createProfileIfNeeded(階段 5A user_profile row 建立)
+  //   - backfillProfileSync(階段 5B user_creature_summary 從本地 pets 一次性 backfill)
+  //   - getMyPrivacy / syncMyPortfolio / generateMySnapshot
+  //     (階段 5E 持倉摘要 + 排行榜資料 + privacy 預設值)
+  //
+  //   失敗一律 try/catch + console.warn,不再 setToast(blob sync 沒了沒
+  //   「無法連接雲端」這個概念;個別 service 自己處理 toast)。
   useEffect(() => {
     if (!userId) {
-      // 登出 → 重置初始 sync 狀態,取消未跑完的 push
       initialSyncDoneForUserRef.current = null;
-      allowAutoPushRef.current = false;
-      cancelPendingPush();
       return;
     }
-    if (initialSyncDoneForUserRef.current === userId) return; // 已跑過
+    if (initialSyncDoneForUserRef.current === userId) return;
 
     (async () => {
       try {
-        const remote = await fetchRemoteMeta(userId);
-
-        if (remote.error) {
-          // 個別 query 失敗 → maybeCloudWarning 只在真斷網時彈;其他狀況 console.warn
-          maybeCloudWarning('fetchRemoteMeta');
-          return; // 不 mark done,下次 mount / network resume 再試
-        }
-
-        if (remote.exists) {
-          // 雲端有資料 → 一律拉,覆蓋本機(不問,不留本機優先選項)
-          const r = await pullNow(userId);
-          if (!r.ok) {
-            maybeCloudWarning('pullNow');
-            return;
-          }
-          // 階段 3.8 修:雲端覆蓋本地後重新初始化「純本地」狀態:
-          //   - checkAndUpdateStreak 根據雲端來的 lastLoginDate 重算今日 todayClaimed
-          //   - checkAndGenerate{Daily,Weekly}Tasks 確保今日 / 本週有任務
-          //     (任務不從雲端拉,登入後本地若無就重抽)
-          // 不能放任 pullNow 把本地任務清空變成空 tab。
-          try {
-            const after = await checkAndUpdateStreak();
-            await checkAndGenerateDailyTasks();
-            await checkAndGenerateWeeklyTasks();
-            // 簽到 modal 跟雲端 streak 同步:若雲端今日已領,關掉啟動時跳出的 modal
-            // (避免「點領取後才發現已領」的 stale UX)
-            if (after.streak.todayClaimed) {
-              setCheckInStreak(null);
-            }
-          } catch (e) {
-            console.warn('[cloud] post-pull task re-init failed:', e);
-          }
-          // 階段 5H.bootstrap fix:第一次的 checkAndRebuildIfNeeded 在 App 初始化階段
-          // 跑過,但那時 cloud pullNow 還沒發生 → db.transactions 是空的 → 決策成
-          // "noop"。雲端資料拉完才能真的偵測有沒有歷史 → 再叫一次。重複呼叫安全
-          // (decision='skip' 直接 return,沒 cost)
-          checkAndRebuildIfNeeded().catch((e) =>
-            console.warn('[historyBootstrap post-pull] failed:', e)
-          );
-          setToast({ message: '☁ 已從雲端載入資料', variant: 'info' });
-        } else {
-          // 雲端是空的(全新帳號)→ 第一次把本機資料推上去當初始備份
-          const hasLocal = await localHasUserData();
-          if (hasLocal) {
-            const r = await pushNow(userId);
-            if (!r.ok) {
-              maybeCloudWarning('pushNow');
-              return;
-            }
-            setToast({ message: '☁ 已備份到雲端', variant: 'info' });
-          }
-        }
-
-        initialSyncDoneForUserRef.current = userId;
-        allowAutoPushRef.current = true;
-
-        // 階段 5A:確保 user_profile row 存在(沒有就建,預設暱稱 + 唯一邀請碼)
-        // 失敗只 warn 不擋主流程,useMyProfile 之後 mount 還會 retry
-        try {
-          await createProfileIfNeeded();
-        } catch (e) {
-          console.warn('[cloud] createProfileIfNeeded failed:', e);
-        }
-
-        // 階段 5B:user_creature_summary 為空 → 從本地 pets 一次性 backfill
-        // 失敗只 warn,之後事件觸發還會逐步補
-        try {
-          await backfillProfileSync();
-        } catch (e) {
-          console.warn('[cloud] backfillProfileSync failed:', e);
-        }
-
-        // 階段 5E:確保 privacy row 存在(預設值)+ 第一次同步 portfolio summary + snapshot
-        // 失敗只 warn 不擋主流程
-        try {
-          await getMyPrivacy();
-          await syncMyPortfolio();
-          await generateMySnapshot();
-        } catch (e) {
-          console.warn('[cloud] stage 5E initial sync failed:', e);
+        const after = await checkAndUpdateStreak();
+        await checkAndGenerateDailyTasks();
+        await checkAndGenerateWeeklyTasks();
+        if (after.streak.todayClaimed) {
+          setCheckInStreak(null);
         }
       } catch (e) {
-        console.warn('[cloud] initial sync error:', e);
-        maybeCloudWarning('initial sync');
+        console.warn('[init] streak / tasks re-init failed:', e);
       }
-    })();
-  }, [userId, maybeCloudWarning]);
 
-  // ─── 雲端同步:本地 DB 變動 → debounced push ───
-  useEffect(() => {
-    if (!userId) return;
-    if (!allowAutoPushRef.current) return; // 初始 sync 還沒完成,不能 push 把雲端清掉
-    pushDebounced(userId);
-  }, [
-    userId,
-    holdings,
-    pets,
-    transactions,
-    snapshots,
-    stocks,
-    achievements,
-    settings,
-    userCultivation,
-    cultivationLog,
-    userLoginStreak,
-    userTasksArr,
-    milestoneCount,
-    creatureUnlocksCount
-  ]);
+      checkAndRebuildIfNeeded().catch((e) =>
+        console.warn('[init] checkAndRebuildIfNeeded failed:', e)
+      );
+
+      try {
+        await createProfileIfNeeded();
+      } catch (e) {
+        console.warn('[init] createProfileIfNeeded failed:', e);
+      }
+
+      try {
+        await backfillProfileSync();
+      } catch (e) {
+        console.warn('[init] backfillProfileSync failed:', e);
+      }
+
+      try {
+        await getMyPrivacy();
+        await syncMyPortfolio();
+        await generateMySnapshot();
+      } catch (e) {
+        console.warn('[init] stage 5E initial sync failed:', e);
+      }
+
+      initialSyncDoneForUserRef.current = userId;
+    })();
+  }, [userId]);
 
   // 階段 5E:本地 holdings / prices 變動 → debounce 5 秒 sync user_portfolio_summary
+  // 階段 4-B 後 blob sync 停用,allowAutoPushRef 也拔了 — syncMyPortfolio 自己會
+  // check session,跑早一點也無害(idempotent upsert)
   useEffect(() => {
     if (!userId) return;
-    if (!allowAutoPushRef.current) return;
     if (portfolioSyncTimerRef.current !== undefined) {
       clearTimeout(portfolioSyncTimerRef.current);
     }
@@ -710,7 +596,7 @@ function Game() {
         clearTimeout(portfolioSyncTimerRef.current);
       }
     };
-  }, [userId, holdings, prices, stocks, transactions]);
+  }, [userId, holdings, prices, transactions]);
 
   /** PhaserMap 只送 petId 出來，這裡用 id 對應到 Pet + Stock */
   async function handlePetClickById(petId: string) {
@@ -736,7 +622,6 @@ function Game() {
         totalAchievements={ACHIEVEMENTS.length}
         lastPriceUpdateAt={settings.lastPriceUpdateAt}
         refreshing={refreshing}
-        cloudSignedIn={!!userId}
         onOpenProfile={() => setModal('profile')}
         flashPawToken={pawFlashToken}
       />
