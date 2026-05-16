@@ -50,8 +50,18 @@ export type TaskTriggerEvent =
 
 /** 任務實例(每筆 daily/weekly 都有自己的 row) */
 export interface UserTask {
-  /** Dexie auto-increment */
+  /** Dexie auto-increment(本機限定主鍵) */
   id?: number;
+  /**
+   * 階段 3D 批 2:雲端 `user_tasks.id`(uuid)。
+   *
+   * 本機保留 Dexie auto-increment number,雲端用 uuid 當 PK。`taskRepo.addTask`
+   * 用 `crypto.randomUUID()` 生 cloudId 寫進本機 + 雲端。後續 patch / cloud
+   * refetch 用 cloudId dedupe(同 cultivationLog.cloudId 模式)。
+   *
+   * 純 TS 型別擴充,不是 Dexie schema 變動。
+   */
+  cloudId?: string;
   /** 對應 task pool 的識別 key,同 key 同一輪不重抽 */
   taskKey: string;
   taskType: 'daily' | 'weekly';
