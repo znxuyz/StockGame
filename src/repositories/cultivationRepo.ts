@@ -251,20 +251,13 @@ let lastRevalidateAt = 0;
 
 class CloudFirstCultivationRepo implements CultivationRepository {
   /**
-   * 階段 3D 配合 Server-side dedup:
-   * Supabase `earn_cultivation` RPC 對 (user, reason ∈ {realm_breakthrough,
-   * effect_unlock, level_up}, pet) 在 30 分鐘內 silent skip(回 success 但不
-   * 真的加)。本機沒辦法事前預測會不會被 dedup,所以走「樂觀 + refetch
-   * 校正」:
+   * 緊急修法:雲端沒 `earn_cultivation` RPC,改成跟 spend() 同套(直接
+   * upsert user_cultivation 表)。原本走 RPC 是想要 server-side 30 分鐘
+   * dedup,但 RPC 從來沒部署上去(部署的是不同名稱 / 沒部署 SQL migration),
+   * 每次領取都 404,使用者拿不到修為。
    *
-   *   1. 本機樂觀寫 balance + log(沒 cloudId)
-   *   2. 呼叫 RPC(不解析 return value,server 是真相)
-   *   3. RPC 成功 → refetch user_cultivation 蓋掉本機 balance(若 silent skip,
-   *      cloud 沒加,refetch 把本機 +N 抹回去)
-   *   4. refetch cultivation_log 最近 20 筆 → 刪掉本機這筆 optimistic + 用
-   *      cloudId dedupe 寫入雲端 entries(若 silent skip 沒新 log,
-   *      optimistic 還是會被刪 → log 跟 balance 一起回到 pre-earn 狀態)
-   *   5. RPC 失敗 → 完整 rollback(balance + log)+ toast + 回 cloud_failed
+   * 後續若想恢復 dedup:在 supabase migrations 加 `earn_cultivation` RPC
+   * 並部署,**然後改回 RPC 版本**。在此之前用 upsert 保證至少功能正常。
    */
   async earn(
     delta: number,
@@ -276,7 +269,7 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       return { ok: true, newAmount: (await this.getBalance())?.amount ?? 0 };
     }
 
-    // 1. 樂觀更新本機(balance + log,沒 cloudId)
+    // 1. 樂觀更新本機(balance + log)
     const previousBalance = await db.userCultivation.get('main');
     const baseline: UserCultivation = previousBalance ?? {
       id: 'main',
@@ -285,20 +278,20 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       lifetimeSpent: 0,
       lastUpdated: Date.now()
     };
-    const optimisticAmount = baseline.amount + delta;
+    const newAmount = baseline.amount + delta;
     const now = Date.now();
-    const optimisticBalance: UserCultivation = {
+    const newBalance: UserCultivation = {
       ...baseline,
-      amount: optimisticAmount,
+      amount: newAmount,
       lifetimeEarned: baseline.lifetimeEarned + delta,
       lastUpdated: now
     };
-    await db.userCultivation.put(optimisticBalance);
-    const optimisticLogId = await db.cultivationLog.add({
+    await db.userCultivation.put(newBalance);
+    const localLogId = await db.cultivationLog.add({
       change: delta,
       reason,
       reasonText,
-      balanceAfter: optimisticAmount,
+      balanceAfter: newAmount,
       createdAt: now,
       relatedPetId
     } as CultivationLog);
@@ -308,26 +301,21 @@ class CloudFirstCultivationRepo implements CultivationRepository {
     try {
       userId = await getCurrentUserId();
     } catch {
-      return { ok: true, newAmount: optimisticAmount };
+      return { ok: true, newAmount };
     }
 
-    // 3. 呼叫 RPC(server 內含 30-min dedup);失敗 → 完整 rollback
+    // 3. upsert 雲端 — 失敗 rollback + toast,**不 throw**
     try {
-      const { error } = await supabase.rpc('earn_cultivation', {
-        p_delta: delta,
-        p_reason: reason,
-        p_reason_text: reasonText,
-        p_related_pet_id: relatedPetId ?? null
-      });
-      if (error) throw new Error(error.message);
+      await this.uploadBalanceToCloud(newBalance, userId);
+      return { ok: true, newAmount };
     } catch (e) {
-      console.error('[cultivationRepo] earn RPC failed:', e);
+      console.error('[cultivationRepo] earn cloud upload failed:', e);
       if (previousBalance) {
         await db.userCultivation.put(previousBalance);
       } else {
         await db.userCultivation.delete('main');
       }
-      await db.cultivationLog.delete(optimisticLogId);
+      await db.cultivationLog.delete(localLogId);
       eventBus.emit('toast:show', {
         message: '修為同步失敗(已還原本機)',
         variant: 'error'
@@ -338,71 +326,6 @@ class CloudFirstCultivationRepo implements CultivationRepository {
         newAmount: previousBalance?.amount ?? 0
       };
     }
-
-    // 4. Refetch cloud balance — 蓋掉本機(silent skip 情況下這步把樂觀值抹回去)
-    try {
-      const { data, error } = await supabase
-        .from('user_cultivation')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (error) throw new Error(error.message);
-      if (data) {
-        await db.userCultivation.put(toLocalBalance(data as RemoteCultivation, baseline));
-      }
-    } catch (e) {
-      console.warn('[cultivationRepo] earn refetch balance failed:', e);
-    }
-
-    // 5. Refetch cloud log — 刪 optimistic + dedupe 匯入 cloud entries
-    //    cloud 沒這張表 / 失敗時 → optimistic log 保留(降級行為)
-    try {
-      const { data, error } = await supabase
-        .from('cultivation_log')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (error) throw new Error(error.message);
-      if (data) {
-        // 5a. 刪掉這次 optimistic local entry(它沒 cloudId,refetch 拿到的雲端
-        //     entry 才是真相;若 silent skip 沒新 entry,刪掉就等於還原)
-        await db.cultivationLog.delete(optimisticLogId);
-
-        // 5b. dedupe:過去已匯入的 cloud entry(cloudId 已存在本機)→ 跳過
-        const all = await db.cultivationLog.toArray();
-        const existingCloudIds = new Set<number>();
-        for (const e of all) {
-          if (typeof e.cloudId === 'number') existingCloudIds.add(e.cloudId);
-        }
-
-        const toInsert: CultivationLog[] = [];
-        for (const row of data) {
-          const cloudId = typeof row.id === 'number' ? row.id : Number(row.id);
-          if (existingCloudIds.has(cloudId)) continue;
-          toInsert.push({
-            cloudId,
-            change: row.change as number,
-            reason: row.reason as CultivationReason,
-            reasonText: (row.reason_text as string) ?? '',
-            balanceAfter: row.balance_after as number,
-            createdAt: row.created_at
-              ? new Date(row.created_at as string).getTime()
-              : Date.now(),
-            relatedPetId: (row.related_pet_id ?? undefined) as string | undefined
-          });
-        }
-        if (toInsert.length > 0) {
-          await db.cultivationLog.bulkAdd(toInsert as CultivationLog[]);
-        }
-      }
-    } catch (e) {
-      console.warn('[cultivationRepo] earn refetch log failed:', e);
-    }
-
-    // 6. 回當前本機餘額(refetch 後的真相 — silent skip 已抹回 pre-earn 值)
-    const finalBalance = await db.userCultivation.get('main');
-    return { ok: true, newAmount: finalBalance?.amount ?? optimisticAmount };
   }
 
   async spend(
