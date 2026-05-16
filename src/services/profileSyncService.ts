@@ -94,23 +94,38 @@ async function recordMilestone(
  *
  *  - eternalOverride=true 時強制 is_eternal=true(不會被舊 row 覆蓋掉)
  *  - 新 row 用 insert,衝突 onConflict=(user_id,creature_species_id) → update
+ *  - **circuit-break**:若雲端 user_creature_summary 表 schema 缺欄位
+ *    (PostgREST 42703 / "Could not find the X column"),session 內後續跳過
+ *    所有 upsert,只 console.warn 一次。避免 5 隻 pet × 每次 earn 重複噴 400。
  */
+/** Session-level 旗標 — column-not-found 觸發後本 session 不再嘗試,避免噴 console */
+let creatureSummaryDisabled = false;
+
 async function upsertCreatureSummary(
   userId: string,
   petId: string,
   options: { eternalOverride?: boolean } = {}
 ): Promise<void> {
+  if (creatureSummaryDisabled) return;
   const snap = await getPetSnapshot(petId);
   if (!snap) return;
   const { pet, realm, level } = snap;
 
   // 先 select 舊 row,人工 max() 跟新值合併
-  const { data: existing } = await supabase
+  const { data: existing, error: selErr } = await supabase
     .from('user_creature_summary')
     .select('*')
     .eq('user_id', userId)
     .eq('creature_species_id', pet.speciesId)
     .maybeSingle();
+  if (selErr && /column .* does not exist|Could not find the .* column/i.test(selErr.message)) {
+    creatureSummaryDisabled = true;
+    console.warn(
+      '[profileSync] user_creature_summary schema 缺欄位,本 session 跳過後續所有 upsert:',
+      selErr.message
+    );
+    return;
+  }
 
   const realmOrder: SoulRealmId[] = ['fan', 'ling', 'yao', 'shen', 'sheng', 'xian'];
   const oldRealmIdx = existing?.highest_realm ? realmOrder.indexOf(existing.highest_realm) : -1;
@@ -134,6 +149,14 @@ async function upsertCreatureSummary(
       { onConflict: 'user_id,creature_species_id' }
     );
   if (error) {
+    if (/column .* does not exist|Could not find the .* column/i.test(error.message)) {
+      creatureSummaryDisabled = true;
+      console.warn(
+        '[profileSync] user_creature_summary schema 缺欄位,本 session 跳過後續所有 upsert:',
+        error.message
+      );
+      return;
+    }
     console.warn('[profileSync] upsertCreatureSummary failed:', error.message);
   }
 }

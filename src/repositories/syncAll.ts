@@ -1303,6 +1303,16 @@ export async function forceFetchAllFromCloud(): Promise<ForceFetchResult> {
     }
   }
 
+  // 修為復原 — 雲端 + 本機 balance 都被歷史 Bug C 蓋成 0,但本機若還有
+  // `cultivationLog` 歷史紀錄,latest entry 的 balanceAfter 就是真實餘額。
+  // 重算 + 寫回本機 + 推上雲。對歷史 log 完全空的裝置(無痕 / fresh install)
+  // 無能為力,但任何留有 log 的舊裝置(桌面)會自動 heal。
+  try {
+    await healCultivationFromLog(userId);
+  } catch (e) {
+    console.warn('[forceFetch] heal cultivation from log failed:', e);
+  }
+
   const totalRowsPulled = reports.reduce(
     (s, r) => s + (r.cloudCount > 0 ? r.cloudCount : 0),
     0
@@ -1322,4 +1332,74 @@ export async function forceFetchAllFromCloud(): Promise<ForceFetchResult> {
     totalRowsPulled,
     durationMs
   };
+}
+
+/**
+ * 修為復原:雲端 + 本機 userCultivation 都被歷史 Bug C 蓋成 0/0/0 時,
+ * 若本機 `cultivationLog` 有歷史 entries,用 latest entry 的 `balanceAfter`
+ * 重建真實餘額 + 推回雲端。
+ *
+ * 條件:
+ *   - 本機 cultivation.amount === 0
+ *   - 本機 cultivationLog 至少 1 筆
+ *   - 最新 log entry 的 balanceAfter > 0
+ *
+ * 否則 no-op(數據真的就是 0 / 沒 log 可救)。
+ */
+async function healCultivationFromLog(userId: string): Promise<void> {
+  const balance = await db.userCultivation.get('main');
+  if (!balance) return;
+  if (balance.amount > 0 || balance.lifetimeEarned > 0) return; // 不需要 heal
+
+  const logs = await db.cultivationLog.toArray();
+  if (logs.length === 0) return;
+
+  // 找最新 log entry(按 createdAt desc)
+  let latest: typeof logs[number] | null = null;
+  for (const l of logs) {
+    if (!latest || l.createdAt > latest.createdAt) latest = l;
+  }
+  if (!latest || latest.balanceAfter <= 0) return;
+
+  // 從 log 重算 lifetime earned / spent
+  let earned = 0;
+  let spent = 0;
+  for (const l of logs) {
+    if (l.change > 0) earned += l.change;
+    else spent += -l.change;
+  }
+
+  const reconstructed: UserCultivation = {
+    id: 'main',
+    amount: latest.balanceAfter,
+    lifetimeEarned: earned,
+    lifetimeSpent: spent,
+    lastUpdated: Date.now()
+  };
+
+  await db.userCultivation.put(reconstructed);
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[forceFetch] 修為 heal from log: amount 0→${reconstructed.amount}, lifetimeEarned 0→${earned}, lifetimeSpent 0→${spent}`
+  );
+
+  // 推回雲端
+  try {
+    const { error } = await supabase
+      .from('user_cultivation')
+      .upsert(
+        {
+          user_id: userId,
+          total_points: reconstructed.amount,
+          lifetime_earned: reconstructed.lifetimeEarned,
+          lifetime_spent: reconstructed.lifetimeSpent
+        },
+        { onConflict: 'user_id' }
+      );
+    if (error) {
+      console.warn('[forceFetch] heal cultivation cloud push failed:', error.message);
+    }
+  } catch (e) {
+    console.warn('[forceFetch] heal cultivation cloud push threw:', e);
+  }
 }

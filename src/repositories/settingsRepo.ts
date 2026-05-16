@@ -264,16 +264,21 @@ class CloudFirstSettingsRepo implements SettingsRepository {
       if (!remote) return;
 
       const localUpdatedAt = local?.updatedAt ?? 0;
-      if (remote.updatedAt && remote.updatedAt > localUpdatedAt) {
+      const remoteUpdatedAt = remote.updatedAt ?? 0;
+      if (remoteUpdatedAt > localUpdatedAt) {
         // 雲端較新 — 寫進本機;useLiveQuery 訂閱 db.settings 變動會自動 retrigger
         await db.settings.put(remote);
-      } else if (local && localUpdatedAt > (remote.updatedAt ?? 0)) {
-        // 本機較新 — 階段 3D 才上傳;這版只 console.warn
-        console.warn(
-          `[settingsRepo] local newer than cloud (local=${localUpdatedAt} > cloud=${remote.updatedAt}), reconcile deferred to 階段 3D`
-        );
+      } else if (local && localUpdatedAt - remoteUpdatedAt > 60_000) {
+        // 本機真的明顯較新(> 60 秒 clock skew 容忍區間)— put() 早該上傳了,
+        // 走到這代表上次 put 失敗或被 boot race 跳過 → 補推一次。
+        try {
+          const userId = await getCurrentUserId();
+          await this.uploadToCloud(local, userId);
+        } catch (e) {
+          console.warn('[settingsRepo] heal-by-push failed:', e);
+        }
       }
-      // 兩邊一樣新 → no-op
+      // < 60s 差距視為 client/server clock skew + 寫入延遲,no-op 不噴 warn
     } catch (e) {
       console.warn('[settingsRepo] revalidate failed:', e);
     }
