@@ -124,8 +124,10 @@ function holdingToRemote(h: Holding, userId: string) {
     avg_cost: h.avgCost,
     total_cost: h.totalCost,
     realized_pnl: h.realizedPnL,
-    first_purchased_at: h.firstPurchasedAt,
-    last_transaction_at: h.lastTransactionAt
+    // **重要**:雲端 holdings.first_purchased_at / last_transaction_at 是 timestamptz,
+    // 直接送 unix ms 數字會被 PG 拒絕「22008 date/time field value out of range」。
+    first_purchased_at: new Date(h.firstPurchasedAt).toISOString(),
+    last_transaction_at: new Date(h.lastTransactionAt).toISOString()
   };
 }
 

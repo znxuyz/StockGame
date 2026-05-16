@@ -26,8 +26,8 @@
  *     - avg_cost              ← Holding.avgCost
  *     - total_cost            ← Holding.totalCost
  *     - realized_pnl          ← Holding.realizedPnL
- *     - first_purchased_at    ← Holding.firstPurchasedAt(unix ms,bigint)
- *     - last_transaction_at   ← Holding.lastTransactionAt(unix ms,bigint)
+ *     - first_purchased_at    ← Holding.firstPurchasedAt(unix ms → ISO timestamptz)
+ *     - last_transaction_at   ← Holding.lastTransactionAt(unix ms → ISO timestamptz)
  *
  *  ❌ 不上雲(本機限定):
  *     - petId  — 跨裝置時用 code 配對 pets 表 query 出對應 pet(批 3 處理)
@@ -91,8 +91,8 @@ interface RemoteHolding {
   avg_cost: number;
   total_cost: number;
   realized_pnl: number;
-  first_purchased_at: number; // bigint ms
-  last_transaction_at: number; // bigint ms
+  first_purchased_at: string; // ISO timestamptz
+  last_transaction_at: string; // ISO timestamptz
 }
 
 function toLocal(remote: RemoteHolding, existing: Holding | undefined): Holding {
@@ -102,8 +102,8 @@ function toLocal(remote: RemoteHolding, existing: Holding | undefined): Holding 
     avgCost: remote.avg_cost,
     totalCost: remote.total_cost,
     realizedPnL: remote.realized_pnl,
-    firstPurchasedAt: remote.first_purchased_at,
-    lastTransactionAt: remote.last_transaction_at,
+    firstPurchasedAt: Date.parse(remote.first_purchased_at),
+    lastTransactionAt: Date.parse(remote.last_transaction_at),
     petId: existing?.petId ?? uuid() // placeholder,批 3 pets 上雲後對齊
   };
 }
@@ -116,8 +116,8 @@ function toRemote(local: Holding, userId: string): RemoteHolding {
     avg_cost: local.avgCost,
     total_cost: local.totalCost,
     realized_pnl: local.realizedPnL,
-    first_purchased_at: local.firstPurchasedAt,
-    last_transaction_at: local.lastTransactionAt
+    first_purchased_at: new Date(local.firstPurchasedAt).toISOString(),
+    last_transaction_at: new Date(local.lastTransactionAt).toISOString()
   };
 }
 
