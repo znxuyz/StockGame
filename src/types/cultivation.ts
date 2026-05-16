@@ -50,6 +50,15 @@ export interface UserCultivation {
 export interface CultivationLog {
   /** Dexie auto-increment,寫入時不傳,讀取時必有 */
   id?: number;
+  /**
+   * 階段 3D 緊急修復:雲端 `cultivation_log.id`(bigserial)。
+   * Optimistic local 寫入時 undefined;`cultivationRepo.earn` 從雲端 refetch
+   * 後寫入 cloud bigserial,後續 refetch 用此 field dedupe 不重複匯入。
+   *
+   * 純 TS 型別擴充,**不是 Dexie schema 變動**(沒在 `version().stores()` 加 index)。
+   * 沒 index → caller 用 `.toArray()` + memory filter 比對(資料量小,可接受)。
+   */
+  cloudId?: number;
   /** 變動量,正數=賺,負數=花 */
   change: number;
   /** 變動原因代碼(reason union) */
