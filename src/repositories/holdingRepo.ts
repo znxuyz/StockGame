@@ -1,26 +1,127 @@
 /**
- * 階段 2 批次 B — `holdingRepo`:Dexie `holdings` 表的 Repository 抽象。
+ * 階段 3D 批 2 — `holdingRepo`:列表類 cloud-first(stale-while-revalidate +
+ * 樂觀更新 + 白名單)。
  *
- * 主鍵 = stock code(同代號同時間只會有一筆 active holding)。
- * 持倉清單常用 `orderBy('lastTransactionAt').reverse()` 顯示「最近交易」排序。
+ * 沿用 settingsRepo 模板,但這個 Repository **被 portfolio.ts 包在 Dexie
+ * transaction 內呼叫**(buyOrFeed / sell)。Dexie transaction body 不允許
+ * await 非 Dexie promise(會 abort 整個 tx)。所以這個檔多兩個機制:
+ *
+ *  1. **cachedUserId**:module-level 同步可讀的 userId,避開 await getSession()。
+ *     auth state 變動時自動更新。Auth gate (PR #116) 保證玩家 mount Game 時
+ *     session 已 ready,所以 cache 通常有值。
+ *
+ *  2. **`Dexie.currentTransaction` detection**:
+ *     - tx 內 → 本機 put/delete 完後,用 `tx.on('complete')` 註冊 post-commit
+ *       hook 跑雲端 sync(fire-and-forget,失敗只 console.warn + toast)。
+ *       **不能 rollback 本機**(tx 已 commit),這是 in-tx 場景的 trade-off。
+ *     - tx 外 → 完整 optimistic + cloud upsert + rollback + toast,跟其他
+ *       cloud-first repo 同模板。
+ *
+ * ──────────── 雲端 vs 本機欄位範圍 ────────────
+ *
+ *  ✅ 上雲(`holdings` 表 + (user_id, code) 複合主鍵;`toRemote` 白名單):
+ *     - user_id
+ *     - code
+ *     - shares
+ *     - avg_cost              ← Holding.avgCost
+ *     - total_cost            ← Holding.totalCost
+ *     - realized_pnl          ← Holding.realizedPnL
+ *     - first_purchased_at    ← Holding.firstPurchasedAt(unix ms,bigint)
+ *     - last_transaction_at   ← Holding.lastTransactionAt(unix ms,bigint)
+ *
+ *  ❌ 不上雲(本機限定):
+ *     - petId  — 跨裝置時用 code 配對 pets 表 query 出對應 pet(批 3 處理)
+ *
+ *  ⚠️ 新裝置從雲端 sync holdings 時,**雲端沒 petId** — 本機 Holding.petId 是
+ *     required string。對策:`toLocal` 用 `existing?.petId ?? uuid()`,沒對應
+ *     local 時 mint 一個 placeholder。批 3 pets 上雲後可用 code 對齊真實 petId。
+ *     在此之前,新裝置看到 holdings 但對應神獸 emoji 可能顯示異常(degraded UX)。
  */
 
 import { useLiveQuery } from 'dexie-react-hooks';
+import Dexie from 'dexie';
 import { db } from '@/db';
+import { supabase, isCloudConfigured } from '@/lib/supabase';
+import { eventBus } from '@/services/eventBus';
+import { uuid } from '@/utils';
 import type { Holding } from '@/types';
+
+// ─── cached userId(同步可讀,給 in-tx 場景用)─────────
+
+let cachedUserId: string | null = null;
+if (isCloudConfigured) {
+  void supabase.auth.getSession().then(({ data }) => {
+    cachedUserId = data.session?.user?.id ?? null;
+  });
+  supabase.auth.onAuthStateChange((_event, session) => {
+    cachedUserId = session?.user?.id ?? null;
+  });
+}
+
+async function getCurrentUserIdAsync(): Promise<string | null> {
+  if (cachedUserId) return cachedUserId;
+  try {
+    const { data } = await supabase.auth.getSession();
+    cachedUserId = data.session?.user?.id ?? null;
+    return cachedUserId;
+  } catch {
+    return null;
+  }
+}
+
+// ─── 公開 interface(不變,caller 完全無感)─────────────
 
 export interface HoldingRepository {
   count(): Promise<number>;
   get(code: string): Promise<Holding | undefined>;
-  /** 無排序,給匯整 / 計算用 */
   list(): Promise<Holding[]>;
-  /** orderBy lastTransactionAt desc — HoldingPicker 排序「最近交易」 */
   listRecent(): Promise<Holding[]>;
   put(holding: Holding): Promise<void>;
   bulkPut(holdings: Holding[]): Promise<void>;
   delete(code: string): Promise<void>;
   clear(): Promise<void>;
 }
+
+// ─── 雲端 ↔ 本機 mapper ──────────────────────────────
+
+interface RemoteHolding {
+  user_id: string;
+  code: string;
+  shares: number;
+  avg_cost: number;
+  total_cost: number;
+  realized_pnl: number;
+  first_purchased_at: number; // bigint ms
+  last_transaction_at: number; // bigint ms
+}
+
+function toLocal(remote: RemoteHolding, existing: Holding | undefined): Holding {
+  return {
+    code: remote.code,
+    shares: remote.shares,
+    avgCost: remote.avg_cost,
+    totalCost: remote.total_cost,
+    realizedPnL: remote.realized_pnl,
+    firstPurchasedAt: remote.first_purchased_at,
+    lastTransactionAt: remote.last_transaction_at,
+    petId: existing?.petId ?? uuid() // placeholder,批 3 pets 上雲後對齊
+  };
+}
+
+function toRemote(local: Holding, userId: string): RemoteHolding {
+  return {
+    user_id: userId,
+    code: local.code,
+    shares: local.shares,
+    avg_cost: local.avgCost,
+    total_cost: local.totalCost,
+    realized_pnl: local.realizedPnL,
+    first_purchased_at: local.firstPurchasedAt,
+    last_transaction_at: local.lastTransactionAt
+  };
+}
+
+// ─── Dexie-only impl(dev fallback)─────────────────
 
 class DexieHoldingRepo implements HoldingRepository {
   count(): Promise<number> {
@@ -35,11 +136,11 @@ class DexieHoldingRepo implements HoldingRepository {
   listRecent(): Promise<Holding[]> {
     return db.holdings.orderBy('lastTransactionAt').reverse().toArray();
   }
-  async put(holding: Holding): Promise<void> {
-    await db.holdings.put(holding);
+  async put(h: Holding): Promise<void> {
+    await db.holdings.put(h);
   }
-  async bulkPut(holdings: Holding[]): Promise<void> {
-    await db.holdings.bulkPut(holdings);
+  async bulkPut(items: Holding[]): Promise<void> {
+    await db.holdings.bulkPut(items);
   }
   async delete(code: string): Promise<void> {
     await db.holdings.delete(code);
@@ -49,13 +150,201 @@ class DexieHoldingRepo implements HoldingRepository {
   }
 }
 
-export const holdingRepo: HoldingRepository = new DexieHoldingRepo();
+// ─── Cloud-first impl ──────────────────────────────
+
+const REVALIDATE_INTERVAL_MS = 10_000;
+let lastRevalidateAt = 0;
+
+class CloudFirstHoldingRepo implements HoldingRepository {
+  count(): Promise<number> {
+    return db.holdings.count();
+  }
+
+  get(code: string): Promise<Holding | undefined> {
+    return db.holdings.get(code);
+  }
+
+  async list(): Promise<Holding[]> {
+    try {
+      const local = await db.holdings.toArray();
+      void this.scheduleRevalidate();
+      return local;
+    } catch (e) {
+      console.error('[holdingRepo] list failed:', e);
+      return [];
+    }
+  }
+
+  async listRecent(): Promise<Holding[]> {
+    try {
+      const local = await db.holdings.orderBy('lastTransactionAt').reverse().toArray();
+      void this.scheduleRevalidate();
+      return local;
+    } catch (e) {
+      console.error('[holdingRepo] listRecent failed:', e);
+      return [];
+    }
+  }
+
+  async put(h: Holding): Promise<void> {
+    const previous = await db.holdings.get(h.code);
+
+    // 1. 樂觀更新本機(總是)
+    await db.holdings.put(h);
+
+    // 2. 偵測是否在 Dexie tx 內 — 影響 cloud sync 策略
+    const tx = Dexie.currentTransaction;
+    if (tx) {
+      // 在 tx 內:本機已 commit,雲端 sync 走 post-commit hook(fire-and-forget,
+      // 失敗只 console.warn + toast,**不能 rollback 本機**)。
+      const userId = cachedUserId;
+      if (!userId) return; // 沒 auth,本機-only
+      tx.on('complete', () => {
+        void this.uploadOne(h, userId).catch((e) => {
+          console.warn('[holdingRepo] in-tx cloud sync failed:', e);
+          eventBus.emit('toast:show', {
+            message: '持倉雲端同步失敗(本機已更新)',
+            variant: 'error'
+          });
+        });
+      });
+      return;
+    }
+
+    // 3. tx 外:完整 optimistic + cloud upsert + rollback + toast
+    const userId = await getCurrentUserIdAsync();
+    if (!userId) return; // 沒 auth,本機-only
+
+    try {
+      await this.uploadOne(h, userId);
+    } catch (e) {
+      console.error('[holdingRepo] cloud upload failed:', e);
+      if (previous) {
+        await db.holdings.put(previous);
+      } else {
+        await db.holdings.delete(h.code);
+      }
+      eventBus.emit('toast:show', {
+        message: '持倉同步失敗(已還原本機)',
+        variant: 'error'
+      });
+    }
+  }
+
+  async bulkPut(items: Holding[]): Promise<void> {
+    // 給 cloudSync legacy path 用 — 整包寫本機,不主動推雲端
+    // (雲端是真實來源,bulkPut 通常用於 pull-then-write,不應再 push 回去)
+    await db.holdings.bulkPut(items);
+  }
+
+  async delete(code: string): Promise<void> {
+    const previous = await db.holdings.get(code);
+    await db.holdings.delete(code);
+
+    const tx = Dexie.currentTransaction;
+    if (tx) {
+      const userId = cachedUserId;
+      if (!userId) return;
+      tx.on('complete', () => {
+        void this.deleteOne(code, userId).catch((e) => {
+          console.warn('[holdingRepo] in-tx cloud delete failed:', e);
+          eventBus.emit('toast:show', {
+            message: '持倉刪除同步失敗(本機已更新)',
+            variant: 'error'
+          });
+        });
+      });
+      return;
+    }
+
+    const userId = await getCurrentUserIdAsync();
+    if (!userId) return;
+
+    try {
+      await this.deleteOne(code, userId);
+    } catch (e) {
+      console.error('[holdingRepo] cloud delete failed:', e);
+      if (previous) await db.holdings.put(previous);
+      eventBus.emit('toast:show', {
+        message: '持倉刪除同步失敗(已還原本機)',
+        variant: 'error'
+      });
+    }
+  }
+
+  async clear(): Promise<void> {
+    await db.holdings.clear();
+    // 雲端不主動 delete(換裝置仍能拉回)
+  }
+
+  // ─ private ─
+
+  private async scheduleRevalidate(): Promise<void> {
+    const now = Date.now();
+    if (now - lastRevalidateAt < REVALIDATE_INTERVAL_MS) return;
+    lastRevalidateAt = now;
+
+    try {
+      const userId = cachedUserId;
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from('holdings')
+        .select('*')
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message);
+      if (!data) return;
+
+      if (data.length === 0) {
+        // 雲端空 → 從本機 seed 一次(舊用戶第一次上雲)
+        const local = await db.holdings.toArray();
+        if (local.length > 0) {
+          const rows = local.map((h) => toRemote(h, userId));
+          const { error: upErr } = await supabase
+            .from('holdings')
+            .upsert(rows, { onConflict: 'user_id,code' });
+          if (upErr) throw new Error(upErr.message);
+        }
+        return;
+      }
+
+      // 雲端有資料 → merge 進本機(保留本機-only 條目,避免 race / 過渡期誤刪)
+      for (const row of data as RemoteHolding[]) {
+        const existing = await db.holdings.get(row.code);
+        await db.holdings.put(toLocal(row, existing));
+      }
+    } catch (e) {
+      console.warn('[holdingRepo] revalidate failed:', e);
+    }
+  }
+
+  private async uploadOne(h: Holding, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('holdings')
+      .upsert(toRemote(h, userId), { onConflict: 'user_id,code' });
+    if (error) throw new Error(error.message);
+  }
+
+  private async deleteOne(code: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('holdings')
+      .delete()
+      .eq('user_id', userId)
+      .eq('code', code);
+    if (error) throw new Error(error.message);
+  }
+}
+
+// ─── factory + singleton ─────────────────────────────
+
+export const holdingRepo: HoldingRepository = isCloudConfigured
+  ? new CloudFirstHoldingRepo()
+  : new DexieHoldingRepo();
 
 export function useHoldings(): Holding[] | undefined {
   return useLiveQuery(() => holdingRepo.list(), []);
 }
 
-/** lastTransactionAt desc — HoldingPicker 用 */
 export function useRecentHoldings(): Holding[] | undefined {
   return useLiveQuery(() => holdingRepo.listRecent(), []);
 }
