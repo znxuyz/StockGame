@@ -229,7 +229,7 @@ export { getOnlineFriends } from './onlineFriendsService';
 export type { OnlineFriend } from './onlineFriendsService';
 
 // 階段 5B:好友個人頁
-export { attachProfileSyncListeners, backfillProfileSync } from './profileSyncService';
+export { attachProfileSyncListeners, backfillProfileSync, clearProfileSyncDisabled } from './profileSyncService';
 export { getMyShowcase, updateMyShowcase, getShowcase } from './showcaseService';
 export {
   getFriendCreatures,

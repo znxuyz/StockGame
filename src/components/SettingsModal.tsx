@@ -11,6 +11,7 @@ import HudThemeSection from './HudThemeSection';
 import BackgroundSection from './BackgroundSection';
 import { BACKGROUNDS } from '@/services';
 import { forceSyncAllToCloud } from '@/repositories/syncAll';
+import { clearProfileSyncDisabled } from '@/services/profileSyncService';
 
 /**
  * 設定彈窗 sub-view 切換。
@@ -350,6 +351,24 @@ export default function SettingsModal({
                   <p className="text-[11px] text-gray-500 leading-relaxed">
                     若發現雲端資料缺失(換裝置看不到神獸 / 修為),
                     手動強推一次。跑完看瀏覽器 console 詳細報告。
+                  </p>
+                  {/* 階段 4-B:部署 user_creature_summary 修復 SQL 後,
+                      點此按鈕清掉 localStorage flag 並重新整理,啟用好友同步 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearProfileSyncDisabled();
+                      onActionComplete('已重新啟用好友同步,3 秒後重新載入');
+                      setTimeout(() => window.location.reload(), 3000);
+                    }}
+                    disabled={busy || deletingAccount || forceSyncing}
+                    className="w-full py-2 bg-sky-100 text-sky-800 rounded-lg text-sm border border-sky-300 disabled:opacity-50"
+                  >
+                    🔄 重新啟用好友同步
+                  </button>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    僅在你部署 supabase/migrations/20260516_stage4b_creature_summary_repair.sql
+                    後才需要點(本機因 schema 不一致已停用好友 profileSync)。
                   </p>
                   {/* 雙擊確認的刪帳號鈕(只在已登入時顯示) */}
                   <button

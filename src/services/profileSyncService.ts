@@ -145,6 +145,21 @@ function writePersistedDisabled(reason: string): void {
   );
 }
 
+/**
+ * 解除持久化 circuit-break(部署 SQL migration 後使用)。
+ * SettingsModal 的「重新啟用好友同步」按鈕呼叫此函式 + reload。
+ */
+export function clearProfileSyncDisabled(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(PROFILE_SYNC_DISABLED_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+  creatureSummaryDisabled = false;
+}
+
 function isSchemaError(message: string | undefined): boolean {
   if (!message) return false;
   return /column .* does not exist|Could not find the .* column/i.test(message);
