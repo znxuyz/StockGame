@@ -543,6 +543,36 @@ function Game() {
   }, [hasHoldings, silentRefresh]);
 
   // ─── 雲端同步:登入後初始 pull/push/conflict ───
+  /**
+   * 階段 3D 修:雲端警告只在「真斷網」彈。
+   *
+   * cloudSync 是舊的 blob-based 同步,還在打階段 3D 批 2-4 未建好的表
+   * (transactions / feed / notifications),會撞 404。但用戶實際**有網**,
+   * settingsRepo / cultivationRepo / loginStreakRepo 雲端同步都正常 — 個別 API
+   * 404 不該嚇使用者「無法連接雲端」。
+   *
+   * 規則:
+   *   - navigator.onLine === false → 真斷網,彈警告
+   *   - 其他失敗(404 / RLS / 500 / 401)→ console.warn 不彈
+   *   - 401 / auth 失效會被 AuthGate 處理,Game 內不重複提示
+   *
+   * 階段 3D 完成後 cloudSync 整檔改寫,這個 helper 一起退場。
+   */
+  const maybeCloudWarning = useCallback(
+    (context: string) => {
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (!offline) {
+        console.warn(`[cloud] ${context} failed but navigator.onLine=true — suppress warning`);
+        return;
+      }
+      setToast({
+        message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
+        variant: 'error'
+      });
+    },
+    [setToast]
+  );
+
   useEffect(() => {
     if (!userId) {
       // 登出 → 重置初始 sync 狀態,取消未跑完的 push
@@ -558,11 +588,8 @@ function Game() {
         const remote = await fetchRemoteMeta(userId);
 
         if (remote.error) {
-          // 網路 / RLS 錯誤 → 提示請連網路再試,不 fallback 本地
-          setToast({
-            message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
-            variant: 'error'
-          });
+          // 個別 query 失敗 → maybeCloudWarning 只在真斷網時彈;其他狀況 console.warn
+          maybeCloudWarning('fetchRemoteMeta');
           return; // 不 mark done,下次 mount / network resume 再試
         }
 
@@ -570,10 +597,7 @@ function Game() {
           // 雲端有資料 → 一律拉,覆蓋本機(不問,不留本機優先選項)
           const r = await pullNow(userId);
           if (!r.ok) {
-            setToast({
-              message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
-              variant: 'error'
-            });
+            maybeCloudWarning('pullNow');
             return;
           }
           // 階段 3.8 修:雲端覆蓋本地後重新初始化「純本地」狀態:
@@ -607,10 +631,7 @@ function Game() {
           if (hasLocal) {
             const r = await pushNow(userId);
             if (!r.ok) {
-              setToast({
-                message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
-                variant: 'error'
-              });
+              maybeCloudWarning('pushNow');
               return;
             }
             setToast({ message: '☁ 已備份到雲端', variant: 'info' });
@@ -647,13 +668,10 @@ function Game() {
         }
       } catch (e) {
         console.warn('[cloud] initial sync error:', e);
-        setToast({
-          message: '⚠️ 無法連接雲端,請檢查網路後重新整理',
-          variant: 'error'
-        });
+        maybeCloudWarning('initial sync');
       }
     })();
-  }, [userId]);
+  }, [userId, maybeCloudWarning]);
 
   // ─── 雲端同步:本地 DB 變動 → debounced push ───
   useEffect(() => {
