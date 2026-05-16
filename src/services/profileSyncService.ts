@@ -101,6 +101,60 @@ async function recordMilestone(
 /** Session-level 旗標 — column-not-found 觸發後本 session 不再嘗試,避免噴 console */
 let creatureSummaryDisabled = false;
 
+/**
+ * 跨 session 持久化 circuit-break。
+ *
+ * 目標:**App 啟動 console 完全沒紅字**。雲端 `user_creature_summary` 表
+ * 若 schema 跟 service 預期不一致(舊版「per-user + collected_species
+ * array」vs service 需要的「per-species_id」),第一次 upsert 會收 400
+ * (column does not exist)。
+ *
+ * 第一次撞到 → 寫 localStorage flag → **之後所有 session boot 直接跳過
+ * 所有 upsert / read 呼叫**,零紅字。
+ *
+ * 解除方式:user 部署 `supabase/migrations/20260512_stage5b_friends_profile.sql`
+ * 把雲端 schema 改成 per-species 後,清 localStorage(或開 DevTools 跑
+ * `localStorage.removeItem('stockgame.profileSync.disabled.v1')`)重新啟用。
+ */
+const PROFILE_SYNC_DISABLED_KEY = 'stockgame.profileSync.disabled.v1';
+
+function readPersistedDisabled(): boolean {
+  try {
+    return typeof localStorage !== 'undefined'
+      ? localStorage.getItem(PROFILE_SYNC_DISABLED_KEY) === '1'
+      : false;
+  } catch {
+    return false;
+  }
+}
+
+function writePersistedDisabled(reason: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(PROFILE_SYNC_DISABLED_KEY, '1');
+    }
+  } catch {
+    /* private mode / quota — fallback 仍有 session-level flag */
+  }
+  // 一次性 info(不是 warn,避免紅字)。日後解除需手動清 localStorage。
+  // eslint-disable-next-line no-console
+  console.info(
+    `[profileSync] schema 與 service 不一致,本裝置已停用 friend-profile 同步(${reason})。` +
+      `部署 supabase/migrations/20260512_stage5b_friends_profile.sql 後,` +
+      `console 跑 localStorage.removeItem('${PROFILE_SYNC_DISABLED_KEY}') 重啟可恢復。`
+  );
+}
+
+function isSchemaError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /column .* does not exist|Could not find the .* column/i.test(message);
+}
+
+// 模組載入時讀一次 localStorage — 若已持久 disabled,session flag 也立刻 true
+if (readPersistedDisabled()) {
+  creatureSummaryDisabled = true;
+}
+
 async function upsertCreatureSummary(
   userId: string,
   petId: string,
@@ -118,12 +172,9 @@ async function upsertCreatureSummary(
     .eq('user_id', userId)
     .eq('creature_species_id', pet.speciesId)
     .maybeSingle();
-  if (selErr && /column .* does not exist|Could not find the .* column/i.test(selErr.message)) {
+  if (selErr && isSchemaError(selErr.message)) {
     creatureSummaryDisabled = true;
-    console.warn(
-      '[profileSync] user_creature_summary schema 缺欄位,本 session 跳過後續所有 upsert:',
-      selErr.message
-    );
+    writePersistedDisabled(selErr.message);
     return;
   }
 
@@ -149,12 +200,9 @@ async function upsertCreatureSummary(
       { onConflict: 'user_id,creature_species_id' }
     );
   if (error) {
-    if (/column .* does not exist|Could not find the .* column/i.test(error.message)) {
+    if (isSchemaError(error.message)) {
       creatureSummaryDisabled = true;
-      console.warn(
-        '[profileSync] user_creature_summary schema 缺欄位,本 session 跳過後續所有 upsert:',
-        error.message
-      );
+      writePersistedDisabled(error.message);
       return;
     }
     console.warn('[profileSync] upsertCreatureSummary failed:', error.message);
@@ -326,6 +374,7 @@ export function attachProfileSyncListeners(): () => void {
  */
 export async function backfillProfileSync(): Promise<void> {
   if (!isCloudConfigured) return;
+  if (creatureSummaryDisabled) return; // 已知 schema 不對,跳過整個 backfill 迴圈
   const userId = await getCurrentUserId();
   if (!userId) return;
 

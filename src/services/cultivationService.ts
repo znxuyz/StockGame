@@ -1,11 +1,12 @@
 /**
  * 修為點數服務(階段 2.1 寫,階段 3D 批 1 改成走 Repository atomic ops)。
  *
- * 階段 3D 批 1 之後,balance + log 的原子性由 Repository 內部
- * (CloudFirstCultivationRepo)透過 Supabase RPC `earn_cultivation` /
- * `spend_cultivation` 保證。Service 層只負責業務驗證 + emit eventBus。
+ * 階段 3D 批 1 假設雲端有 `earn_cultivation` / `spend_cultivation` RPC,但
+ * RPC 從來沒部署成功。階段 4-B 後 Repository 改成直接 upsert
+ * `user_cultivation` 表,沒了 server-side atomic check(本機預檢餘額仍在)。
+ * Service 層只負責業務驗證 + emit eventBus,不變。
  *
- * 對外 API 不變:earnCultivation / spendCultivation / getCultivationBalance / ...
+ * 對外 API:earnCultivation / spendCultivation / getCultivationBalance / ...
  */
 
 import { cultivationRepo } from '@/repositories/cultivationRepo';
