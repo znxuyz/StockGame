@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { holdingRepo } from '@/repositories/holdingRepo';
 import { buyOrFeed } from '@/services';
 import { calcFee, formatInt, formatPrice, type FeeConfig } from '@/utils';
+import { useOnline } from '@/lib/useOnline';
 import type { Settings } from '@/types';
 
 interface FeedModalProps {
@@ -58,6 +59,7 @@ export default function FeedModal({
   const [feedDate, setFeedDate] = useState(todayYMD());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const online = useOnline();
 
   // 階段 R.7:打開 modal 時若有 presetCode 自動填入,
   // 之後玩家手動 HoldingPicker 切其他檔仍允許(presetCode 只是入口預設值)
@@ -237,10 +239,11 @@ export default function FeedModal({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={busy || !holding || !sharesNum || !priceNum}
+          disabled={busy || !holding || !sharesNum || !priceNum || !online}
+          title={!online ? '離線中無法操作' : undefined}
           className="w-full py-3 bg-amber-500 text-white rounded-lg font-bold text-base disabled:opacity-50 active:scale-95 transition-transform"
         >
-          {busy ? '處理中⋯' : '🍖 餵食加碼'}
+          {busy ? '處理中⋯' : !online ? '📡 離線中' : '🍖 餵食加碼'}
         </button>
       </div>
     </Modal>

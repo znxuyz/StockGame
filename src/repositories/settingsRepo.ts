@@ -57,6 +57,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { Settings, HudTheme } from '@/types';
 
 // ─── 公開 interface(不變)─────────────────────────────
@@ -201,7 +202,6 @@ class CloudFirstSettingsRepo implements SettingsRepository {
   }
 
   async put(settings: Settings): Promise<void> {
-    const previous = await db.settings.get('singleton');
     const stamped: Settings = { ...settings, updatedAt: Date.now() };
 
     // 1. 樂觀更新本機 — UI 立刻反應
@@ -219,19 +219,13 @@ class CloudFirstSettingsRepo implements SettingsRepository {
       return;
     }
 
-    // 3. upsert 雲端
+    // 3. upsert 雲端(階段 4-C:失敗保留本機,reportCloudWriteFailure + pendingSync drain)
     try {
       await this.uploadToCloud(stamped, userId);
     } catch (e) {
-      // 4. rollback 本機
-      if (previous) {
-        await db.settings.put(previous);
-      } else {
-        await db.settings.delete('singleton');
-      }
-      throw new Error(
-        `設定同步失敗,請重試:${e instanceof Error ? e.message : String(e)}`
-      );
+      reportCloudWriteFailure('設定', e);
+      // 不 throw、不 rollback — caller(SettingsModal.handleSave)會看到成功
+      // 路徑跑完,玩家不會以為「儲存失敗」。連線後 drain 補推。
     }
   }
 

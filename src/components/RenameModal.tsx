@@ -4,6 +4,7 @@ import { petRepo } from '@/repositories/petRepo';
 import { spendCultivation } from '@/services';
 import { useCultivation } from '@/hooks/useCultivation';
 import { getCreature } from '@/data/creatures';
+import { useOnline } from '@/lib/useOnline';
 import type { Pet } from '@/types';
 
 interface RenameModalProps {
@@ -38,6 +39,7 @@ export default function RenameModal({ open, onClose, pet, onSuccess }: RenameMod
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const online = useOnline();
 
   const cultivation = useCultivation();
   const balance = cultivation.amount;
@@ -172,14 +174,17 @@ export default function RenameModal({ open, onClose, pet, onSuccess }: RenameMod
           </button>
           <button
             type="submit"
-            disabled={busy || insufficient || !!liveError || !trimmed}
+            disabled={busy || insufficient || !!liveError || !trimmed || !online}
+            title={!online ? '離線中無法操作' : undefined}
             className="flex-1 bg-amber-500 text-white font-bold py-2.5 rounded-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
           >
             {busy
               ? '改名中⋯'
-              : insufficient
-                ? `修為不足(差 ${COST - balance})`
-                : '確認改名'}
+              : !online
+                ? '📡 離線中'
+                : insufficient
+                  ? `修為不足(差 ${COST - balance})`
+                  : '確認改名'}
           </button>
         </div>
       </form>

@@ -22,7 +22,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { CreatureUnlock } from '@/types';
 
 // ─── helper ──────────────────────────────────────────
@@ -136,11 +136,7 @@ class CloudFirstCreatureUnlockRepo implements CreatureUnlockRepository {
         throw new Error(error.message);
       }
     } catch (e) {
-      console.warn('[creatureUnlockRepo] cloud insert failed:', e);
-      eventBus.emit('toast:show', {
-        message: '圖鑑解鎖同步失敗(本機已解鎖)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('圖鑑解鎖', e);
     }
 
     return localId;

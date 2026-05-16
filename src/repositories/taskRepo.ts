@@ -47,7 +47,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { UserTask, MilestoneReward } from '@/types';
 
 type TaskType = UserTask['taskType'];
@@ -234,11 +234,7 @@ class CloudFirstTaskRepo implements TaskRepository {
         .insert(userTaskToRemote(withCloudId, cloudId, userId));
       if (error && error.code !== '23505') throw new Error(error.message);
     } catch (e) {
-      console.warn('[taskRepo] addTask cloud insert failed:', e);
-      eventBus.emit('toast:show', {
-        message: '任務雲端同步失敗(本機已建立)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('任務建立', e);
     }
     return localId;
   }
@@ -267,11 +263,7 @@ class CloudFirstTaskRepo implements TaskRepository {
         });
       if (error) throw new Error(error.message);
     } catch (e) {
-      console.warn('[taskRepo] patchTask cloud upsert failed:', e);
-      eventBus.emit('toast:show', {
-        message: '任務進度同步失敗(本機已更新)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('任務進度', e);
     }
   }
 
@@ -297,11 +289,7 @@ class CloudFirstTaskRepo implements TaskRepository {
         .eq('task_type', type);
       if (error) throw new Error(error.message);
     } catch (e) {
-      console.warn('[taskRepo] deleteTasksByType cloud delete failed:', e);
-      eventBus.emit('toast:show', {
-        message: '舊任務雲端清除失敗(本機已清)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('舊任務清除', e);
     }
   }
 
@@ -330,11 +318,7 @@ class CloudFirstTaskRepo implements TaskRepository {
         .insert(milestoneToRemote(m as MilestoneReward, userId));
       if (error && error.code !== '23505') throw new Error(error.message);
     } catch (e) {
-      console.warn('[taskRepo] addMilestone cloud insert failed:', e);
-      eventBus.emit('toast:show', {
-        message: '里程碑同步失敗(本機已領)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('連登里程碑', e);
     }
     return localId;
   }

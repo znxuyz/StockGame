@@ -49,7 +49,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { UserCultivation, CultivationLog, CultivationReason } from '@/types';
 
 // ─── 公開 interface(批 1 加的 earn/spend 保留)─────
@@ -287,7 +287,7 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       lastUpdated: now
     };
     await db.userCultivation.put(newBalance);
-    const localLogId = await db.cultivationLog.add({
+    await db.cultivationLog.add({
       change: delta,
       reason,
       reasonText,
@@ -304,28 +304,15 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       return { ok: true, newAmount };
     }
 
-    // 3. upsert 雲端 — 失敗 rollback + toast,**不 throw**
+    // 3. upsert 雲端(失敗保留本機 + pendingSync drain;**不** throw / rollback)
     try {
       await this.uploadBalanceToCloud(newBalance, userId);
-      return { ok: true, newAmount };
     } catch (e) {
-      console.error('[cultivationRepo] earn cloud upload failed:', e);
-      if (previousBalance) {
-        await db.userCultivation.put(previousBalance);
-      } else {
-        await db.userCultivation.delete('main');
-      }
-      await db.cultivationLog.delete(localLogId);
-      eventBus.emit('toast:show', {
-        message: '修為同步失敗(已還原本機)',
-        variant: 'error'
-      });
-      return {
-        ok: false,
-        reason: 'cloud_failed',
-        newAmount: previousBalance?.amount ?? 0
-      };
+      reportCloudWriteFailure('修為', e);
+      // **不 rollback** — 本機 newAmount 保留,連線後 drain 補推上雲
     }
+    // 不論雲端成功失敗,本機都已 +N → 對 caller 而言一律成功
+    return { ok: true, newAmount };
   }
 
   async spend(
@@ -353,7 +340,7 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       lastUpdated: now
     };
     await db.userCultivation.put(newBalance);
-    const localLogId = await db.cultivationLog.add({
+    await db.cultivationLog.add({
       change: -delta,
       reason,
       reasonText,
@@ -370,24 +357,14 @@ class CloudFirstCultivationRepo implements CultivationRepository {
       return { ok: true, newAmount };
     }
 
-    // 3. upsert 雲端 — 失敗 rollback + toast,**不 throw**
+    // 3. upsert 雲端(失敗保留本機 + pendingSync drain;**不** rollback)
     try {
       await this.uploadBalanceToCloud(newBalance, userId);
-      return { ok: true, newAmount };
     } catch (e) {
-      console.error('[cultivationRepo] spend cloud upload failed:', e);
-      await db.userCultivation.put(previousBalance);
-      await db.cultivationLog.delete(localLogId);
-      eventBus.emit('toast:show', {
-        message: '修為同步失敗(已還原本機)',
-        variant: 'error'
-      });
-      return {
-        ok: false,
-        reason: 'cloud_failed',
-        current: previousBalance.amount
-      };
+      reportCloudWriteFailure('修為', e);
+      // 不 rollback — 連線後 drain 把扣款結果推上雲
     }
+    return { ok: true, newAmount };
   }
 
   // ─ Singleton balance(stale-while-revalidate)─

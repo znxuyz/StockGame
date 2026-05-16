@@ -20,7 +20,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { AchievementProgress } from '@/types';
 
 // ─── helper ──────────────────────────────────────────
@@ -104,7 +104,6 @@ class CloudFirstAchievementRepo implements AchievementRepository {
   }
 
   async put(a: AchievementProgress): Promise<void> {
-    const previous = await db.achievements.get(a.id);
 
     // 1. 樂觀更新本機
     await db.achievements.put(a);
@@ -120,16 +119,7 @@ class CloudFirstAchievementRepo implements AchievementRepository {
         .upsert(toRemote(a, userId), { onConflict: 'user_id,achievement_id' });
       if (error) throw new Error(error.message);
     } catch (e) {
-      console.error('[achievementRepo] cloud upload failed:', e);
-      if (previous) {
-        await db.achievements.put(previous);
-      } else {
-        await db.achievements.delete(a.id);
-      }
-      eventBus.emit('toast:show', {
-        message: '成就同步失敗(已還原本機)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('成就', e);
     }
   }
 

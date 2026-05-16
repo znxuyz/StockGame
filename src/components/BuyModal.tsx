@@ -3,6 +3,7 @@ import Modal from './Modal';
 import { lookupStock, ApiError, describeApiError } from '@/api';
 import { buyOrFeed } from '@/services';
 import { calcFee, formatInt, type FeeConfig } from '@/utils';
+import { useOnline } from '@/lib/useOnline';
 import type { Settings, Stock } from '@/types';
 
 interface BuyModalProps {
@@ -48,6 +49,7 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
   const [price, setPrice] = useState('');
   const [purchaseDate, setPurchaseDate] = useState(todayYMD());
   const [busy, setBusy] = useState(false);
+  const online = useOnline();
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
@@ -259,10 +261,11 @@ export default function BuyModal({ open, onClose, settings, onActionComplete }: 
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={busy || !stock || !sharesNum || !priceNum}
+          disabled={busy || !stock || !sharesNum || !priceNum || !online}
+          title={!online ? '離線中無法操作' : undefined}
           className="w-full py-3 bg-emerald-500 text-white rounded-lg font-bold text-base disabled:opacity-50 active:scale-95 transition-transform"
         >
-          {busy ? '處理中⋯' : '🥚 孵化神獸'}
+          {busy ? '處理中⋯' : !online ? '📡 離線中' : '🥚 孵化神獸'}
         </button>
       </div>
     </Modal>

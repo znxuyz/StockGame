@@ -33,7 +33,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { LoginStreak } from '@/types';
 
 // ─── 公開 interface(不變)─────────────────────────────
@@ -152,7 +152,6 @@ class CloudFirstLoginStreakRepo implements LoginStreakRepository {
   }
 
   async put(s: LoginStreak): Promise<void> {
-    const previous = await db.userLoginStreak.get('main');
     const stamped: LoginStreak = { ...s, updatedAt: Date.now() };
 
     // 1. 樂觀更新本機
@@ -170,16 +169,7 @@ class CloudFirstLoginStreakRepo implements LoginStreakRepository {
     try {
       await this.uploadToCloud(stamped, userId);
     } catch (e) {
-      console.error('[loginStreakRepo] cloud upload failed:', e);
-      if (previous) {
-        await db.userLoginStreak.put(previous);
-      } else {
-        await db.userLoginStreak.delete('main');
-      }
-      eventBus.emit('toast:show', {
-        message: '連登資料同步失敗(已還原本機)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('連登', e);
     }
   }
 

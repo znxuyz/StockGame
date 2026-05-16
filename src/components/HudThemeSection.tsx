@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { settingsRepo, useSettings } from '@/repositories/settingsRepo';
 import { spendCultivation } from '@/services';
 import { useCultivation } from '@/hooks/useCultivation';
+import { useOnline } from '@/lib/useOnline';
 import type { HudTheme, Settings } from '@/types';
 
 interface HudThemeSectionProps {
@@ -45,6 +46,7 @@ export default function HudThemeSection({ onBack }: HudThemeSectionProps) {
   const cultivation = useCultivation();
   const balance = cultivation.amount;
   const [busy, setBusy] = useState<HudTheme | null>(null);
+  const online = useOnline();
   const [error, setError] = useState<string | null>(null);
 
   if (!settings) return null;
@@ -152,21 +154,23 @@ export default function HudThemeSection({ onBack }: HudThemeSectionProps) {
                 <button
                   type="button"
                   onClick={() => selectTheme(t.id)}
-                  disabled={!!busy}
+                  disabled={!!busy || !online}
+                  title={!online ? '離線中無法操作' : undefined}
                   className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-bold active:scale-95 transition-transform disabled:opacity-50"
                 >
-                  選用
+                  {!online ? '📡' : '選用'}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => unlockAndSelect(t.id)}
-                  disabled={!!busy || insufficient}
+                  disabled={!!busy || insufficient || !online}
+                  title={!online ? '離線中無法操作' : undefined}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition-transform disabled:active:scale-100 ${
-                    insufficient ? 'bg-gray-300 text-gray-500' : 'bg-amber-500 text-white'
+                    insufficient || !online ? 'bg-gray-300 text-gray-500' : 'bg-amber-500 text-white'
                   }`}
                 >
-                  {isBusy ? '解鎖中⋯' : insufficient ? '💎不足' : '解鎖'}
+                  {isBusy ? '解鎖中⋯' : !online ? '📡' : insufficient ? '💎不足' : '解鎖'}
                 </button>
               )}
             </div>

@@ -56,6 +56,8 @@ import { useAuth } from '@/lib/auth';
 import { isCloudConfigured } from '@/lib/supabase';
 import { ACHIEVEMENTS } from '@/data/achievements';
 import TopBar from '@/components/TopBar';
+import OfflineBanner from '@/components/OfflineBanner';
+import { attachPendingSyncListener } from '@/lib/pendingSync';
 import CultivationFloater from '@/components/CultivationFloater';
 import MilestoneCelebration from '@/components/MilestoneCelebration';
 import EternalCelebration from '@/components/EternalCelebration';
@@ -293,6 +295,15 @@ function Game() {
   // listener 內部會 check session,沒登入時 noop
   useEffect(() => {
     const detach = attachProfileSyncListeners();
+    return () => detach();
+  }, []);
+
+  // 階段 4-C:離線寫入排隊 → 連線恢復自動 drain
+  //   - Repos 在離線/網路錯時 markPendingSync()
+  //   - window `online` event → drainPendingSync() 跑 forceSyncAllToCloud
+  //   - boot 時若有 pending flag 也立刻跑一次
+  useEffect(() => {
+    const detach = attachPendingSyncListener();
     return () => detach();
   }, []);
 
@@ -638,6 +649,7 @@ function Game() {
         onOpenProfile={() => setModal('profile')}
         flashPawToken={pawFlashToken}
       />
+      <OfflineBanner />
       <CultivationFloater />
       <MilestoneCelebration />
       <EternalCelebration />

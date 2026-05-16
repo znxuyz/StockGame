@@ -42,7 +42,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie from 'dexie';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import { uuid } from '@/utils';
 import type { Holding } from '@/types';
 
@@ -187,8 +187,6 @@ class CloudFirstHoldingRepo implements HoldingRepository {
   }
 
   async put(h: Holding): Promise<void> {
-    const previous = await db.holdings.get(h.code);
-
     // 1. 樂觀更新本機(總是)
     await db.holdings.put(h);
 
@@ -201,33 +199,22 @@ class CloudFirstHoldingRepo implements HoldingRepository {
       if (!userId) return; // 沒 auth,本機-only
       tx.on('complete', () => {
         void this.uploadOne(h, userId).catch((e) => {
-          console.warn('[holdingRepo] in-tx cloud sync failed:', e);
-          eventBus.emit('toast:show', {
-            message: '持倉雲端同步失敗(本機已更新)',
-            variant: 'error'
-          });
+          reportCloudWriteFailure('持倉', e);
         });
       });
       return;
     }
 
-    // 3. tx 外:完整 optimistic + cloud upsert + rollback + toast
+    // 3. tx 外:optimistic + cloud upsert
+    // 階段 4-C:雲端失敗**不 rollback**(offline-first 保留本機),
+    // 由 pendingSync.drainPendingSync 在連線恢復時自動重送。
     const userId = await getCurrentUserIdAsync();
     if (!userId) return; // 沒 auth,本機-only
 
     try {
       await this.uploadOne(h, userId);
     } catch (e) {
-      console.error('[holdingRepo] cloud upload failed:', e);
-      if (previous) {
-        await db.holdings.put(previous);
-      } else {
-        await db.holdings.delete(h.code);
-      }
-      eventBus.emit('toast:show', {
-        message: '持倉同步失敗(已還原本機)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('持倉', e);
     }
   }
 
@@ -238,7 +225,6 @@ class CloudFirstHoldingRepo implements HoldingRepository {
   }
 
   async delete(code: string): Promise<void> {
-    const previous = await db.holdings.get(code);
     await db.holdings.delete(code);
 
     const tx = Dexie.currentTransaction;
@@ -247,11 +233,7 @@ class CloudFirstHoldingRepo implements HoldingRepository {
       if (!userId) return;
       tx.on('complete', () => {
         void this.deleteOne(code, userId).catch((e) => {
-          console.warn('[holdingRepo] in-tx cloud delete failed:', e);
-          eventBus.emit('toast:show', {
-            message: '持倉刪除同步失敗(本機已更新)',
-            variant: 'error'
-          });
+          reportCloudWriteFailure('持倉刪除', e);
         });
       });
       return;
@@ -263,12 +245,7 @@ class CloudFirstHoldingRepo implements HoldingRepository {
     try {
       await this.deleteOne(code, userId);
     } catch (e) {
-      console.error('[holdingRepo] cloud delete failed:', e);
-      if (previous) await db.holdings.put(previous);
-      eventBus.emit('toast:show', {
-        message: '持倉刪除同步失敗(已還原本機)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('持倉刪除', e);
     }
   }
 

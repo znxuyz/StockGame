@@ -57,6 +57,7 @@ import Dexie from 'dexie';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
 import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { Pet, PetColorVariant } from '@/types';
 import type { RingEffect } from '@/services/petTier';
 
@@ -289,8 +290,6 @@ class CloudFirstPetRepo implements PetRepository {
   }
 
   async put(pet: Pet): Promise<void> {
-    const previous = await db.pets.get(pet.id);
-
     // 1. 樂觀更新本機(總是)
     await db.pets.put(pet);
 
@@ -301,33 +300,20 @@ class CloudFirstPetRepo implements PetRepository {
       if (!userId) return;
       dexieTx.on('complete', () => {
         void this.uploadOne(pet, userId).catch((e) => {
-          console.warn('[petRepo] in-tx cloud upload failed:', e);
-          eventBus.emit('toast:show', {
-            message: '神獸雲端同步失敗(本機已更新)',
-            variant: 'error'
-          });
+          reportCloudWriteFailure('神獸', e);
         });
       });
       return;
     }
 
-    // 3. tx 外:完整 optimistic + cloud upsert + rollback + toast
+    // 3. tx 外:optimistic + cloud upsert(失敗保留本機,pendingSync drain)
     const userId = await getCurrentUserIdAsync();
     if (!userId) return;
 
     try {
       await this.uploadOne(pet, userId);
     } catch (e) {
-      console.error('[petRepo] cloud upload failed:', e);
-      if (previous) {
-        await db.pets.put(previous);
-      } else {
-        await db.pets.delete(pet.id);
-      }
-      eventBus.emit('toast:show', {
-        message: '神獸同步失敗(已還原本機)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('神獸', e);
     }
   }
 
@@ -357,11 +343,7 @@ class CloudFirstPetRepo implements PetRepository {
       if (!userId) return;
       dexieTx.on('complete', () => {
         void this.uploadOne(merged, userId).catch((e) => {
-          console.warn('[petRepo] in-tx patch cloud sync failed:', e);
-          eventBus.emit('toast:show', {
-            message: '神獸雲端同步失敗(本機已更新)',
-            variant: 'error'
-          });
+          reportCloudWriteFailure('神獸', e);
         });
       });
       return;
@@ -373,13 +355,8 @@ class CloudFirstPetRepo implements PetRepository {
     try {
       await this.uploadOne(merged, userId);
     } catch (e) {
-      console.error('[petRepo] patch cloud upload failed:', e);
-      // rollback partial(把舊欄位寫回去)
-      await db.pets.update(id, local as Partial<Pet>);
-      eventBus.emit('toast:show', {
-        message: '神獸同步失敗(已還原本機)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('神獸', e);
+      // 階段 4-C:不 rollback partial,保留本機;pendingSync 下次 drain 重送
     }
   }
 

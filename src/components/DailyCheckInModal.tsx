@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
 import { claimTodayLogin, STREAK_MILESTONES } from '@/services';
+import { useOnline } from '@/lib/useOnline';
 import type { LoginStreak } from '@/types';
 
 /**
@@ -35,6 +36,7 @@ export default function DailyCheckInModal({ open, onClose, streak }: DailyCheckI
   const [claiming, setClaiming] = useState(false);
   /** 本地鏡像 todayClaimed,讓「領取後立刻變灰」不必等 useLiveQuery 回流 */
   const [claimedLocal, setClaimedLocal] = useState(streak.todayClaimed);
+  const online = useOnline();
   /** 領取失敗時的錯誤訊息(顯示在按鈕下方紅字,玩家可重試) */
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /** 領取後的自動關閉 timer ref,unmount / 手動關時清掉避免 stale onClose 觸發 */
@@ -158,14 +160,21 @@ export default function DailyCheckInModal({ open, onClose, streak }: DailyCheckI
         <button
           type="button"
           onClick={handleClaim}
-          disabled={claiming || isClaimed}
+          disabled={claiming || isClaimed || !online}
+          title={!online ? '離線中無法操作' : undefined}
           className={`w-full py-3 rounded-lg font-bold transition ${
-            isClaimed
+            isClaimed || !online
               ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
               : 'bg-amber-500 text-white hover:bg-amber-600 active:bg-amber-700 shadow-md'
           }`}
         >
-          {isClaimed ? '今日已領取 ✓' : claiming ? '領取中⋯' : '領取今日修煉'}
+          {isClaimed
+            ? '今日已領取 ✓'
+            : claiming
+              ? '領取中⋯'
+              : !online
+                ? '📡 離線中'
+                : '領取今日修煉'}
         </button>
         {errorMsg && (
           <p className="text-xs text-red-600 text-center -mt-2">⚠️ {errorMsg}</p>

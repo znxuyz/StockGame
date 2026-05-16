@@ -41,7 +41,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie from 'dexie';
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
-import { eventBus } from '@/services/eventBus';
+import { reportCloudWriteFailure } from '@/lib/pendingSync';
 import type { Transaction, TransactionType } from '@/types';
 
 // ─── cached userId(同步可讀,給 in-tx 場景用)─────────
@@ -214,8 +214,6 @@ class CloudFirstTransactionRepo implements TransactionRepository {
   }
 
   async put(tx: Transaction): Promise<void> {
-    const previous = await db.transactions.get(tx.id);
-
     // 1. 樂觀更新本機(總是)
     await db.transactions.put(tx);
 
@@ -228,33 +226,20 @@ class CloudFirstTransactionRepo implements TransactionRepository {
       if (!userId) return;
       dexieTx.on('complete', () => {
         void this.uploadOne(tx, userId).catch((e) => {
-          console.warn('[transactionRepo] in-tx cloud upload failed:', e);
-          eventBus.emit('toast:show', {
-            message: '交易雲端同步失敗(本機已紀錄)',
-            variant: 'error'
-          });
+          reportCloudWriteFailure('交易', e);
         });
       });
       return;
     }
 
-    // 3. tx 外:完整 optimistic + cloud upsert + rollback + toast
+    // 3. tx 外:optimistic + cloud upsert(失敗保留本機,pendingSync drain)
     const userId = await getCurrentUserIdAsync();
     if (!userId) return;
 
     try {
       await this.uploadOne(tx, userId);
     } catch (e) {
-      console.error('[transactionRepo] cloud upload failed:', e);
-      if (previous) {
-        await db.transactions.put(previous);
-      } else {
-        await db.transactions.delete(tx.id);
-      }
-      eventBus.emit('toast:show', {
-        message: '交易同步失敗(已還原本機)',
-        variant: 'error'
-      });
+      reportCloudWriteFailure('交易', e);
     }
   }
 
