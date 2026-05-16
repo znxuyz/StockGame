@@ -19,6 +19,7 @@
 
 import { db } from '@/db';
 import { supabase, isCloudConfigured } from '@/lib/supabase';
+import { lookupStock } from '@/api/stockLookup';
 import type {
   Settings,
   HudTheme,
@@ -1313,6 +1314,19 @@ export async function forceFetchAllFromCloud(): Promise<ForceFetchResult> {
     console.warn('[forceFetch] heal cultivation from log failed:', e);
   }
 
+  // **股票 metadata 補抓** — `db.stocks`(股票名/市場/產業)只在玩家
+  // `lookupStock(code)` 買單時 lazy populate,不上雲。無痕視窗 / 新裝置
+  // 本機 stocks 是空的,PhaserMap 對每個 holding 找不到對應 stock →
+  // 5 隻 pet 全 return null → 主場景空白。
+  // 解法:forceFetch 後 iterate holdings codes,沒在 db.stocks 的逐個 lookupStock
+  // (lookupStock 內部 cache hit → no-op,miss → 打 TWSE API + 寫 db.stocks)。
+  // useLiveQuery 訂閱 db.stocks 自動 retrigger PhaserMap → pets render。
+  try {
+    await ensureStocksForHoldings();
+  } catch (e) {
+    console.warn('[forceFetch] ensureStocksForHoldings failed:', e);
+  }
+
   const totalRowsPulled = reports.reduce(
     (s, r) => s + (r.cloudCount > 0 ? r.cloudCount : 0),
     0
@@ -1401,5 +1415,39 @@ async function healCultivationFromLog(userId: string): Promise<void> {
     }
   } catch (e) {
     console.warn('[forceFetch] heal cultivation cloud push threw:', e);
+  }
+}
+
+/**
+ * 補抓所有 holding 對應的 stock metadata 進 `db.stocks`。
+ * `lookupStock` 內部有 cache hit short-circuit,所以已存在的不會打 API。
+ * 平行 lookup 但 cap 在序列以免一次打 5+ API 觸發 TWSE rate limit。
+ */
+async function ensureStocksForHoldings(): Promise<void> {
+  const holdings = await db.holdings.toArray();
+  if (holdings.length === 0) return;
+
+  const existingCodes = new Set((await db.stocks.toArray()).map((s) => s.code));
+  const missing = holdings.map((h) => h.code).filter((c) => !existingCodes.has(c));
+  if (missing.length === 0) return;
+
+  // eslint-disable-next-line no-console
+  console.log(`[forceFetch] 補抓 ${missing.length} 檔 stock metadata: ${missing.join(', ')}`);
+
+  let ok = 0;
+  const failed: string[] = [];
+  for (const code of missing) {
+    try {
+      await lookupStock(code);
+      ok++;
+    } catch (e) {
+      failed.push(`${code}(${e instanceof Error ? e.message : String(e)})`);
+    }
+  }
+  if (failed.length > 0) {
+    console.warn(`[forceFetch] stock metadata 補抓失敗 ${failed.length}/${missing.length}: ${failed.join('; ')}`);
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(`[forceFetch] stock metadata 補完 ${ok}/${missing.length} 檔`);
   }
 }
