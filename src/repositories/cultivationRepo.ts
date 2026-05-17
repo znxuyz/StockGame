@@ -85,7 +85,6 @@ export interface CultivationRepository {
   clearBalance(): Promise<void>;
 
   addLog(entry: Omit<CultivationLog, 'id'>): Promise<number>;
-  bulkPutLogs(entries: CultivationLog[]): Promise<void>;
   listLogs(): Promise<CultivationLog[]>;
   listRecentLogs(limit: number): Promise<CultivationLog[]>;
   countLogs(): Promise<number>;
@@ -226,9 +225,6 @@ class DexieCultivationRepo implements CultivationRepository {
   }
   async addLog(entry: Omit<CultivationLog, 'id'>): Promise<number> {
     return db.cultivationLog.add(entry as CultivationLog);
-  }
-  async bulkPutLogs(entries: CultivationLog[]): Promise<void> {
-    await db.cultivationLog.bulkPut(entries);
   }
   listLogs(): Promise<CultivationLog[]> {
     return db.cultivationLog.orderBy('createdAt').toArray();
@@ -402,9 +398,6 @@ class CloudFirstCultivationRepo implements CultivationRepository {
     return db.cultivationLog.add(entry as CultivationLog);
   }
 
-  async bulkPutLogs(entries: CultivationLog[]): Promise<void> {
-    await db.cultivationLog.bulkPut(entries);
-  }
 
   listLogs(): Promise<CultivationLog[]> {
     return db.cultivationLog.orderBy('createdAt').toArray();
@@ -555,7 +548,3 @@ export function useCultivationBalance(): UserCultivation | undefined {
 export function useRecentCultivationLogs(limit: number): CultivationLog[] | undefined {
   return useLiveQuery(() => cultivationRepo.listRecentLogs(limit), [limit]);
 }
-
-/** Dexie transactional escape hatch — 只給 cloudSync.ts 用 */
-export const dexieUserCultivationTable = db.userCultivation;
-export const dexieCultivationLogTable = db.cultivationLog;

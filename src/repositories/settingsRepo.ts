@@ -326,9 +326,3 @@ export const settingsRepo: SettingsRepository = isCloudConfigured
 export function useSettings(): Settings | undefined {
   return useLiveQuery(() => settingsRepo.get(), []);
 }
-
-/**
- * Dexie transactional escape hatch — 只給 cloudSync.ts 用(階段 3D 改寫後消失)。
- * 維持「`src/` 內 `db.settings` 全 0(除了本檔)」驗收條件。
- */
-export const dexieSettingsTable = db.settings;

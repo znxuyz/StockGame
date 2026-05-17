@@ -32,11 +32,10 @@ import {
   type PortfolioSummary
 } from '@/services';
 import type { LoginStreak } from '@/types';
-// 階段 4-B:cloudSync(user_data blob 整包同步)整段停用 — 批 1-3 完成後
-// settingsRepo / cultivationRepo / loginStreakRepo / holdingRepo / petRepo /
-// transactionRepo / achievementRepo / creatureUnlockRepo / taskRepo 各自上雲,
-// 已不需要 blob 路徑。cloudSync.ts 檔案保留(階段 6 統一清掉),呼叫端在
-// App.tsx 內全部移除。
+// 階段 4-B + 6:舊版 `cloudSync.ts`(user_data blob 整包同步)已**整檔刪除**。
+// 9 個 Repository(settings / cultivation / loginStreak / holding / pet /
+// transaction / achievement / creatureUnlock / task)各自上雲;forceFetchAllFromCloud
+// 在 post-login 統一拉雲端 → 本機 Dexie。
 import {
   createProfileIfNeeded,
   attachProfileSyncListeners,
@@ -184,7 +183,8 @@ export default function App() {
  *    維持離線模式(production Cloudflare Pages 永遠是 true,不會走這條)
  *  - auth loading → 短暫顯示「登入狀態載入中⋯」
  *  - 沒 session → 全屏 SignInModal(forceLogin=true,藏關閉鈕),children 不 render
- *    避免 Game / phaser 在沒 auth 的狀態 mount(會跟 cloudSync 的 userId 邏輯打架)
+ *    避免 Game / phaser 在沒 auth 的狀態 mount(各 Repository 的 cachedUserId 還沒填,
+ *    forceFetchAllFromCloud 也跑不到 — 等 session ready 才放行 children)
  *  - 有 session → children 正常 render
  *
  * 登出由 SettingsModal 內既有的「登出」按鈕觸發。useAuth 的 onAuthStateChange
@@ -402,9 +402,6 @@ function Game() {
   }, []);
 
   // live data — 主畫面持倉 / 成就用
-  // 階段 4-B:blob pushDebounced 停用後,之前為了觸發 push 而訂閱的 pets /
-  // snapshots / stocks / cultivation / tasks / milestones / creatureUnlocks
-  // 共 7 個 useLiveQuery 已移除(原本只是 push trigger,沒被讀取)。
   const settings = useSettings();
   const holdings = useHoldings();
   const prices = useLiveQuery(() => db.prices.toArray(), []);
@@ -527,14 +524,12 @@ function Game() {
     };
   }, [hasHoldings, silentRefresh]);
 
-  // ─── 階段 4-B:登入後 post-init(blob sync 已停用)─────
+  // ─── 登入後 post-init ────────────────────────────────
   //
-  //   階段 3D 把 9 個 Repository 各自上雲(white-list + cloud-first)後,
-  //   舊的 user_data blob 整包 pull/push 路徑(fetchRemoteMeta / pullNow /
-  //   pushNow / pushDebounced)已不再需要,整段停用。`maybeCloudWarning`
-  //   helper 也一起退場(沒有 caller 了)。
-  //
-  //   仍然需要在 user login 後跑的非-blob init 步驟保留:
+  //   9 個 Repository 各自 cloud-first(階段 3D)+ forceFetchAllFromCloud
+  //   統一拉雲端到本機(階段 4-C)+ 離線 pendingSync drain(階段 4-C)。
+  //   本 effect 跑剩下的「非 Repository」初始化:streak / tasks /
+  //   profile / portfolio summary 等。失敗一律 try/catch + console.warn。
   //   - checkAndUpdateStreak / checkAndGenerateDailyTasks / Weekly
   //     (跨裝置 lastLoginDate 可能不同,做一次同步檢查)
   //   - checkAndRebuildIfNeeded(歷史快照狀態驅動補抓)

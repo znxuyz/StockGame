@@ -43,7 +43,6 @@ export interface CreatureUnlockRepository {
   count(): Promise<number>;
   getByCreatureId(creatureId: string): Promise<CreatureUnlock | undefined>;
   add(u: Omit<CreatureUnlock, 'id'>): Promise<number>;
-  bulkPut(u: CreatureUnlock[]): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -84,9 +83,6 @@ class DexieCreatureUnlockRepo implements CreatureUnlockRepository {
   }
   async add(u: Omit<CreatureUnlock, 'id'>): Promise<number> {
     return db.creatureUnlocks.add(u as CreatureUnlock);
-  }
-  async bulkPut(u: CreatureUnlock[]): Promise<void> {
-    await db.creatureUnlocks.bulkPut(u);
   }
   async clear(): Promise<void> {
     await db.creatureUnlocks.clear();
@@ -140,11 +136,6 @@ class CloudFirstCreatureUnlockRepo implements CreatureUnlockRepository {
     }
 
     return localId;
-  }
-
-  async bulkPut(u: CreatureUnlock[]): Promise<void> {
-    // cloudSync legacy path,純本機
-    await db.creatureUnlocks.bulkPut(u);
   }
 
   async clear(): Promise<void> {
@@ -223,5 +214,3 @@ export const creatureUnlockRepo: CreatureUnlockRepository = isCloudConfigured
 export function useCreatureUnlocks(): CreatureUnlock[] | undefined {
   return useLiveQuery(() => creatureUnlockRepo.list(), []);
 }
-
-export const dexieCreatureUnlocksTable = db.creatureUnlocks;

@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { formatCount, formatSigned, formatPercent } from '@/utils';
 import type { PortfolioSummary } from '@/services';
-// 階段 4-B:blob 整包 sync 停用 — HUD 不再顯示「☁✓ 已同步」狀態
-// (Repository 各自上雲,沒有單一全域 sync 狀態可顯示;
-//  個別 repo 失敗會 emit toast)
+// HUD 不再顯示「☁✓ 已同步」狀態:Repository 各自上雲,沒有單一全域 sync 狀態
+// 可顯示;個別 repo 失敗會 emit toast,離線時 OfflineBanner 接管視覺提示。
 import { useCultivation } from '@/hooks/useCultivation';
 import CultivationCounter from './CultivationCounter';
 import type { MarketStatus } from '@/api';

@@ -39,7 +39,6 @@ async function getCurrentUserId(): Promise<string | null> {
 export interface AchievementRepository {
   list(): Promise<AchievementProgress[]>;
   put(a: AchievementProgress): Promise<void>;
-  bulkPut(a: AchievementProgress[]): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -77,9 +76,6 @@ class DexieAchievementRepo implements AchievementRepository {
   }
   async put(a: AchievementProgress): Promise<void> {
     await db.achievements.put(a);
-  }
-  async bulkPut(a: AchievementProgress[]): Promise<void> {
-    await db.achievements.bulkPut(a);
   }
   async clear(): Promise<void> {
     await db.achievements.clear();
@@ -121,11 +117,6 @@ class CloudFirstAchievementRepo implements AchievementRepository {
     } catch (e) {
       reportCloudWriteFailure('成就', e);
     }
-  }
-
-  async bulkPut(a: AchievementProgress[]): Promise<void> {
-    // cloudSync legacy path,純本機(雲端是真實來源,不再 push 回去)
-    await db.achievements.bulkPut(a);
   }
 
   async clear(): Promise<void> {
@@ -193,5 +184,3 @@ export const achievementRepo: AchievementRepository = isCloudConfigured
 export function useAchievements(): AchievementProgress[] | undefined {
   return useLiveQuery(() => achievementRepo.list(), []);
 }
-
-export const dexieAchievementsTable = db.achievements;

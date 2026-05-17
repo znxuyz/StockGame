@@ -18,6 +18,14 @@ export interface Holding {
   firstPurchasedAt: number;
   /** 最近一次交易時間（unix millis） */
   lastTransactionAt: number;
-  /** 對應的寵物 id（同一個 holding 一隻寵物） */
+  /**
+   * 對應寵物 id(同一個 holding 一隻寵物)。
+   *
+   * **本機快取限定欄位 — 不上雲**(階段 6 保留):
+   * - portfolio.ts buyOrFeed/sell 用此 PK 找對應 active pet
+   * - 雲端 `holdings` 表沒這 column;`holdingRepo.toLocal` 從雲端拉時
+   *   找對應本機 pet (by code) 或 mint placeholder uuid
+   * - 跨裝置 sync 後 pet 用 code 對齊,petId 重新生成不影響功能
+   */
   petId: string;
 }

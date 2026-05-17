@@ -24,14 +24,21 @@ export interface Pet {
   /** 玩家自訂名(階段 4A.2 改名儀式;空字串 / undefined → 用 species.name 預設) */
   customName?: string;
   /**
-   * 上次境界檢查值。每次 PetSprite.applyData 拿 status.realm 跟這個比,
-   * 升級了就觸發突破慶祝動畫,然後寫回 lastRealmCheck。
-   * 防止「同一境界突破」反覆觸發動畫。
+   * **本機快取限定欄位 — 不上雲**(階段 6 保留:純 UI 防抖)。
+   *
+   * 上次境界檢查值。PetSprite.applyData 拿 status.realm 跟這個比,
+   * 升級了才觸發突破慶祝動畫 + 寫回 lastRealmCheck;防同境界突破反覆放動畫。
+   *
+   * 為什麼**不上雲**:1) frame-write 級別頻率 2) 純 UI 狀態,跨裝置無意義
+   *(換裝置重新 fetch pet 時 lastRealmCheck=undefined → 不放動畫,正確行為)。
+   * petRepo.CLOUD_FIELDS_OF_PET whitelist 排除此欄位。
    */
   lastRealmCheck?: import('@/services/petTier').SoulRealm;
   /**
-   * 上次魂環特效檢查值(階段 2.3)。effect 升級才 earn 修為,
-   * 從低升高才獎勵,從高降低不扣。防報酬率震盪洗修為。
+   * **本機快取限定欄位 — 不上雲**(階段 6 保留:純修為防抖)。
+   *
+   * 上次魂環特效檢查值。effect 升級才 earn 修為,從低升高才獎勵,
+   * 從高降低不扣。防報酬率震盪洗修為(同 lastRealmCheck 不上雲理由)。
    */
   lastEffectCheck?: import('@/services/petTier').RingEffect;
   /**

@@ -1327,6 +1327,18 @@ export async function forceFetchAllFromCloud(): Promise<ForceFetchResult> {
     console.warn('[forceFetch] ensureStocksForHoldings failed:', e);
   }
 
+  // **holding.petId 對齊** — `fetchHoldings` 跟 `fetchPets` 在 Promise.allSettled
+  // 內並行,fetchHoldings 寫入時 db.pets 可能還空 → toLocal 替每個 holding
+  // mint 一個 placeholder uuid 當 petId。等 fetchPets 完成後本機有真實 pet,
+  // 但 holding.petId 仍是 orphan uuid,portfolio.ts buyOrFeed/sell 用
+  // `petRepo.get(holding.petId)` 找不到 → 誤判「新 holding」建重複 pet。
+  // 修法:fetch 全 settle 之後,以 `(code, !retiredAt)` 配對,更新 holding.petId。
+  try {
+    await reconcileHoldingPetIds();
+  } catch (e) {
+    console.warn('[forceFetch] reconcileHoldingPetIds failed:', e);
+  }
+
   const totalRowsPulled = reports.reduce(
     (s, r) => s + (r.cloudCount > 0 ? r.cloudCount : 0),
     0
@@ -1449,5 +1461,34 @@ async function ensureStocksForHoldings(): Promise<void> {
   } else {
     // eslint-disable-next-line no-console
     console.log(`[forceFetch] stock metadata 補完 ${ok}/${missing.length} 檔`);
+  }
+}
+
+/**
+ * 把 holding.petId 對齊到本機現有的 active pet(同 code、未退役)。
+ * forceFetchAllFromCloud 後段呼叫:確保「雲端 → 本機」rebuild 出來的
+ * holdings 跟 pets 有正確 PK 關聯(portfolio.ts 服務層查 pet 是用
+ * `petRepo.get(holding.petId)` 直接 by id,不走 code lookup)。
+ */
+async function reconcileHoldingPetIds(): Promise<void> {
+  const holdings = await db.holdings.toArray();
+  if (holdings.length === 0) return;
+  const pets = await db.pets.toArray();
+  const activePetByCode = new Map<string, Pet>();
+  for (const p of pets) {
+    if (p.retiredAt) continue;
+    activePetByCode.set(p.code, p);
+  }
+  let fixed = 0;
+  for (const h of holdings) {
+    const real = activePetByCode.get(h.code);
+    if (real && real.id !== h.petId) {
+      await db.holdings.update(h.code, { petId: real.id });
+      fixed++;
+    }
+  }
+  if (fixed > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[forceFetch] reconcile holding.petId: ${fixed} 筆對齊`);
   }
 }

@@ -76,7 +76,6 @@ export interface TransactionRepository {
   getEarliest(): Promise<Transaction | undefined>;
   count(): Promise<number>;
   put(tx: Transaction): Promise<void>;
-  bulkPut(txs: Transaction[]): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -153,9 +152,6 @@ class DexieTransactionRepo implements TransactionRepository {
   }
   async put(tx: Transaction): Promise<void> {
     await db.transactions.put(tx);
-  }
-  async bulkPut(txs: Transaction[]): Promise<void> {
-    await db.transactions.bulkPut(txs);
   }
   async clear(): Promise<void> {
     await db.transactions.clear();
@@ -241,12 +237,6 @@ class CloudFirstTransactionRepo implements TransactionRepository {
     } catch (e) {
       reportCloudWriteFailure('交易', e);
     }
-  }
-
-  async bulkPut(txs: Transaction[]): Promise<void> {
-    // cloudSync legacy pull-then-write — 純本機,不 push 回雲端
-    // (push 會跟 revalidate 互相覆蓋造成循環)
-    await db.transactions.bulkPut(txs);
   }
 
   async clear(): Promise<void> {

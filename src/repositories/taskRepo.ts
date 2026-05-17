@@ -471,5 +471,3 @@ export function useWeeklyTasks(): UserTask[] | undefined {
   return useLiveQuery(() => taskRepo.listTasksByType('weekly'), []);
 }
 
-export const dexieUserTasksTable = db.userTasks;
-export const dexieMilestoneRewardsTable = db.milestoneRewards;

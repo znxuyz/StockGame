@@ -5,8 +5,6 @@ import { settingsRepo } from '@/repositories/settingsRepo';
 import type { Settings } from '@/types';
 import { isCloudConfigured, supabase } from '@/lib/supabase';
 import { useAuth, signOut } from '@/lib/auth';
-// 階段 4-B:blob pushDebounced 停用後沒有 pending push 要 cancel,
-// 原 cancelPendingPush() callsite 全移除
 import HudThemeSection from './HudThemeSection';
 import BackgroundSection from './BackgroundSection';
 import { BACKGROUNDS } from '@/services';
@@ -65,6 +63,14 @@ export default function SettingsModal({
   const [deletingAccount, setDeletingAccount] = useState(false);
   /** 強制同步進行中(防重複點) */
   const [forceSyncing, setForceSyncing] = useState(false);
+  /** 雙擊確認清快取 */
+  const [confirmingClearCache, setConfirmingClearCache] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
+  useEffect(() => {
+    if (!confirmingClearCache) return;
+    const id = setTimeout(() => setConfirmingClearCache(false), 5000);
+    return () => clearTimeout(id);
+  }, [confirmingClearCache]);
   /** 子頁切換(取代之前的 nested Modal) */
   const [subView, setSubView] = useState<SubView>('main');
   useEffect(() => {
@@ -78,6 +84,8 @@ export default function SettingsModal({
     if (!open) {
       setConfirmingDelete(false);
       setDeletingAccount(false);
+      setConfirmingClearCache(false);
+      setClearingCache(false);
       setSubView('main');
     }
   }, [open]);
@@ -85,6 +93,48 @@ export default function SettingsModal({
   async function handleSignOut() {
     await signOut();
     onActionComplete('已登出雲端');
+  }
+
+  /**
+   * 階段 6:清除本機 Dexie 快取 + 重新整理。
+   *
+   * 「雲端為主、本機只是快取」原則的萬用解 — 使用者發現本機資料異常
+   * (顯示對不上 / Dexie 卡住)時點此,把本機 IndexedDB 整個刪掉,reload
+   * 後 App boot 路徑會走 seedIfEmpty → forceFetchAllFromCloud →
+   * ensureStocksForHoldings → 完整重建 UI。
+   *
+   * 雙擊確認(同刪帳號模式),5 秒沒按取消。
+   *
+   * 副作用:本機-only 資料會一起被清(可接受):
+   *  - cultivationLog 歷史時間軸(雲端 schema 未對齊不上雲)
+   *  - lastRealmCheck / lastEffectCheck UI 防抖旗標(rebuild 後不會誤觸動畫)
+   *  - prices / snapshots / historicalPrices(可重新抓 / 重算)
+   *  - localStorage 內 pendingSync flag / profileSync disabled flag 一起清
+   */
+  async function handleClearCache() {
+    if (!confirmingClearCache) {
+      setConfirmingClearCache(true);
+      return;
+    }
+    setConfirmingClearCache(false);
+    setClearingCache(true);
+    try {
+      await db.delete();
+      // 順手把本檔範圍內的 localStorage flag 也清,讓 boot 全新狀態
+      try {
+        localStorage.removeItem('stockgame.pendingSync.v1');
+        localStorage.removeItem('stockgame.profileSync.disabled.v1');
+      } catch {
+        /* ignore */
+      }
+      // 不 toast(reload 太快看不到),直接 reload 讓 boot path 接手
+      window.location.reload();
+    } catch (e) {
+      setClearingCache(false);
+      onActionComplete(
+        `⚠️ 清快取失敗:${e instanceof Error ? e.message : String(e)}`
+      );
+    }
   }
 
   /**
@@ -424,6 +474,33 @@ export default function SettingsModal({
             <span className="text-sm text-gray-700">📊 Excel 批次匯入</span>
             <span className="text-xs text-gray-500">一次匯入多筆歷史交易 ›</span>
           </button>
+        )}
+
+        {/* 階段 6:清除本機 IndexedDB 快取(雙擊確認)。
+            雲端資料不動,reload 後從雲端重新拉。萬用 self-service 解。 */}
+        {isCloudConfigured && (
+          <>
+            <button
+              type="button"
+              onClick={handleClearCache}
+              disabled={busy || clearingCache}
+              className={`w-full py-2 rounded-lg text-sm border disabled:opacity-50 transition-colors ${
+                confirmingClearCache
+                  ? 'bg-amber-500 text-white border-amber-600 animate-pulse font-bold'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
+              }`}
+            >
+              {clearingCache
+                ? '清理中,即將重新載入⋯'
+                : confirmingClearCache
+                  ? '⚠️ 再點一次:清除本機快取並重新載入'
+                  : '🧹 清除本機快取(資料保留雲端)'}
+            </button>
+            <p className="text-[11px] text-gray-500 leading-relaxed mt-1 mb-2">
+              清完後從雲端重新拉。神獸 / 持倉 / 交易 / 成就 / 修為餘額都會回來。
+              修為時間軸(本機獨有)會清空,之後再 earn 重新累積。
+            </p>
+          </>
         )}
 
         <button

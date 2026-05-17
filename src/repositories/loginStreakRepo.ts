@@ -250,6 +250,3 @@ export const loginStreakRepo: LoginStreakRepository = isCloudConfigured
 export function useLoginStreak(): LoginStreak | undefined {
   return useLiveQuery(() => loginStreakRepo.get(), []);
 }
-
-/** Dexie transactional escape hatch — 只給 cloudSync.ts 用 */
-export const dexieLoginStreakTable = db.userLoginStreak;

@@ -77,7 +77,6 @@ export interface HoldingRepository {
   list(): Promise<Holding[]>;
   listRecent(): Promise<Holding[]>;
   put(holding: Holding): Promise<void>;
-  bulkPut(holdings: Holding[]): Promise<void>;
   delete(code: string): Promise<void>;
   clear(): Promise<void>;
 }
@@ -138,9 +137,6 @@ class DexieHoldingRepo implements HoldingRepository {
   }
   async put(h: Holding): Promise<void> {
     await db.holdings.put(h);
-  }
-  async bulkPut(items: Holding[]): Promise<void> {
-    await db.holdings.bulkPut(items);
   }
   async delete(code: string): Promise<void> {
     await db.holdings.delete(code);
@@ -216,12 +212,6 @@ class CloudFirstHoldingRepo implements HoldingRepository {
     } catch (e) {
       reportCloudWriteFailure('持倉', e);
     }
-  }
-
-  async bulkPut(items: Holding[]): Promise<void> {
-    // 給 cloudSync legacy path 用 — 整包寫本機,不主動推雲端
-    // (雲端是真實來源,bulkPut 通常用於 pull-then-write,不應再 push 回去)
-    await db.holdings.bulkPut(items);
   }
 
   async delete(code: string): Promise<void> {

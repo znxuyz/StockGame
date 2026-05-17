@@ -126,7 +126,6 @@ export interface PetRepository {
   /** 階段 3D 批 3b 加 — 已退役神獸(retiredAt 有值) */
   listRetired(): Promise<Pet[]>;
   put(pet: Pet): Promise<void>;
-  bulkPut(pets: Pet[]): Promise<void>;
   patch(id: string, partial: Partial<Pet>): Promise<void>;
   clear(): Promise<void>;
 }
@@ -223,9 +222,6 @@ class DexiePetRepo implements PetRepository {
   async put(pet: Pet): Promise<void> {
     await db.pets.put(pet);
   }
-  async bulkPut(pets: Pet[]): Promise<void> {
-    await db.pets.bulkPut(pets);
-  }
   async patch(id: string, partial: Partial<Pet>): Promise<void> {
     await db.pets.update(id, partial);
   }
@@ -315,11 +311,6 @@ class CloudFirstPetRepo implements PetRepository {
     } catch (e) {
       reportCloudWriteFailure('神獸', e);
     }
-  }
-
-  async bulkPut(pets: Pet[]): Promise<void> {
-    // cloudSync legacy pull-then-write — 純本機,不 push 回雲端
-    await db.pets.bulkPut(pets);
   }
 
   async patch(id: string, partial: Partial<Pet>): Promise<void> {
