@@ -122,24 +122,6 @@ export default function AdvancedMetrics() {
           realized: summary.realizedPnL,
           unrealized: summary.unrealizedPnL
         });
-        // eslint-disable-next-line no-console
-        console.log('[AdvancedMetrics]', {
-          totalCost: summary.totalCost,
-          totalMarketValue: summary.totalMarketValue,
-          unrealizedPnL: summary.unrealizedPnL,
-          absoluteReturnPct:
-            absoluteReturn !== null ? (absoluteReturn * 100).toFixed(2) + '%' : '—',
-          twrPct: twr !== null ? (twr * 100).toFixed(2) + '%' : '—',
-          twrSource: twrFallback ? 'fallback (absolute)' : 'real TWR',
-          hasRealHistoricalPrices: hasRealPrices,
-          snapshotCount: snapshots.length,
-          transactionCount: transactions.length,
-          sharpe:
-            sharpe !== null
-              ? sharpe.toFixed(2)
-              : `—(${dailyRet.length}/${SHARPE_MIN_SAMPLES} 天)`,
-          mdd: mdd !== null ? (mdd * 100).toFixed(2) + '%' : '—'
-        });
       }
     })();
     return () => {

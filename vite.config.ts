@@ -54,16 +54,12 @@ export default defineConfig({
           urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
           handler: 'NetworkOnly'
         },
-        // ── 台股價格 API:NetworkFirst + 短 TTL,離線時 fallback cache
-        {
-          urlPattern: /^https:\/\/openapi\.twse\.com\.tw\/.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'twse-api-cache',
-            expiration: { maxEntries: 50, maxAgeSeconds: 60 * 10 },
-            networkTimeoutSeconds: 10
-          }
-        },
+        // ── openapi.twse.com.tw:不走 SW(階段 6)
+        //   原 NetworkFirst 設定在 CORS 失敗時會 fallback 試 cache,cache 沒命中
+        //   再 throw `no-response`,放大 workbox 紅字噪音。改不攔截 → 瀏覽器
+        //   直接 fetch,App 層 try/catch 自己處理 + 24h circuit-break。
+        //   代價:離線時沒有 SW cache fallback。但 TWSE 歷史 K 線只在開
+        //   RecordsModal 對比圖才用,離線體驗影響低。
         {
           urlPattern: /^https:\/\/www\.tpex\.org\.tw\/.*/i,
           handler: 'NetworkFirst',

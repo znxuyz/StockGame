@@ -6,6 +6,13 @@
  *
  * 失敗策略:silentRefresh 整套設計成失敗不彈 toast,只 console.warn,
  * 所以這邊也跟著不丟 unhandled rejection。
+ *
+ * **CORS circuit-break**(階段 6):openapi.twse.com.tw 對部分 origin 沒開
+ * CORS,直接 fetch 會撞 `Access-Control-Allow-Origin` missing。一旦失敗
+ * (任何 error)就寫 localStorage flag,**24 小時內不再嘗試** — 避免
+ * MarketCompareChart re-mount 反覆噴 CORS 紅字。解除:dev console 跑
+ * `localStorage.removeItem('stockgame.marketIndex.disabled.v1')`,或等 24h
+ * 自然過期。
  */
 
 import { db } from '@/db';
@@ -13,6 +20,34 @@ import { fetchTaiexQuote, fetchTaiexHistoryMonth } from '@/api';
 import { isMarketOpen, getTaipeiDateString } from '@/api/marketHours';
 
 const SYMBOL = 'TAIEX' as const;
+
+const DISABLED_KEY = 'stockgame.marketIndex.disabled.v1';
+const DISABLED_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+function isDisabled(): boolean {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const raw = localStorage.getItem(DISABLED_KEY);
+    if (!raw) return false;
+    const until = Number(raw);
+    if (!Number.isFinite(until) || Date.now() > until) {
+      localStorage.removeItem(DISABLED_KEY);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function markDisabled(): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(DISABLED_KEY, String(Date.now() + DISABLED_TTL_MS));
+  } catch {
+    /* ignore */
+  }
+}
 
 /** YYYY-MM 字串(台北時區) */
 function taipeiYearMonth(date: Date): string {
@@ -40,6 +75,10 @@ function yearMonthToOpenapiDate(ym: string): string {
  * days 預設 90,意思是「保證近三個月資料齊全」。再多歷史就是用前面月份的 cache。
  */
 export async function ensureTaiexHistory(days: number = 90): Promise<{ fetchedMonths: number; error?: string }> {
+  // 已在 circuit-break window 內 → 直接跳過,不噴 CORS 紅字
+  if (isDisabled()) {
+    return { fetchedMonths: 0, error: 'circuit-break: marketIndex disabled (24h)' };
+  }
   try {
     const now = new Date();
     const months = new Set<string>();
@@ -71,7 +110,13 @@ export async function ensureTaiexHistory(days: number = 90): Promise<{ fetchedMo
     return { fetchedMonths: fetched };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.warn('[marketIndex] ensureTaiexHistory 失敗:', msg);
+    markDisabled();
+    // demote 到 info(不紅字)— 已知 TWSE OpenAPI CORS 對部分 origin 拒絕,
+    // 標記 24h 不再嘗試,玩家看 MarketCompareChart 只少了 TAIEX 對比線
+    // eslint-disable-next-line no-console
+    console.info(
+      `[marketIndex] ensureTaiexHistory 失敗 — 24h 內不再嘗試(${msg})`
+    );
     return { fetchedMonths: 0, error: msg };
   }
 }
