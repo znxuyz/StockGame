@@ -18,74 +18,17 @@ import { formatInt, formatSigned } from '@/utils';
  * 來源:snapshots 表,每月取「該月最後一筆」+「該月最早一筆」
  *      pnl[m] = lastSnapshotOfMonth[m].totalPnL - earliestSnapshotOfMonth[m].totalPnL
  *
- * 視覺:
- *   - 折線本身:中性灰(stroke #999),把月份順序串起來看趨勢
- *   - 點顏色:盈利紅 / 虧損綠(台股慣例)
- *   - 當月(進行中)點:空心 — 白底 + 對應顏色粗邊,跟結算月的實心點視覺
- *     對比明顯,等同舊柱狀圖「虛線邊框」的進行中標記
+ * 視覺(跟「累積報酬率」一致):
+ *   - 單色實線(無 dot),smooth monotone
  *   - y=0 基準線:淺灰虛線,一眼看出該月是賺是賠
+ *   - hover 才出 activeDot + tooltip(月份 / 損益,進行中標註)
  *
  * 一個月內只有 1 筆 snapshot → pnl=0(沒法算),仍渲染點顯示「持平」。
  */
-
-/** 台股慣例:紅 = 盈利,綠 = 虧損 */
-const COLOR_PROFIT = '#e23b3b';
-const COLOR_LOSS = '#1f9e4a';
-
 interface MonthlyPoint {
   month: string;
   pnl: number;
   ongoing: boolean;
-}
-
-/** 自訂點:盈虧染色 + 進行中用空心 */
-function PnLDot(props: {
-  cx?: number;
-  cy?: number;
-  payload?: MonthlyPoint;
-  index?: number;
-}) {
-  const { cx, cy, payload } = props;
-  if (cx == null || cy == null || !payload) return <g />;
-  const color = payload.pnl >= 0 ? COLOR_PROFIT : COLOR_LOSS;
-  if (payload.ongoing) {
-    // 空心:白底 + 較粗的彩色邊,r=6 略大讓玩家一眼注意到是當月
-    return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={6}
-        fill="#ffffff"
-        stroke={color}
-        strokeWidth={2.5}
-      />
-    );
-  }
-  return <circle cx={cx} cy={cy} r={4.5} fill={color} stroke="#ffffff" strokeWidth={1} />;
-}
-
-/** hover 高亮版的點(同邏輯但稍大) */
-function PnLActiveDot(props: {
-  cx?: number;
-  cy?: number;
-  payload?: MonthlyPoint;
-}) {
-  const { cx, cy, payload } = props;
-  if (cx == null || cy == null || !payload) return <g />;
-  const color = payload.pnl >= 0 ? COLOR_PROFIT : COLOR_LOSS;
-  if (payload.ongoing) {
-    return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={7.5}
-        fill="#ffffff"
-        stroke={color}
-        strokeWidth={3}
-      />
-    );
-  }
-  return <circle cx={cx} cy={cy} r={6} fill={color} stroke="#ffffff" strokeWidth={1.5} />;
 }
 
 export default function MonthlyPnL() {
@@ -147,16 +90,16 @@ export default function MonthlyPnL() {
           <Line
             type="monotone"
             dataKey="pnl"
-            stroke="#999"
-            strokeWidth={1.5}
-            dot={<PnLDot />}
-            activeDot={<PnLActiveDot />}
+            stroke="#e23b3b"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
             isAnimationActive={false}
           />
         </LineChart>
       </ResponsiveContainer>
-      <p className="text-[10px] text-gray-400 text-center mt-1">
-        點 = 該月損益(紅賺綠賠);空心點 = 當月進行中(尚未結算)
+      <p className="text-[11px] text-gray-500 text-center mt-1">
+        每月損益變動 · 最近 12 個月
       </p>
     </div>
   );
