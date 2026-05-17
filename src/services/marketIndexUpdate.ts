@@ -20,7 +20,7 @@
  */
 
 import { db } from '@/db';
-import { fetchTaiexQuote, fetchTaiexHistoryMonth } from '@/api';
+import { fetchTaiexQuote } from '@/api';
 import { isMarketOpen, getTaipeiDateString } from '@/api/marketHours';
 
 const SYMBOL = 'TAIEX' as const;
@@ -36,87 +36,141 @@ try {
   /* ignore */
 }
 
-/** YYYY-MM 字串(台北時區) */
-function taipeiYearMonth(date: Date): string {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric',
-    month: '2-digit'
-  });
-  // en-CA: "YYYY-MM-DD" 取前 7 chars 變 YYYY-MM
-  return fmt.format(date).slice(0, 7);
+// ─── Yahoo Finance ^TWII 抓取(歷史日 K)──────────────────
+//
+// 為什麼用 Yahoo 而不是 TWSE OpenAPI MI_5MINS_HIST:
+//   - OpenAPI 的 ?date= 參數實測會被忽略,每次都回最近 10 個交易日,
+//     導致 8 個月迴圈拿回的全是同一份「最近 10 天」資料 → baseline
+//     在 200+ 天前的玩家完全沒對應 TAIEX 點 → chart noTaiex=true
+//   - Yahoo `^TWII` 一次 call 拿整段 range 日 K,乾淨可靠
+//   - /api/yahoo CF Function proxy 已存在,沒新增 dependency
+
+interface YahooChartResponse {
+  chart: {
+    result?: Array<{
+      timestamp?: number[];
+      indicators?: {
+        adjclose?: Array<{ adjclose?: Array<number | null> }>;
+        quote?: Array<{ close?: Array<number | null> }>;
+      };
+    }>;
+    error?: { code: string; description: string } | null;
+  };
 }
 
-/** 把 YYYY-MM 轉成 YYYYMMDD(月初) */
-function yearMonthToOpenapiDate(ym: string): string {
-  return ym.replace('-', '') + '01';
+const YAHOO_BASE = '/api/yahoo';
+const TAIEX_TICKER = '%5ETWII'; // ^TWII URL-encoded
+
+/** YYYY-MM-DD → unix sec(台北時區當天 00:00) */
+function ymdToUnixSec(ymd: string): number {
+  return new Date(`${ymd}T00:00:00+08:00`).getTime() / 1000;
+}
+
+/** unix sec → YYYY-MM-DD(台北時區) */
+function unixSecToYmd(sec: number): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date(sec * 1000));
 }
 
 /**
- * 確保 TAIEX 歷史已經抓在本地。範圍**動態算**:
+ * 從 Yahoo Finance 一次抓 ^TWII 整段 range 的日收盤。
+ * 失敗回空 Map,不 throw(caller 自己決定要不要 toast)。
+ */
+async function fetchTaiexHistoryRange(startDate: string, endDate: string): Promise<Map<string, number>> {
+  const period1 = ymdToUnixSec(startDate);
+  const period2 = ymdToUnixSec(endDate) + 86_400; // +1d 確保 endDate 包含
+  const url = `${YAHOO_BASE}/v8/finance/chart/${TAIEX_TICKER}?period1=${period1}&period2=${period2}&interval=1d&events=history`;
+
+  let resp: Response;
+  try {
+    resp = await fetch(url);
+  } catch (e) {
+    console.warn(`[marketIndex] fetch ${url} 連線失敗:`, e);
+    return new Map();
+  }
+  // eslint-disable-next-line no-console
+  console.info(`[marketIndex] fetch ${url} → status=${resp.status} content-type=${resp.headers.get('content-type')}`);
+  if (!resp.ok) {
+    console.warn(`[marketIndex] HTTP ${resp.status} ${resp.statusText}`);
+    return new Map();
+  }
+  let data: YahooChartResponse;
+  try {
+    data = (await resp.json()) as YahooChartResponse;
+  } catch (e) {
+    console.warn(`[marketIndex] JSON 解析失敗:`, e);
+    return new Map();
+  }
+  if (data.chart.error || !data.chart.result || data.chart.result.length === 0) {
+    console.warn(`[marketIndex] yahoo error:`, data.chart.error?.description ?? 'no result');
+    return new Map();
+  }
+  const result = data.chart.result[0];
+  const ts = result.timestamp ?? [];
+  // 優先 adjclose 沒有再退 close
+  const adjClose = result.indicators?.adjclose?.[0]?.adjclose;
+  const rawClose = result.indicators?.quote?.[0]?.close;
+  const closes = adjClose ?? rawClose ?? [];
+  const out = new Map<string, number>();
+  for (let i = 0; i < ts.length; i++) {
+    const close = closes[i];
+    if (close == null || !Number.isFinite(close)) continue;
+    out.set(unixSecToYmd(ts[i]), close);
+  }
+  return out;
+}
+
+/**
+ * 確保 TAIEX 歷史已經抓在本地。範圍**動態算**(跟 MarketCompareChart baseline 對齊):
  *
  *  1. 找 db.transactions 內 type='buy' 最早一筆 → 從那天起算
- *     (跟 MarketCompareChart 的 baseline 對齊;否則只抓 90 天但 baseline
- *      在 200+ 天前,findClosestTaiexAtOrBefore(baseline) 拿不到資料 →
- *      chart `noTaiex: true` 線不畫)
  *  2. 沒任何 buy 交易 → fallback 抓 days(預設 90)天
- *  3. 算需要哪幾個月(YYYY-MM)
- *  4. 看 marketIndices 哪幾個月已有(>=15 筆 = 該月已抓過)
- *  5. 缺的月份逐個補(每月一個 API call)
- *
- * 上限 5 年 = 60 個月(防呆,避免 user 假資料 baseline 太遠抓爆 quota)。
- *
- * **完整 diagnostic 輸出**:每月一行,幫 debug 用。
+ *  3. 上限 5 年(防呆,避免假資料 baseline 太遠抓爆 API quota)
+ *  4. 已 cached 範圍會被本地檢查跳過(只抓缺的日期 — 但目前用整批 fetch,
+ *     Yahoo 一次 call 整段,所以策略簡化為:每次 mount 重抓整段覆蓋)
+ *  5. **單一 Yahoo API call** 拿整段日 K → bulkPut 寫 db.marketIndices
  */
 export async function ensureTaiexHistory(days: number = 90): Promise<{ fetchedMonths: number; error?: string }> {
   try {
     const now = new Date();
-    // 找第一筆 buy 決定起點
     const buys = await db.transactions.where('type').equals('buy').toArray();
     const fromMs = buys.length > 0
       ? Math.min(...buys.map((t) => t.timestamp))
       : now.getTime() - days * 86_400_000;
-    // 上限 5 年(防呆)
     const earliestAllowedMs = now.getTime() - 5 * 365 * 86_400_000;
     const startMs = Math.max(fromMs, earliestAllowedMs);
 
-    const months = new Set<string>();
-    // 從 startMs 倒推日,把覆蓋到的月份都收進來
-    for (let ms = startMs; ms <= now.getTime(); ms += 86_400_000) {
-      months.add(taipeiYearMonth(new Date(ms)));
-    }
-    // 補今天那個月(loop 可能差幾小時沒蓋到)
-    months.add(taipeiYearMonth(now));
-    const monthList = [...months].sort();
-    // eslint-disable-next-line no-console
-    console.info(`[marketIndex] ensureTaiexHistory(days=${days}) — 檢查 ${monthList.length} 個月: ${monthList.join(', ')}`);
+    const startDate = unixSecToYmd(startMs / 1000);
+    const endDate = unixSecToYmd(now.getTime() / 1000);
 
-    let fetched = 0;
-    let skipped = 0;
-    for (const ym of monthList) {
-      const start = `${ym}-01`;
-      const end = `${ym}-31`;
-      const existing = await db.marketIndices
-        .where('[symbol+date]')
-        .between([SYMBOL, start], [SYMBOL, end], true, true)
-        .count();
-      const isCurrentMonth = ym === taipeiYearMonth(now);
-      if (!isCurrentMonth && existing >= 15) {
-        skipped++;
-        continue;
-      }
-
-      const bars = await fetchTaiexHistoryMonth(yearMonthToOpenapiDate(ym));
-      // eslint-disable-next-line no-console
-      console.info(`[marketIndex] month ${ym}: 抓回 ${bars.length} 筆`);
-      if (bars.length > 0) {
-        await db.marketIndices.bulkPut(bars);
-        fetched++;
-      }
-    }
     // eslint-disable-next-line no-console
-    console.info(`[marketIndex] ensureTaiexHistory 完成:抓 ${fetched} 月,跳過 ${skipped} 月(本地已有)`);
-    return { fetchedMonths: fetched };
+    console.info(`[marketIndex] ensureTaiexHistory: 抓 ${startDate} ~ ${endDate} (Yahoo ^TWII)`);
+
+    const closeMap = await fetchTaiexHistoryRange(startDate, endDate);
+    if (closeMap.size === 0) {
+      console.warn(`[marketIndex] ensureTaiexHistory 無資料`);
+      return { fetchedMonths: 0, error: 'no data' };
+    }
+
+    const fetchedAt = Date.now();
+    const bars = [...closeMap.entries()].map(([date, close]) => ({
+      symbol: SYMBOL,
+      date,
+      close,
+      fetchedAt,
+      source: 'close' as const
+    }));
+    await db.marketIndices.bulkPut(bars);
+
+    // eslint-disable-next-line no-console
+    console.info(
+      `[marketIndex] ensureTaiexHistory 完成:寫入 ${bars.length} 筆日 K,範圍 ${bars[0].date} ~ ${bars[bars.length - 1].date}`
+    );
+    return { fetchedMonths: bars.length };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.warn(`[marketIndex] ensureTaiexHistory 失敗:${msg}`);
