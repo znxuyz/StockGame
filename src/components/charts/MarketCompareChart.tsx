@@ -7,7 +7,8 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-  Legend
+  Legend,
+  ReferenceLine
 } from 'recharts';
 import { ensureTaiexHistory, getMarketCompare, type MarketCompareResult } from '@/services';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -15,41 +16,36 @@ import { db } from '@/db';
 import { formatPercent } from '@/utils';
 
 /**
- * 你的累積報酬率 vs 加權指數累積報酬率,90 天範圍。
+ * 你的累積報酬率 vs 加權指數累積報酬率。
  *
- *  - 第一次 mount 時跑 ensureTaiexHistory(90) 把缺的月份補齊
- *  - 用 useLiveQuery 訂閱 snapshots / marketIndices,有變動就重算對比
- *  - Alpha 顯示在頂部:正 = 跑贏大盤,負 = 跑輸
+ *  - **baseline = 第一筆 buy 交易日**(階段 6.X):自那天起算每天 %
+ *  - 標題動態顯示「跟大盤比(自 YYYY-MM-DD 起,N 天)」
+ *  - 第一次 mount 跑 ensureTaiexHistory 把缺的月份補齊
+ *  - useLiveQuery 訂閱 transactions / snapshots / marketIndices,任一變動就重算
+ *  - Alpha 顯示在頂部:正 = 跑贏大盤,負 = 跑輸;TAIEX 無資料時 Alpha = '-'
  */
 export default function MarketCompareChart() {
   const [result, setResult] = useState<MarketCompareResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [historyError, setHistoryError] = useState<string | null>(null);
 
-  // 訂閱兩張表,任一有變動就重算
+  // 訂閱三張表(加 transactions — baseline 改靠它),任一有變動就重算
+  const transactions = useLiveQuery(() => db.transactions.toArray(), []);
   const snapshots = useLiveQuery(() => db.snapshots.toArray(), []);
   const indices = useLiveQuery(() => db.marketIndices.toArray(), []);
 
   // 第一次 mount 跑 ensureTaiexHistory(只跑一次)
+  // 失敗 / circuit-break 時不阻擋 chart 渲染 — service 會回 noTaiex:true
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const r = await ensureTaiexHistory(90);
-      if (cancelled) return;
-      if (r.error) setHistoryError(r.error);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void ensureTaiexHistory(90);
   }, []);
 
-  // snapshots / indices 變動 → 重算對比
+  // transactions / snapshots / indices 變動 → 重算對比
   useEffect(() => {
-    if (!snapshots || !indices) return;
+    if (!transactions || !snapshots || !indices) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const r = await getMarketCompare(90);
+      const r = await getMarketCompare();
       if (cancelled) return;
       setResult(r);
       setLoading(false);
@@ -57,7 +53,7 @@ export default function MarketCompareChart() {
     return () => {
       cancelled = true;
     };
-  }, [snapshots, indices]);
+  }, [transactions, snapshots, indices]);
 
   if (loading || !result) {
     return (
@@ -67,14 +63,29 @@ export default function MarketCompareChart() {
     );
   }
 
-  if (result.data.length === 0) {
+  // 空狀態 1:還沒任何 buy 交易
+  if (result.noBuy) {
     return (
       <div className="data-card p-3">
         <h4 className="text-sm font-bold mb-2">📊 跟大盤比</h4>
         <p className="text-xs text-gray-500 text-center py-6">
-          {historyError
-            ? `加權指數歷史抓取失敗:${historyError}`
-            : '需要至少一天有 snapshot + 加權指數收盤,稍後再回來看(每次刷新股價會記一筆)'}
+          尚無交易紀錄,完成首筆買入後可查看大盤對比
+        </p>
+      </div>
+    );
+  }
+
+  // 空狀態 2:有 buy 但 baseline 之後還沒有任何 snapshot / TAIEX → data 空
+  if (result.data.length === 0) {
+    return (
+      <div className="data-card p-3">
+        <h4 className="text-sm font-bold mb-2">
+          📊 跟大盤比{result.baselineDate ? `(自 ${result.baselineDate} 起)` : ''}
+        </h4>
+        <p className="text-xs text-gray-500 text-center py-6">
+          {result.noTaiex
+            ? '加權指數歷史暫時取不到,稍後再回來看(系統會自動補抓)'
+            : '剛建立首筆交易,稍後刷新一次股價就會記第一筆 snapshot'}
         </p>
       </div>
     );
@@ -83,7 +94,8 @@ export default function MarketCompareChart() {
   const chartData = result.data.map((d) => ({
     date: d.date.slice(5), // MM-DD
     you: Number(d.portfolioPct.toFixed(2)),
-    taiex: Number(d.taiexPct.toFixed(2))
+    // 沒 TAIEX 時把該欄位設成 null,recharts Line 自動斷線不畫
+    taiex: result.noTaiex ? null : Number(d.taiexPct.toFixed(2))
   }));
 
   const alphaText = result.alpha != null ? formatPercent(result.alpha / 100, true) : '-';
@@ -94,9 +106,23 @@ export default function MarketCompareChart() {
         : 'text-tw-down'
       : 'text-gray-500';
 
+  // 「N 天」label — 跨度(含頭尾)
+  const spanDays = result.baselineDate
+    ? Math.max(
+        1,
+        Math.round(
+          (new Date(result.data[result.data.length - 1].date).getTime() -
+            new Date(result.baselineDate).getTime()) /
+            86_400_000
+        ) + 1
+      )
+    : null;
+
   return (
     <div className="data-card p-3">
-      <h4 className="text-sm font-bold mb-2">📊 跟大盤比(90 天)</h4>
+      <h4 className="text-sm font-bold mb-2">
+        📊 跟大盤比{result.baselineDate ? `(自 ${result.baselineDate} 起 · ${spanDays} 天)` : ''}
+      </h4>
 
       {/* Alpha 摘要 — 三色玻璃 pill */}
       <div className="grid grid-cols-3 gap-2 text-center text-xs mb-2">
@@ -135,6 +161,8 @@ export default function MarketCompareChart() {
             tickFormatter={(v) => `${v.toFixed(0)}%`}
             domain={['auto', 'auto']}
           />
+          {/* baseline 0% 線:讓玩家一眼看出該日是跑贏 / 跑輸 baseline */}
+          <ReferenceLine y={0} stroke="#999" strokeDasharray="2 4" strokeWidth={1} />
           <Tooltip
             formatter={(v: number, name: string) => [`${v.toFixed(2)}%`, name]}
             labelFormatter={(l) => `日期 ${l}`}
@@ -157,12 +185,15 @@ export default function MarketCompareChart() {
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
+            connectNulls={false}
           />
         </LineChart>
       </ResponsiveContainer>
 
       <p className="text-[11px] text-gray-500 text-center mt-1">
-        baseline = 第一次有 snapshot + 大盤收盤的那天 · Alpha 為正代表跑贏大盤
+        {result.noTaiex
+          ? '加權指數歷史暫無資料,只顯示你的累積線'
+          : 'baseline = 第一筆 buy 那天 · Alpha 為正代表跑贏大盤'}
       </p>
     </div>
   );
