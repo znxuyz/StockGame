@@ -53,24 +53,40 @@ function yearMonthToOpenapiDate(ym: string): string {
 }
 
 /**
- * 確保最近 days 天的 TAIEX 歷史已經抓在本地。
- * 邏輯:
- *  1. 算需要哪幾個月(YYYY-MM)
- *  2. 看 marketIndices 哪幾個月已有(>=15 筆 = 該月已抓過)
- *  3. 缺的月份逐個補(每月一個 API call)
+ * 確保 TAIEX 歷史已經抓在本地。範圍**動態算**:
  *
- * days 預設 90;再多歷史就是用前面月份的 cache。
+ *  1. 找 db.transactions 內 type='buy' 最早一筆 → 從那天起算
+ *     (跟 MarketCompareChart 的 baseline 對齊;否則只抓 90 天但 baseline
+ *      在 200+ 天前,findClosestTaiexAtOrBefore(baseline) 拿不到資料 →
+ *      chart `noTaiex: true` 線不畫)
+ *  2. 沒任何 buy 交易 → fallback 抓 days(預設 90)天
+ *  3. 算需要哪幾個月(YYYY-MM)
+ *  4. 看 marketIndices 哪幾個月已有(>=15 筆 = 該月已抓過)
+ *  5. 缺的月份逐個補(每月一個 API call)
+ *
+ * 上限 5 年 = 60 個月(防呆,避免 user 假資料 baseline 太遠抓爆 quota)。
  *
  * **完整 diagnostic 輸出**:每月一行,幫 debug 用。
  */
 export async function ensureTaiexHistory(days: number = 90): Promise<{ fetchedMonths: number; error?: string }> {
   try {
     const now = new Date();
+    // 找第一筆 buy 決定起點
+    const buys = await db.transactions.where('type').equals('buy').toArray();
+    const fromMs = buys.length > 0
+      ? Math.min(...buys.map((t) => t.timestamp))
+      : now.getTime() - days * 86_400_000;
+    // 上限 5 年(防呆)
+    const earliestAllowedMs = now.getTime() - 5 * 365 * 86_400_000;
+    const startMs = Math.max(fromMs, earliestAllowedMs);
+
     const months = new Set<string>();
-    for (let i = 0; i <= days; i++) {
-      const d = new Date(now.getTime() - i * 86_400_000);
-      months.add(taipeiYearMonth(d));
+    // 從 startMs 倒推日,把覆蓋到的月份都收進來
+    for (let ms = startMs; ms <= now.getTime(); ms += 86_400_000) {
+      months.add(taipeiYearMonth(new Date(ms)));
     }
+    // 補今天那個月(loop 可能差幾小時沒蓋到)
+    months.add(taipeiYearMonth(now));
     const monthList = [...months].sort();
     // eslint-disable-next-line no-console
     console.info(`[marketIndex] ensureTaiexHistory(days=${days}) — 檢查 ${monthList.length} 個月: ${monthList.join(', ')}`);
