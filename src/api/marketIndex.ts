@@ -1,13 +1,15 @@
 /**
  * 加權指數(TAIEX)抓取。
  *
- * 兩個資料源:
- *  - 盤中即時:mis API channel `tse_t00.tw`(走既有 /api/mis proxy)
+ * 兩個資料源(都走 Cloudflare Pages Function proxy):
+ *  - 盤中即時:mis API channel `tse_t00.tw`(走 /api/mis proxy)
  *  - 歷史日 K:TWSE OpenAPI `/v1/indicesReport/MI_5MINS_HIST?date=YYYYMMDD`
  *    回特定月份每日 5 分 K 中的尾盤值;我們只取每日最末筆當當日收盤
+ *    走 /api/twse proxy(functions/api/twse/[[path]].ts)
  *
- * openapi.twse.com.tw 對 browser 開放 CORS,所以前端可以直接打,
- * 不需要新建 Cloudflare Function proxy(跟現有 mis 不同:mis 沒 CORS 要 proxy)。
+ * 為什麼用 proxy:openapi.twse.com.tw 對 Cloudflare Pages 子網域不開 CORS,
+ * 前端直接打會被瀏覽器擋。edge function 代為轉發 + 加 Access-Control-Allow-Origin。
+ * dev 模式 vite proxy(vite.config.ts `/api/twse`)用同樣 path 接 dev server 轉發。
  */
 
 import { ApiError } from './errors';
@@ -15,7 +17,7 @@ import { getTaipeiDateString } from './marketHours';
 import type { MarketIndexBar } from '@/types';
 
 const MIS_BASE = '/api/mis';
-const OPENAPI_BASE = 'https://openapi.twse.com.tw/v1';
+const OPENAPI_BASE = '/api/twse/v1';
 
 /** mis 即時報價的單筆欄位(只列加權指數會用到的) */
 interface MisIndexQuote {

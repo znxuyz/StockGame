@@ -7,12 +7,15 @@
  * 失敗策略:silentRefresh 整套設計成失敗不彈 toast,只 console.warn,
  * 所以這邊也跟著不丟 unhandled rejection。
  *
- * **CORS circuit-break**(階段 6):openapi.twse.com.tw 對部分 origin 沒開
- * CORS,直接 fetch 會撞 `Access-Control-Allow-Origin` missing。一旦失敗
- * (任何 error)就寫 localStorage flag,**24 小時內不再嘗試** — 避免
- * MarketCompareChart re-mount 反覆噴 CORS 紅字。解除:dev console 跑
- * `localStorage.removeItem('stockgame.marketIndex.disabled.v1')`,或等 24h
- * 自然過期。
+ * **CORS circuit-break**:openapi.twse.com.tw 對部分 origin 沒開 CORS,
+ * 直接 fetch 會擋。階段 6 改走 Cloudflare Pages Function proxy
+ * (`/api/twse/v1/*` → openapi.twse.com.tw)解決根因,**仍保留 circuit-break**
+ * 應付 proxy 暫時故障 / upstream 502 等狀況。一旦失敗就寫 localStorage flag,
+ * **24 小時內不再嘗試**。解除:console 跑
+ * `localStorage.removeItem('stockgame.marketIndex.disabled.v2')` 或等 24h 自然過期。
+ *
+ * **key version bump v1→v2**:proxy 上線後舊用戶 localStorage v1 flag 可能還在,
+ * 改 key 讓所有 client 視為新狀態重新嘗試。
  */
 
 import { db } from '@/db';
@@ -21,7 +24,16 @@ import { isMarketOpen, getTaipeiDateString } from '@/api/marketHours';
 
 const SYMBOL = 'TAIEX' as const;
 
-const DISABLED_KEY = 'stockgame.marketIndex.disabled.v1';
+const DISABLED_KEY = 'stockgame.marketIndex.disabled.v2';
+
+/** 一次性清舊 v1 flag(proxy 上線後,給舊 client 一個乾淨起點) */
+try {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('stockgame.marketIndex.disabled.v1');
+  }
+} catch {
+  /* ignore */
+}
 const DISABLED_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 function isDisabled(): boolean {
