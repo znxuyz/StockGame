@@ -44,6 +44,15 @@
     display: none;
   }
 
+  /** 共用「隱藏 scrollbar 但保留橫向 scroll」工具 class(階段 6.X 圖鑑類別 pill 用) */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /**
    * 玻璃擬態 BottomBar:對稱 HUD,bottom 鋪到 viewport 底(iOS home indicator 下面)。
    *  - bottom: 0 + padding-bottom: calc(6px + safe-bottom) full-bleed
