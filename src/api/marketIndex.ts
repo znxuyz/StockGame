@@ -116,19 +116,37 @@ export async function fetchTaiexHistoryMonth(yyyymmdd: string): Promise<MarketIn
   try {
     resp = await fetch(url, { method: 'GET' });
   } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(`[marketIndex] fetch ${url} 連線失敗:`, e);
     throw new ApiError('network', '無法連線到 TWSE OpenAPI', { endpoint: url, cause: e });
   }
+  // eslint-disable-next-line no-console
+  console.info(
+    `[marketIndex] fetch ${url} → status=${resp.status} content-type=${resp.headers.get('content-type')}`
+  );
   if (!resp.ok) {
     throw new ApiError('http', `${resp.status} ${resp.statusText}`, { endpoint: url });
   }
 
+  // 先以 text 拿,印出前 200 字元供 debug,再 parse JSON
+  const rawText = await resp.text();
+  if (rawText.length === 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`[marketIndex] ${url} 回應空 body`);
+    return [];
+  }
+
   let data: OpenapiIndexBar[];
   try {
-    data = (await resp.json()) as OpenapiIndexBar[];
+    data = JSON.parse(rawText) as OpenapiIndexBar[];
   } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(`[marketIndex] ${url} JSON 解析失敗:`, e, ' / body 前 200 字:', rawText.slice(0, 200));
     throw new ApiError('parse', 'OpenAPI 回應格式異常', { endpoint: url, cause: e });
   }
   if (!Array.isArray(data)) {
+    // eslint-disable-next-line no-console
+    console.warn(`[marketIndex] ${url} 回應不是陣列:`, typeof data, ' / body 前 200 字:', rawText.slice(0, 200));
     throw new ApiError('parse', 'OpenAPI 回應不是陣列', { endpoint: url });
   }
 

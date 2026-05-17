@@ -4,18 +4,19 @@
  *  - ensureTaiexHistory:確保最近 N 天歷史在本地;缺哪幾個月就補
  *  - updateTaiexIntraday:抓最新值,寫入今天那筆(覆蓋)
  *
- * 失敗策略:silentRefresh 整套設計成失敗不彈 toast,只 console.warn,
- * 所以這邊也跟著不丟 unhandled rejection。
+ * 失敗策略:silentRefresh 整套設計成失敗不彈 toast,所以這邊也跟著不丟
+ * unhandled rejection,但**會 console.info 完整 diagnostic trace** —
+ * 包含每月 URL / status / bar 數,出問題時 user 把 console 貼回來就能定位。
  *
- * **CORS circuit-break**:openapi.twse.com.tw 對部分 origin 沒開 CORS,
- * 直接 fetch 會擋。階段 6 改走 Cloudflare Pages Function proxy
- * (`/api/twse/v1/*` → openapi.twse.com.tw)解決根因,**仍保留 circuit-break**
- * 應付 proxy 暫時故障 / upstream 502 等狀況。一旦失敗就寫 localStorage flag,
- * **24 小時內不再嘗試**。解除:console 跑
- * `localStorage.removeItem('stockgame.marketIndex.disabled.v3')` 或等 24h 自然過期。
+ * **走 Cloudflare Pages Function proxy**(`/api/twse/v1/*` →
+ * openapi.twse.com.tw)— 解決 CORS 根因。階段 4-C 加的 24h circuit-break
+ * 在本檔已**拆除**,因為:
+ *   - 有 proxy 後失敗率應該很低
+ *   - 失敗時用戶看到 console.info 一條,不噴紅字,不需要 flag 防 spam
+ *   - 24h block 反而會在「Proxy 部署順序卡住一次失敗」之後鎖死 UI,差體驗
  *
- * **key version bump v1→v2→v3**:每次 proxy 邏輯有變動就 bump key,
- * 強制所有 client 視為新狀態重新嘗試(否則被前一版的 24h flag 卡死)。
+ * 模組載入時順手清舊版的 localStorage flag(v1 / v2 / v3),避免舊裝置
+ * 升級後被歷史 flag 鎖住。
  */
 
 import { db } from '@/db';
@@ -24,47 +25,15 @@ import { isMarketOpen, getTaipeiDateString } from '@/api/marketHours';
 
 const SYMBOL = 'TAIEX' as const;
 
-const DISABLED_KEY = 'stockgame.marketIndex.disabled.v3';
-
-/** 清舊 v1 / v2 flag(proxy 上線後,給舊 client 一個乾淨起點) */
+/** 一次性清掉所有歷史版本的 circuit-break flag(本檔已不再使用) */
 try {
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem('stockgame.marketIndex.disabled.v1');
     localStorage.removeItem('stockgame.marketIndex.disabled.v2');
+    localStorage.removeItem('stockgame.marketIndex.disabled.v3');
   }
 } catch {
   /* ignore */
-}
-const DISABLED_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-function isDisabled(): boolean {
-  try {
-    if (typeof localStorage === 'undefined') return false;
-    const raw = localStorage.getItem(DISABLED_KEY);
-    if (!raw) return false;
-    const until = Number(raw);
-    if (!Number.isFinite(until) || Date.now() > until) {
-      localStorage.removeItem(DISABLED_KEY);
-      return false;
-    }
-    // eslint-disable-next-line no-console
-    console.info(
-      `[marketIndex] circuit-break 中,跳過 TAIEX 抓取(直到 ${new Date(until).toLocaleString('zh-TW')});` +
-        `要立刻重試:console 跑 localStorage.removeItem('${DISABLED_KEY}') + 重整`
-    );
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function markDisabled(): void {
-  try {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(DISABLED_KEY, String(Date.now() + DISABLED_TTL_MS));
-  } catch {
-    /* ignore */
-  }
 }
 
 /** YYYY-MM 字串(台北時區) */
@@ -90,51 +59,51 @@ function yearMonthToOpenapiDate(ym: string): string {
  *  2. 看 marketIndices 哪幾個月已有(>=15 筆 = 該月已抓過)
  *  3. 缺的月份逐個補(每月一個 API call)
  *
- * days 預設 90,意思是「保證近三個月資料齊全」。再多歷史就是用前面月份的 cache。
+ * days 預設 90;再多歷史就是用前面月份的 cache。
+ *
+ * **完整 diagnostic 輸出**:每月一行,幫 debug 用。
  */
 export async function ensureTaiexHistory(days: number = 90): Promise<{ fetchedMonths: number; error?: string }> {
-  // 已在 circuit-break window 內 → 直接跳過,不噴 CORS 紅字
-  if (isDisabled()) {
-    return { fetchedMonths: 0, error: 'circuit-break: marketIndex disabled (24h)' };
-  }
   try {
     const now = new Date();
     const months = new Set<string>();
-    // 倒推 days 天,把覆蓋到的月份都收進來
     for (let i = 0; i <= days; i++) {
       const d = new Date(now.getTime() - i * 86_400_000);
       months.add(taipeiYearMonth(d));
     }
+    const monthList = [...months].sort();
+    // eslint-disable-next-line no-console
+    console.info(`[marketIndex] ensureTaiexHistory(days=${days}) — 檢查 ${monthList.length} 個月: ${monthList.join(', ')}`);
 
     let fetched = 0;
-    for (const ym of months) {
+    let skipped = 0;
+    for (const ym of monthList) {
       const start = `${ym}-01`;
       const end = `${ym}-31`;
       const existing = await db.marketIndices
         .where('[symbol+date]')
         .between([SYMBOL, start], [SYMBOL, end], true, true)
         .count();
-      // 該月已有 >= 15 筆視為已抓過(假設交易日不會少於 15 天)
-      // 若是當月,允許重抓(因為當月還在累積)
       const isCurrentMonth = ym === taipeiYearMonth(now);
-      if (!isCurrentMonth && existing >= 15) continue;
+      if (!isCurrentMonth && existing >= 15) {
+        skipped++;
+        continue;
+      }
 
       const bars = await fetchTaiexHistoryMonth(yearMonthToOpenapiDate(ym));
+      // eslint-disable-next-line no-console
+      console.info(`[marketIndex] month ${ym}: 抓回 ${bars.length} 筆`);
       if (bars.length > 0) {
         await db.marketIndices.bulkPut(bars);
         fetched++;
       }
     }
+    // eslint-disable-next-line no-console
+    console.info(`[marketIndex] ensureTaiexHistory 完成:抓 ${fetched} 月,跳過 ${skipped} 月(本地已有)`);
     return { fetchedMonths: fetched };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    markDisabled();
-    // demote 到 info(不紅字)— 已知 TWSE OpenAPI CORS 對部分 origin 拒絕,
-    // 標記 24h 不再嘗試,玩家看 MarketCompareChart 只少了 TAIEX 對比線
-    // eslint-disable-next-line no-console
-    console.info(
-      `[marketIndex] ensureTaiexHistory 失敗 — 24h 內不再嘗試(${msg})`
-    );
+    console.warn(`[marketIndex] ensureTaiexHistory 失敗:${msg}`);
     return { fetchedMonths: 0, error: msg };
   }
 }
