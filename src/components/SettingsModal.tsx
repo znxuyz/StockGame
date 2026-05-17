@@ -420,6 +420,29 @@ export default function SettingsModal({
                     僅在你部署 supabase/migrations/20260516_stage4b_creature_summary_repair.sql
                     後才需要點(本機因 schema 不一致已停用好友 profileSync)。
                   </p>
+                  {/* 階段 6.X:加權指數 24h circuit-break 手動解除 */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem('stockgame.marketIndex.disabled.v1');
+                        localStorage.removeItem('stockgame.marketIndex.disabled.v2');
+                        localStorage.removeItem('stockgame.marketIndex.disabled.v3');
+                      } catch {
+                        /* ignore */
+                      }
+                      onActionComplete('已重試大盤指數同步,3 秒後重新載入');
+                      setTimeout(() => window.location.reload(), 3000);
+                    }}
+                    disabled={busy || deletingAccount || forceSyncing}
+                    className="w-full py-2 bg-sky-100 text-sky-800 rounded-lg text-sm border border-sky-300 disabled:opacity-50"
+                  >
+                    📊 重試大盤指數同步
+                  </button>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    對比 tab「加權指數」顯示 -、Alpha 不出來時點此。
+                    清掉 24h 失敗 flag,重整後再試一次 TWSE OpenAPI proxy。
+                  </p>
                   {/* 雙擊確認的刪帳號鈕(只在已登入時顯示) */}
                   <button
                     type="button"

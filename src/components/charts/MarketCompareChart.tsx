@@ -26,7 +26,6 @@ import { formatPercent } from '@/utils';
  */
 export default function MarketCompareChart() {
   const [result, setResult] = useState<MarketCompareResult | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // 訂閱三張表(加 transactions — baseline 改靠它),任一有變動就重算
   const transactions = useLiveQuery(() => db.transactions.toArray(), []);
@@ -40,22 +39,23 @@ export default function MarketCompareChart() {
   }, []);
 
   // transactions / snapshots / indices 變動 → 重算對比
+  // **不 setLoading(true)**:首次 result === null 顯示載入畫面;之後 deps 變動
+  // 默默重算 + setResult,讓圖表直接平滑 update,**不再閃回 loading 畫面**
+  // (上一版每次都閃,切 tab / Dexie 寫入都觸發,體驗很糟)
   useEffect(() => {
     if (!transactions || !snapshots || !indices) return;
     let cancelled = false;
     (async () => {
-      setLoading(true);
       const r = await getMarketCompare();
       if (cancelled) return;
       setResult(r);
-      setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
   }, [transactions, snapshots, indices]);
 
-  if (loading || !result) {
+  if (!result) {
     return (
       <div className="data-card p-3">
         <p className="text-xs text-gray-400 text-center py-6">大盤對比載入中⋯</p>

@@ -12,10 +12,10 @@
  * (`/api/twse/v1/*` → openapi.twse.com.tw)解決根因,**仍保留 circuit-break**
  * 應付 proxy 暫時故障 / upstream 502 等狀況。一旦失敗就寫 localStorage flag,
  * **24 小時內不再嘗試**。解除:console 跑
- * `localStorage.removeItem('stockgame.marketIndex.disabled.v2')` 或等 24h 自然過期。
+ * `localStorage.removeItem('stockgame.marketIndex.disabled.v3')` 或等 24h 自然過期。
  *
- * **key version bump v1→v2**:proxy 上線後舊用戶 localStorage v1 flag 可能還在,
- * 改 key 讓所有 client 視為新狀態重新嘗試。
+ * **key version bump v1→v2→v3**:每次 proxy 邏輯有變動就 bump key,
+ * 強制所有 client 視為新狀態重新嘗試(否則被前一版的 24h flag 卡死)。
  */
 
 import { db } from '@/db';
@@ -24,12 +24,13 @@ import { isMarketOpen, getTaipeiDateString } from '@/api/marketHours';
 
 const SYMBOL = 'TAIEX' as const;
 
-const DISABLED_KEY = 'stockgame.marketIndex.disabled.v2';
+const DISABLED_KEY = 'stockgame.marketIndex.disabled.v3';
 
-/** 一次性清舊 v1 flag(proxy 上線後,給舊 client 一個乾淨起點) */
+/** 清舊 v1 / v2 flag(proxy 上線後,給舊 client 一個乾淨起點) */
 try {
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem('stockgame.marketIndex.disabled.v1');
+    localStorage.removeItem('stockgame.marketIndex.disabled.v2');
   }
 } catch {
   /* ignore */
@@ -46,6 +47,11 @@ function isDisabled(): boolean {
       localStorage.removeItem(DISABLED_KEY);
       return false;
     }
+    // eslint-disable-next-line no-console
+    console.info(
+      `[marketIndex] circuit-break 中,跳過 TAIEX 抓取(直到 ${new Date(until).toLocaleString('zh-TW')});` +
+        `要立刻重試:console 跑 localStorage.removeItem('${DISABLED_KEY}') + 重整`
+    );
     return true;
   } catch {
     return false;
