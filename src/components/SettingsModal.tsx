@@ -8,8 +8,6 @@ import { useAuth, signOut } from '@/lib/auth';
 import HudThemeSection from './HudThemeSection';
 import BackgroundSection from './BackgroundSection';
 import { BACKGROUNDS } from '@/services';
-import { forceSyncAllToCloud } from '@/repositories/syncAll';
-import { clearProfileSyncDisabled } from '@/services/profileSyncService';
 
 /**
  * 設定彈窗 sub-view 切換。
@@ -34,12 +32,12 @@ interface SettingsModalProps {
   onOpenMonthlyReview?: () => void;
   /** 階段 5E:點「🔒 隱私設定」入口,關掉設定讓 App 開 PrivacySettingsModal */
   onOpenPrivacy?: () => void;
-  /** 階段 5G:點「📊 Excel 批次匯入」入口 */
-  onOpenExcelImport?: () => void;
 }
 
 /**
  * 設定彈窗 — 手續費折扣 + 最低手續費 + 音效 + HUD 主題 + 家園背景 + 月度回顧 + 雲端同步。
+ * 階段 6.X:強制同步 / 重啟好友同步 / 重試大盤 / Excel 匯入 等「工具」操作
+ * 搬到 ToolsModal,從主畫面 🛠 按鈕進入,本頁不再混雜。
  */
 export default function SettingsModal({
   open,
@@ -48,8 +46,7 @@ export default function SettingsModal({
   onActionComplete,
   onOpenSignIn,
   onOpenMonthlyReview,
-  onOpenPrivacy,
-  onOpenExcelImport
+  onOpenPrivacy
 }: SettingsModalProps) {
   const [discountTenths, setDiscountTenths] = useState('10');
   const [minFee, setMinFee] = useState('20');
@@ -61,8 +58,6 @@ export default function SettingsModal({
   /** 雙擊確認刪帳號:第一擊 → confirmingDelete = true 並 5 秒後自動 reset */
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  /** 強制同步進行中(防重複點) */
-  const [forceSyncing, setForceSyncing] = useState(false);
   /** 雙擊確認清快取 */
   const [confirmingClearCache, setConfirmingClearCache] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
@@ -134,39 +129,6 @@ export default function SettingsModal({
       onActionComplete(
         `⚠️ 清快取失敗:${e instanceof Error ? e.message : String(e)}`
       );
-    }
-  }
-
-  /**
-   * 階段 4-B 緊急救援:把本機所有 Repository 的資料**強推**到雲端,
-   * 修復 self-heal 靜默失敗造成的雲端資料缺失。
-   * 跑完看 console「[forceSync]」log 詳細逐 table 報告。
-   */
-  async function handleForceSync() {
-    if (forceSyncing) return;
-    setForceSyncing(true);
-    try {
-      const result = await forceSyncAllToCloud();
-      if (!result.userId) {
-        onActionComplete('⚠️ 強制同步失敗:未登入雲端');
-        return;
-      }
-      if (result.ok) {
-        onActionComplete(
-          `☁ 強制同步完成:推 ${result.totalSucceeded}/${result.totalAttempted} 筆(${result.durationMs}ms)`
-        );
-      } else {
-        onActionComplete(
-          `⚠️ 強制同步部分失敗:成功 ${result.totalSucceeded}/${result.totalAttempted},失敗 ${result.totalFailed} 筆(看 console)`
-        );
-      }
-    } catch (e) {
-      console.error('[forceSync] handler threw:', e);
-      onActionComplete(
-        `⚠️ 強制同步出錯:${e instanceof Error ? e.message : String(e)}`
-      );
-    } finally {
-      setForceSyncing(false);
     }
   }
 
@@ -388,61 +350,8 @@ export default function SettingsModal({
                   >
                     登出
                   </button>
-                  {/* 階段 4-B 緊急救援:強制同步本機資料到雲端
-                      (self-heal 失敗時手動觸發,跑完看 console [forceSync] log) */}
-                  <button
-                    type="button"
-                    onClick={handleForceSync}
-                    disabled={busy || deletingAccount || forceSyncing}
-                    className="w-full py-2 bg-amber-100 text-amber-800 rounded-lg text-sm border border-amber-300 disabled:opacity-50"
-                  >
-                    {forceSyncing ? '同步中⋯' : '☁⤴ 強制同步全部資料到雲端'}
-                  </button>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
-                    若發現雲端資料缺失(換裝置看不到神獸 / 修為),
-                    手動強推一次。跑完看瀏覽器 console 詳細報告。
-                  </p>
-                  {/* 階段 4-B:部署 user_creature_summary 修復 SQL 後,
-                      點此按鈕清掉 localStorage flag 並重新整理,啟用好友同步 */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clearProfileSyncDisabled();
-                      onActionComplete('已重新啟用好友同步,3 秒後重新載入');
-                      setTimeout(() => window.location.reload(), 3000);
-                    }}
-                    disabled={busy || deletingAccount || forceSyncing}
-                    className="w-full py-2 bg-sky-100 text-sky-800 rounded-lg text-sm border border-sky-300 disabled:opacity-50"
-                  >
-                    🔄 重新啟用好友同步
-                  </button>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
-                    僅在你部署 supabase/migrations/20260516_stage4b_creature_summary_repair.sql
-                    後才需要點(本機因 schema 不一致已停用好友 profileSync)。
-                  </p>
-                  {/* 階段 6.X:加權指數 24h circuit-break 手動解除 */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        localStorage.removeItem('stockgame.marketIndex.disabled.v1');
-                        localStorage.removeItem('stockgame.marketIndex.disabled.v2');
-                        localStorage.removeItem('stockgame.marketIndex.disabled.v3');
-                      } catch {
-                        /* ignore */
-                      }
-                      onActionComplete('已重試大盤指數同步,3 秒後重新載入');
-                      setTimeout(() => window.location.reload(), 3000);
-                    }}
-                    disabled={busy || deletingAccount || forceSyncing}
-                    className="w-full py-2 bg-sky-100 text-sky-800 rounded-lg text-sm border border-sky-300 disabled:opacity-50"
-                  >
-                    📊 重試大盤指數同步
-                  </button>
-                  <p className="text-[11px] text-gray-500 leading-relaxed">
-                    對比 tab「加權指數」顯示 -、Alpha 不出來時點此。
-                    清掉 24h 失敗 flag,重整後再試一次 TWSE OpenAPI proxy。
-                  </p>
+                  {/* 階段 6.X:強制同步 / 好友同步 / 大盤重試 / Excel 匯入 等
+                      工具操作搬到主畫面 🛠 按鈕的 ToolsModal,本頁不再顯示。 */}
                   {/* 雙擊確認的刪帳號鈕(只在已登入時顯示) */}
                   <button
                     type="button"
@@ -484,20 +393,7 @@ export default function SettingsModal({
 
         <hr className="my-4" />
 
-        {/* 階段 5G:Excel 批次匯入(放在「清除所有資料」之上) */}
-        {onOpenExcelImport && (
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onOpenExcelImport();
-            }}
-            className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-gray-200 bg-white/40 active:scale-[0.99] transition-transform mb-2"
-          >
-            <span className="text-sm text-gray-700">📊 Excel 批次匯入</span>
-            <span className="text-xs text-gray-500">一次匯入多筆歷史交易 ›</span>
-          </button>
-        )}
+        {/* 階段 6.X:Excel 批次匯入搬到主畫面 🛠 工具按鈕的 ToolsModal */}
 
         {/* 階段 6:清除本機 IndexedDB 快取(雙擊確認)。
             雲端資料不動,reload 後從雲端重新拉。萬用 self-service 解。 */}

@@ -73,6 +73,7 @@ import GameModal from '@/components/GameModal';
 import FriendsModal from '@/components/FriendsModal';
 import TradeModal from '@/components/TradeModal';
 import SettingsModal from '@/components/SettingsModal';
+import ToolsModal from '@/components/ToolsModal';
 import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
 import InstallPrompt from '@/components/InstallPrompt';
@@ -113,6 +114,7 @@ type ModalKind =
   | 'loan'
   | 'borrowed'
   | 'excelImport'
+  | 'tools'
   | null;
 
 export default function App() {
@@ -661,6 +663,7 @@ function Game() {
         onPetClick={handlePetClickById}
         onRefresh={handleRefresh}
         refreshing={refreshing}
+        onOpenTools={() => setModal('tools')}
       />
 
       <BottomBar
@@ -834,6 +837,11 @@ function Game() {
           setModal('monthly');
         }}
         onOpenPrivacy={() => setModal('privacy')}
+      />
+      <ToolsModal
+        open={modal === 'tools'}
+        onClose={() => setModal(null)}
+        onActionComplete={postAction}
         onOpenExcelImport={() => setModal('excelImport')}
       />
       <Suspense fallback={null}>

@@ -19,11 +19,13 @@ import { WorldScene } from './scene';
 import type { PetSpriteData } from './petSprite';
 
 interface PhaserMapProps {
-  /** 玩家點到寵物（World scene 點擊事件轉出） */
+  /** 玩家點到寵物(World scene 點擊事件轉出) */
   onPetClick: (petId: string) => void;
   /** 右上角刷新鈕 */
   onRefresh: () => void;
   refreshing: boolean;
+  /** 階段 6.X:右上角刷新鈕下方「🛠 工具」按鈕 — 打開工具彈窗(強制同步 / 重試大盤 / Excel 匯入 等) */
+  onOpenTools?: () => void;
 }
 
 /**
@@ -60,7 +62,7 @@ function waitForSceneReady(
   else game.events.once(Phaser.Core.Events.READY, attach);
 }
 
-export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserMapProps) {
+export default function PhaserMap({ onPetClick, onRefresh, refreshing, onOpenTools }: PhaserMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<WorldScene | null>(null);
@@ -260,24 +262,19 @@ export default function PhaserMap({ onPetClick, onRefresh, refreshing }: PhaserM
         {refreshing ? '⏳' : '🔄'}
       </button>
 
-      <button
-        type="button"
-        onClick={() => sceneRef.current?.zoomBy(1.25)}
-        className="absolute right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
-        style={{ top: 'calc(68px + var(--hud-height, 80px))' }}
-        aria-label="放大"
-      >
-        ＋
-      </button>
-      <button
-        type="button"
-        onClick={() => sceneRef.current?.zoomBy(0.8)}
-        className="absolute right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl font-bold active:scale-90 transition-transform"
-        style={{ top: 'calc(124px + var(--hud-height, 80px))' }}
-        aria-label="縮小"
-      >
-        －
-      </button>
+      {/* 階段 6.X:工具按鈕(原 +/- zoom 按鈕拔掉,手機 pinch 已能縮放)。
+          打開「工具」彈窗:強制同步 / 重啟好友同步 / 重試大盤 / Excel 匯入 */}
+      {onOpenTools && (
+        <button
+          type="button"
+          onClick={onOpenTools}
+          className="absolute right-3 z-10 w-12 h-12 rounded-full bg-white/95 shadow-lg flex items-center justify-center text-2xl active:scale-90 transition-transform"
+          style={{ top: 'calc(68px + var(--hud-height, 80px))' }}
+          aria-label="工具"
+        >
+          🛠
+        </button>
+      )}
 
       {/* 空狀態提示 */}
       {isEmpty && (
