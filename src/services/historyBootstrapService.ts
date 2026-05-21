@@ -112,7 +112,7 @@ export async function checkAndRebuildIfNeeded(): Promise<void> {
   // 2. 決策
   const decision = decide(firstTxDate, range, yesterday);
   // eslint-disable-next-line no-console
-  console.log('[historyBootstrap] inspect:', {
+  console.info('[historyBootstrap] inspect:', {
     txTableName: 'db.transactions',
     rawTxCount,
     firstTx: firstTxDate ?? '(none)',
@@ -136,7 +136,7 @@ export async function checkAndRebuildIfNeeded(): Promise<void> {
     const total = result.priceRowsFetched + result.priceRowsCached;
     const hitRate = total === 0 ? '—' : ((result.priceRowsCached / total) * 100).toFixed(1) + '%';
     // eslint-disable-next-line no-console
-    console.log('[historyBootstrap] done:', {
+    console.info('[historyBootstrap] done:', {
       durationMs: result.durationMs,
       wallMs,
       daysRebuilt: result.daysRebuilt,

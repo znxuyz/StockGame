@@ -32,7 +32,7 @@ export default function PwaUpdatePrompt() {
       setShowPrompt(true);
     },
     onOfflineReady() {
-      console.log('[PWA] 已可離線使用');
+      console.info('[PWA] 已可離線使用');
     },
     onRegistered(swReg) {
       if (swReg) {

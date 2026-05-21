@@ -135,7 +135,7 @@ export default function App() {
 
         try {
           const r = await backfillSnapshotsIfNeeded();
-          if (!r.skipped) console.log('[snapshotBackfill]', r);
+          if (!r.skipped) console.info('[snapshotBackfill]', r);
         } catch (e) {
           console.warn('[snapshotBackfill] failed:', e);
         }
