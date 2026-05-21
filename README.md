@@ -21,13 +21,13 @@
 
 ## 特色
 
-- 🐾 **50 隻原創上古神祇** — 鴻鈞道祖、玄黃地母、滄溟海尊、紫微天樞⋯ 搭配 AI 立繪，無立繪自動 fallback emoji
+- 🐾 **294 隻原創上古神祇** — 鴻鈞道祖、玄黃地母、滄溟海尊、紫微天樞⋯ 跨 13 大世界觀（魔界 / 自然界 / 冥界 / 海界 / 佛界 / 道界 / 夢境界 / 夜界 / 月宮 / 人界 / 極北 / 心魔界 / 虛無界），搭配 AI 立繪，無立繪自動 fallback emoji
 - 🗺️ **2400×1600 大地圖** — 神獸散布整個世界，玩家拖曳 camera 探索（公主連結家園感）
 - 📈 **真實台股報價** — 上市 / 上櫃 / ETF。盤中 9:05–13:30 每 30 秒自動更新，盤後用最新收盤
 - ✨ **三維度養成系統** — 等級 Lv.1-999（累積投入）/ 魂環境界 凡靈妖神聖仙（持有時間）/ 魂環特效 暗淡脈動旋轉噴光（報酬率）
 - 💎 **修為點數系統** — 升級 / 突破 / 特效解鎖 / 召喚新神獸 / 賣出獲利全部給修為，飄字 + count-up + 紀錄 tab
 - 📅 **每日簽到 + 任務系統** — 連登 7/14/30/60/100 里程碑 + 每日 3 任務 + 週 4 任務，紀錄按鈕紅點提示可領
-- 🏆 **成就 + 圖鑑** — 30+ 成就（5 類）、50 隻神祇圖鑑、交易明細、跟大盤比 Alpha
+- 🏆 **成就 + 圖鑑** — 30+ 成就（5 類）、294 隻神祇圖鑑（含進度條 / 分類篩選 / 故事解鎖）、交易明細、跟大盤比 Alpha
 - ☁ **雲端帳號** — Apple / Google / Email+密碼 三選一登入（Magic Link 改作密碼重設用），換手機無痛接續，可整帳號刪除
 - 📱 **PWA** — 加到桌面變 App，離線可用（不上 App Store），SW autoUpdate + 玩家可控的「新版本可用」提示
 - 🪞 **毛玻璃 UI** — HUD / BottomBar / 抽屜彈窗統一玻璃擬態語言，半透明 + backdrop-blur
@@ -36,7 +36,7 @@
 
 | 機制 | 規則 |
 |---|---|
-| **召喚** | 買新檔股票時隨機抽 1 隻神獸（50 隻原創上古神祇） |
+| **召喚** | 買新檔股票時隨機抽 1 隻神獸（294 隻原創上古神祇，13 個分類） |
 | **等級** | Lv.1–999，依累積投入金額（每 NT$1,000 = 1 級） |
 | **魂環境界** | 凡 0 月 / 靈 3 月 / 妖 12 月 / 神 36 月 / 聖 60 月 / 仙 120 月（依持有時間） |
 | **魂環特效** | 暗 < 0% / 普通 < 20% / 脈動 < 50% / 旋轉 < 100% / 噴光 ≥ 100%（依報酬率） |
@@ -94,7 +94,7 @@
 └────────────────────────────────────────────────┘
 
          ┌──  Phaser 2400×1600 大地圖  ──┐
-         │  50 隻神獸散布全 world          │
+         │  294 隻神獸散布全 world         │
          │  櫻花飄落 + 金光粒子            │
          │  拖曳 camera + 雙指 zoom 探索   │
          │  4 套家園背景（4B.4 解鎖切換）  │
@@ -167,7 +167,7 @@ npm run typecheck    # 型別檢查
 ```bash
 npm run build:icons         # public/app-icon-source.JPG → public/icons/*.png（PWA / favicon）
 npm run process:ui-assets   # public/assets/particles/petal.JPG → 去背 PNG（粒子）
-npm run download:sprites    # docs/art-prompts.md → public/sprites/*.png（50 隻立繪 / MJ）
+npm run download:sprites    # docs/art-prompts.md → public/sprites/*.png（294 隻立繪 / MJ）
 npm run fetch:industries    # 月跑：證交所 OpenAPI → src/data/industries.json
 npm run fetch:holidays      # 月跑：TaiwanCalendar → src/data/holidays.json
 
@@ -219,7 +219,7 @@ StockGame/
 │   ├── assets/bg/                ← 4 套家園背景（main / 粉紅雲紋 / 月夜 / 仙山，4B.4）
 │   ├── assets/rings/             ← 6 顆魂環 PNG（凡靈妖神聖仙）
 │   ├── assets/particles/         ← 櫻花 / 金光粒子
-│   └── sprites/<id>.png          ← 50 隻神祇立繪
+│   └── sprites/<id>.png          ← 294 隻神祇立繪
 ├── src/
 │   ├── components/               ← React UI
 │   │   ├── Modal.tsx             ← 抽屜 Modal（.glass-popup，top:140 + bottom:0）
@@ -239,15 +239,15 @@ StockGame/
 │   │   ├── petSprite.ts          ← PetSprite（pixelPerfect + tween wander + colorVariant tint + lockDepthAt）
 │   │   └── soulRing.ts           ← 6 顆魂環 Image + 5 種特效動畫
 │   ├── data/
-│   │   ├── creatures.ts          ← 50 神祇定義
-│   │   ├── creatureStories.ts    ← 50 隻長版背景故事（4C.3 解鎖內容）
+│   │   ├── creatures.ts          ← 294 神祇定義（13 大世界觀分類）
+│   │   ├── creatureStories.ts    ← 294 隻長版背景故事（4C.3 解鎖內容）
 │   │   ├── achievements.ts       ← 30+ 成就
 │   │   ├── taskPool.ts           ← DAILY 8 + WEEKLY 7 任務池
 │   │   ├── industries.json       ← npm run fetch:industries 產出
 │   │   └── holidays.json         ← npm run fetch:holidays 產出
 │   ├── services/                 ← 業務邏輯（portfolio / cloudSync / cultivation / taskService / petTier / petColor / background / creatureUnlockService / eventBus / loginStreakService）
 │   ├── api/                      ← TWSE / TPEX API 包裝
-│   ├── db/schema.ts              ← Dexie schema（目前 v13）
+│   ├── db/schema.ts              ← Dexie schema（目前 v16）
 │   ├── lib/                      ← supabase / auth
 │   └── index.css                 ← Tailwind + 玻璃 utility class + 4 套 HUD 主題 CSS 變數
 ├── scripts/                      ← 資產處理 / 資料抓取（含 process-button-icons.mjs / process-rings.mjs）

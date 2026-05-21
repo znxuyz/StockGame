@@ -76,6 +76,26 @@ create table public.user_data (
 
 `prices` 表**不**同步 — 它是 TWSE/TPEx API 抓的快取，本地隨時可重抓，不必占雲端空間。其他 7 張表全納入 sync。
 
+### Stage 6.X RLS 補丁(必跑)
+
+階段 3D 時 7 張 cloud-first 表(`holdings` / `pets` / `transactions` /
+`achievements` / `creature_unlocks` / `milestone_rewards` /
+`user_tasks`)是用 Supabase Dashboard 手動建的,**Dashboard 預設不開
+RLS** — 任何登入用戶都可讀寫別人的 row,跨用戶資料外洩。
+
+修復:`supabase/migrations/20260517_stage6_core_tables_rls.sql`
+(全 idempotent,可重跑)。套用方式:Supabase Dashboard → SQL Editor
+整段貼上 → Run。看不到 error 即可。
+
+內容:每張表 `create table if not exists`(以 RemoteXxx interface
+為準的欄位)+ `enable row level security` + 補上 SELECT/INSERT/UPDATE/
+DELETE 四條 `auth.uid() = user_id` 政策(policy 名前綴 `own_<table>_*`
+避免跟 Dashboard 既有政策撞名)。
+
+⚠️ **新加 cloud-first 表時,絕對不要用 Dashboard 手動建** — 寫進
+migration 檔同時定義 schema + RLS,跑 `supabase db push` 才能保證
+RLS 不被遺漏。
+
 ---
 
 ## npm scripts cheat sheet
@@ -97,7 +117,7 @@ npm run fetch:holidays    # TaiwanCalendar → src/data/holidays.json
 # 沒 npm wrapper，需要時直接跑：
 node scripts/flood-fill-sprite-bg.mjs file1.png      # flood-fill + halo 指定檔(限 transp < 5%)
 node scripts/flood-fill-sprite-bg.mjs --auto         # 自動偵測 4 角 alpha > 8 OR partial > 4%
-node scripts/flood-fill-sprite-bg.mjs --halo         # 全 50 隻只跑 halo cleanup(安全 idempotent)
+node scripts/flood-fill-sprite-bg.mjs --halo         # 全 294 隻只跑 halo cleanup(安全 idempotent)
 node scripts/process-button-icons.mjs                # BottomBar/TradeModal/tab/ 全部 PNG icon 去背 + resize 256x256
 node scripts/process-button-icons.mjs <file.png>     # 處理單一 icon(就地覆蓋,seed-based flood-fill)
 node scripts/process-rings.mjs                       # 6 顆魂環 PNG (public/assets/rings/) 去背 + resize 128x128
@@ -107,7 +127,7 @@ node scripts/process-rings.mjs                       # 6 顆魂環 PNG (public/a
 
 ## 美術立繪流程
 
-- 50 隻角色立繪 URL 列在 `docs/art-prompts.md` §1 表
+- 294 隻角色立繪 URL 列在 `docs/art-prompts.md`(13 大世界觀分類:魔界/自然界/冥界/海界/佛界/道界/夢境界/夜界/月宮/人界/極北/心魔界/虛無界)
 - `npm run download:sprites` 把 PNG 抓到 `public/sprites/<id>.png`
   - **必須在使用者本機跑**，sandbox / CI / Cloudflare Function 都會被 cdn.midjourney.com 擋 403
   - 跑完 commit `public/sprites/` 進 repo
@@ -119,6 +139,10 @@ node scripts/process-rings.mjs                       # 6 顆魂環 PNG (public/a
   - 透明像素直接停 BFS（**不**跨越），保護已被去背的主體
   - halo cleanup pass 走完 flood-fill 後形態學清理孤立 partial-alpha
   - 跑完 audit：`opaque%` 不應該大幅下降（>15% drop = 主體被吃，restore backup 重來）
+- **244 隻擴充批次(階段 5/6 期間)**:從 50 隻起家擴到 294 隻全部走同一條 pipeline:MJ → iOS Lift Subject 手工去背 → flood-fill 補殘留 → hole-fill 補主體內部漏洞 → resize 256×256。中間踩過幾個雷:
+  - **pinyin → slug 一致性**:`creatures.ts` 的 id 跟 `public/sprites/<id>.png` 必須完全對齊。早期批次有把「之」拼成 zhi vs jhih 不一致導致圖載不到 → 用 PR description 表格雙向核對
+  - **hole-fill 不能太貪**:主體內部一些深色細節(如黑龍鱗縫)alpha 介於 100-200,被 hole-fill 誤判為透明孔洞填回不透明 → 改用「只填面積 < 200 px 且四鄰全是 opaque」的 conservative pass
+  - **批次處理時 sharp 記憶體爆**:`npm run process:ui-assets` 一次處理 200+ PNG 會吃 8GB+,要改 chunked(每批 20 隻)+ `sharp.cache(false)`
 
 ---
 
@@ -141,6 +165,7 @@ node scripts/process-rings.mjs                       # 6 顆魂環 PNG (public/a
 | 13 | 深度消耗管道(階段 4C)資料層:Pet 加 `isEternal?: boolean` / `eternalDate?: number` / `finalEffect?: RingEffect`(4C.2 永恆紀念);新增 `creatureUnlocks` 表(4C.3 圖鑑故事解鎖,`++id, &creatureId` 唯一索引防重複) | upgrade callback backfill 舊 pet `isEternal=false`;eternalDate / finalEffect 不 backfill;`creatureUnlocks` 是新表自然空 |
 | 14 | **重大修正** pets 加 `speciesId` 二級索引 — `portfolio.ts buyOrFeed` 走 `db.pets.where('speciesId').equals(...).count()` 判定「第一次召喚物種」,但 v5 拔 tier 那次把 pets index 改成 `'id, code, retiredAt'` 漏掉 speciesId,結果 Excel 匯入(整批走 buyOrFeed 新檔路徑)全部 throw「KeyPath speciesId on object store pets is not indexed」 | no-op data upgrade(只重建 index,神獸 / 持倉 / 修為全保留)|
 | 15 | 歷史日收盤價快取 — 新增 `historicalPrices` 表(`[code+date]` compound primary key + `code` / `date` 二級索引),給階段 5H 的 `rebuildDailySnapshots` 用真實歷史價回推累積報酬率 / 月度損益曲線 | no-op upgrade(純加新表,IndexedDB 自動建)|
+| 16 | Settings 拔掉 4 個 legacy 欄位:`playerName`(改用雲端 `user_profile.nickname`)、`lastLoginDate` / `consecutiveDays` / `maxConsecutiveDays`(改用 `LoginStreak` table)。`login.ts:migrateLegacyFromSettings` helper 一併拔除,舊玩家有充分時間升級過,沒升的 LoginStreak 從零起算 | upgrade callback `tx.table('settings').toCollection().modify(s => { delete s.playerName; ...})` 走訪每筆 settings delete 4 欄位 |
 
 新增 schema 升級時，務必在 `src/db/schema.ts` 用 `version(N).upgrade(...)` 寫 migration，不要直接改 type 然後爆用戶資料。
 

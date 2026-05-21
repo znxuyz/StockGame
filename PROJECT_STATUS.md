@@ -15,6 +15,7 @@
 | 台股上市 / 上櫃 / ETF 報價 | ✅ |
 | 買入 / 加碼 / 賣出（含手續費 + 證交稅） | ✅ |
 | 寵物境界進化 / 黑化 / 淨化（舊系統） | ❌ 2026-05 整套移除（v5 schema 拔欄位） |
+| 圖鑑 13 大世界觀分類 + 解鎖進度條 + 分類篩選 | ✅（階段 6.X 起 GameModal 圖鑑 tab） |
 | **三維度養成系統**：等級 Lv.1-999 / 魂環境界 6 階 / 魂環特效 5 種 | ✅（階段 1） |
 | **修為點數系統**：5 個來源 + HUD 💎 + 飄字 + 紀錄 tab + 雲端同步 | ✅（階段 2） |
 | **每日簽到 + 任務系統**：連登 + 里程碑 + 8 daily 池 + 7 weekly 池 + 11 emit 點 + toast + 紅點 | ✅（階段 3） |
@@ -31,8 +32,8 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 50 隻神獸（含立繪 art:true） | ✅（`creatures.ts`） |
-| 50 隻立繪 PNG（背景去乾淨） | ✅（`public/sprites/`，flood-fill 處理 4 隻整片殘留，46 隻保留原始去背狀態） |
+| 294 隻神獸（含立繪 art:true，跨 13 大世界觀） | ✅（`creatures.ts`，13 個 category：魔/自然/冥/海/佛/道/夢/夜/月宮/人/極北/心魔/虛無） |
+| 294 隻立繪 PNG（背景去乾淨） | ✅（`public/sprites/`，PNG 256×256，flood-fill / hole-fill 全 batch 處理） |
 | 2400×1600 大地圖（橫向 3:2） | ✅（`WORLD_WIDTH` / `WORLD_HEIGHT` in `scene.ts`） |
 | 神獸散布整個 world（拖 camera 探索） | ✅（`playableArea` world-relative） |
 | 攝影機可拖可縮（pinch / wheel） | ✅ |
@@ -65,7 +66,7 @@
 | 消耗管道:HUD 主題色 💎200 | ✅（`HudThemeSection` state-based 子頁 + 4 套 CSS 變數 + `[data-theme]`,階段 4B.3） |
 | 消耗管道:家園背景換皮 💎500 | ✅（`BackgroundSection` state-based 子頁 + `scene.setBackgroundId` 動態載入,階段 4B.4;美術 4 張全到位) |
 | 消耗管道:永恆紀念 💎2000 | ✅（`BestiaryPetDetail` state-based + `pet.isEternal/eternalDate/finalEffect` + `EternalCelebration`,階段 4C.2) |
-| 消耗管道:圖鑑故事解鎖 💎100 | ✅（`creatureUnlocks` 表 + 50 隻擴寫長版 story + 淡入動畫,階段 4C.3) |
+| 消耗管道:圖鑑故事解鎖 💎100 | ✅（`creatureUnlocks` 表 + 294 隻擴寫長版 story + 淡入動畫,階段 4C.3) |
 | 圖鑑列表視覺(✨ 永恆 / 📜 故事 角標) | ✅（階段 4C.4) |
 
 ### 每日簽到 + 任務系統(階段 3)
@@ -112,7 +113,7 @@
 
 | 項目 | 狀態 |
 |---|---|
-| 本機 IndexedDB（Dexie schema v13） | ✅ |
+| 本機 IndexedDB（Dexie schema v16） | ✅ |
 | 盤中自動更新（每 30s + 背景回前景補抓） | ✅（`silentRefresh` in `App.tsx`） |
 | 「上次更新時間」相對時間 + stale 警示 | ✅（`TopBar`） |
 | 雲端帳號（Apple / Google / Email+密碼） | ✅（Supabase auth；Magic Link 降級為密碼重設） |
@@ -157,6 +158,9 @@ Bundle (production gzip 估值):
 | v11 | Pet 加 `boostedDays?: number` / `effectBoostUntil?: number` optional(階段 4A.3 催熟 + 4A.4 淬煉,修為消耗管道)。upgrade backfill `boostedDays = 0` |
 | v12 | 進階消耗管道(階段 4B)資料層:Pet 加 `colorVariant?: PetColorVariant`(配色 5 選 1);Settings 加 `unlockedBackgrounds` / `currentBackground` / `hudTheme` / `unlockedHudThemes` 4 個 optional 欄位。upgrade backfill 全部 'default' |
 | v13 | 深度消耗管道(階段 4C)資料層:Pet 加 `isEternal?: boolean` / `eternalDate?: number` / `finalEffect?: RingEffect`(永恆紀念);新增 `creatureUnlocks` 表(`++id, &creatureId` 唯一索引防重複)。upgrade backfill 舊 pet `isEternal = false` |
+| v14 | **重大修正** pets 加 `speciesId` 二級索引 — v5 拔 tier 時遺漏,Excel 匯入走 buyOrFeed 新檔判定 throw `KeyPath speciesId on object store pets is not indexed`。no-op data upgrade(只重建 index) |
+| v15 | 歷史日收盤價快取 — 新增 `historicalPrices` 表(`[code+date]` compound primary key + `code` / `date` 二級索引),給階段 5H `rebuildDailySnapshots` 用真實歷史價回推累積報酬率 / 月度損益曲線。no-op upgrade |
+| v16 | Settings 拔掉 4 個 legacy 欄位:`playerName`(改用雲端 `user_profile.nickname`)、`lastLoginDate` / `consecutiveDays` / `maxConsecutiveDays`(改用 `LoginStreak` table)。upgrade callback 走訪 settings row delete 四欄位,讓 DB shape 跟新型別對齊。`login.ts:migrateLegacyFromSettings` helper 一併拔除 |
 
 ---
 
@@ -164,8 +168,8 @@ Bundle (production gzip 估值):
 
 | 想找什麼 | 看哪 |
 |---|---|
-| 神獸定義 | `src/data/creatures.ts`（50 隻原創上古神祇） |
-| 神獸長版背景故事 | `src/data/creatureStories.ts`（4C.3 用，xlsx 種子） |
+| 神獸定義 | `src/data/creatures.ts`（294 隻原創上古神祇，13 大分類） |
+| 神獸長版背景故事 | `src/data/creatureStories.ts`（4C.3 用，xlsx 種子，294 隻完整覆蓋） |
 | 成就定義 | `src/data/achievements.ts` |
 | 等級計算 (Lv.1-999) | `src/services/evolution.ts`（精簡為 calculateLevel） |
 | 三維度養成計算器 | `src/services/petTier.ts`（getRealm / getRingEffect / getPetStatus / upgradeEffect / naturalEffect 拆分） |
@@ -211,7 +215,7 @@ Bundle (production gzip 估值):
 ```
 
 ```
-docs/art-prompts.md（50 個 MJ URL）
+docs/art-prompts.md（294 個 MJ URL）
     ↓ npm run download:sprites（user 本機）
 public/sprites/<id>.png
     ↓（用 iOS Lift Subject 等手工去背,輸出 PNG with transparent ring）
@@ -238,14 +242,14 @@ PWA / favicon 上線
 
 ### 阻塞
 
-無。50 隻立繪已全進 repo，背景已清乾淨。
+無。294 隻立繪已全進 repo，背景已清乾淨。
 
 ### 非阻塞 / 設計取捨
 
 - **碰撞靠軟性方案**（多圓形 body shape + tween bounce），未上 Arcade Physics。實機觀察一週，若還會擠再升級
 - **拖曳神獸不支援**（user 決議）— 只能自由漫遊
 - **iOS 不支援 `navigator.vibrate`** — 只 Android Chrome / 桌機 Chromium 會震
-- **舊用戶 IndexedDB**：v1 → ... → v13 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
+- **舊用戶 IndexedDB**：v1 → ... → v16 都用 Dexie upgrade callback 保留資料，但若用戶 IndexedDB 從未升過（極舊版本）可能要清資料重來
 - **多裝置衝突**：cloudSync 用 blob-level pull-overwrites-local，沒做 field-level merge。雲端 SCHEMA_VERSION 1 → 4，舊 blob pull 後本地對應表歸零。若兩裝置同時操作可能互蓋（cultivation / streak / tasks / 4B 主題背景 / 4C 永恆 / creatureUnlocks 都受影響），要做 cross-device 即時同步需加 polling + 各 field 的合理 merge 策略（lifetime_earned / lifetimeLogins 取 max，task progress 同 taskKey 取大）
 - **iOS Safari `backdrop-filter` containing block 雷**：任何 element 套 `backdrop-filter` 在 iOS 上會變成 fixed 子孫的 containing block。nested Modal（Modal in Modal）會被鎖進 outer modal box 而非 viewport。目前已知 PetInfoModal 的 sub-action modals（RenameModal/BoostRealmModal/TemperRingModal/ColorVariantModal）仍是 nested 結構，理論上踩雷但 user 沒 report，未拆。**新加子頁一律用 state-based view 模式**（參考 SettingsModal / Bestiary）
 - **Magic link redirect**：Supabase 設定的 Site URL + Redirect URLs 是 hard-coded，新增部署環境（例如 staging）要去 Supabase dashboard 加
