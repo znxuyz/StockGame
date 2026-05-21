@@ -14,15 +14,16 @@
  *     - hudTheme / unlockedHudThemes               HUD 主題(花修為解鎖)
  *
  *  ❌ 不上雲(本機 Dexie 才有,Supabase 表沒這些欄位):
- *     - consecutiveDays / maxConsecutiveDays /
- *       lastLoginDate                              連登 → 階段 3D 搬 loginStreakRepo
  *     - lastPriceUpdateAt / lastSnapshotDate        本機同步狀態,每裝置各自記
  *     - createdAt                                   帳戶元資料,沒必要跨裝置
- *     - playerName                                  deprecated,改用 user_profile.nickname
+ *
+ *  (階段 6.X Dexie v16 起 `playerName` / `lastLoginDate` / `consecutiveDays` /
+ *   `maxConsecutiveDays` 四個 legacy 欄位已從型別拔除 — 連登搬 LoginStreak,
+ *   暱稱搬 user_profile.nickname。)
  *
  *  toRemote 用白名單(只送上面 ✅ 的欄位)避免發 unknown column 給 PostgREST。
- *  toLocal 回 merge with `existingLocal`,雲端只覆蓋外觀欄位,本機既有的連登
- *  / lastLoginDate 等保留。
+ *  toLocal 回 merge with `existingLocal`,雲端只覆蓋外觀欄位,本機既有的同步
+ *  狀態 / createdAt 保留。
  *
  *  ⚠️ 在 toRemote 加新欄位前,務必先在 Supabase `user_settings` 表 ALTER ADD
  *     COLUMN(否則 PostgREST schema cache 找不到欄位,寫入會 throw 卡住整個
@@ -103,8 +104,7 @@ interface RemoteSettings {
 
 /**
  * 雲端 → 本機。`existingLocal` 提供「本機限定欄位」的當前值
- * (連登 / lastLoginDate / lastPriceUpdateAt / lastSnapshotDate / createdAt /
- * playerName / consecutiveDays / maxConsecutiveDays),merge 保留之。
+ * (lastPriceUpdateAt / lastSnapshotDate / createdAt),merge 保留之。
  *
  * 沒 `existingLocal`(極罕見:本機 Dexie 是空的且全新註冊)→ 用 Dexie schema
  * 預設值(從 seed.ts 對齊)。
@@ -115,9 +115,7 @@ function toLocal(remote: RemoteSettings, existingLocal: Settings | undefined): S
     brokerageFeeDiscount: 1.0,
     brokerageMinFee: 20,
     soundEnabled: true,
-    createdAt: Date.now(),
-    consecutiveDays: 0,
-    maxConsecutiveDays: 0
+    createdAt: Date.now()
   };
   return {
     ...baseline,

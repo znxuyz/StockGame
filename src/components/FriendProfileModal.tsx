@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSettings } from '@/repositories/settingsRepo';
+import { useLoginStreak } from '@/repositories/loginStreakRepo';
 import Modal from './Modal';
 import { ProfileAvatar } from './ProfileEditModal';
 import FriendPortfolioView from './FriendPortfolioView';
@@ -182,9 +182,10 @@ function FriendProfileBody({
   const seen = formatLastSeen(profile.lastSeenAt);
 
   // 我自己的 lifetime / streak / 神獸 — 給「我 vs 他」用
+  // 階段 3D 起 streak 來源從 Settings(deprecated)改成 LoginStreak
   const myCult = useCultivation();
-  const settings = useSettings();
-  const myConsecutiveDays = settings?.consecutiveDays ?? 0;
+  const myStreak = useLoginStreak();
+  const myConsecutiveDays = myStreak?.currentStreak ?? 0;
 
   // 展示神獸:對方有自選 → 用它;沒選 → fallback 對方等級最高 3 隻
   const showcaseIds = useMemo(() => {

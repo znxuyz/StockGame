@@ -346,6 +346,38 @@ export class StockGameDB extends Dexie {
     this.version(15).stores({
       historicalPrices: '[code+date], code, date'
     });
+
+    /**
+     * v16:Settings 拔掉 4 個 legacy 欄位(階段 6.X 收尾)。
+     *
+     *   - `playerName`:階段 5A.2 起改用雲端 `user_profile.nickname`,
+     *     `createProfileIfNeeded` 早已不讀 settings.playerName(fallback 預設
+     *     「修仙者#XXXX」)。舊玩家有充分時間升級。
+     *   - `lastLoginDate` / `consecutiveDays` / `maxConsecutiveDays`:階段
+     *     3D 批 1 起改用 `LoginStreak` table。舊 `login.ts:migrateLegacyFromSettings`
+     *     早已把資料搬完,本次 v16 連 helper 也一併刪除。
+     *
+     * stores 不變(IndexedDB document store 對拔欄位不需 schema 改);純粹用
+     * upgrade callback 走訪 settings row delete 4 個欄位,讓 DB shape 跟新
+     * 型別對齊,避免 stale 資料 leak 到 cloud blob 同步。
+     *
+     * 還沒升級過的舊玩家(極少數)— LoginStreak 從零起算;profileService 第一
+     * 次建 user_profile 就用預設暱稱。可接受。
+     */
+    this.version(16)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('settings')
+          .toCollection()
+          .modify((s) => {
+            const r = s as Record<string, unknown>;
+            delete r.playerName;
+            delete r.lastLoginDate;
+            delete r.consecutiveDays;
+            delete r.maxConsecutiveDays;
+          });
+      });
   }
 }
 

@@ -12,29 +12,8 @@ export interface Settings {
   lastPriceUpdateAt?: number;
   /** 上次每日快照寫入日期 YYYY-MM-DD */
   lastSnapshotDate?: string;
-  /**
-   * @deprecated 階段 5A.2 起改用雲端 `user_profile.nickname` 統一管理玩家名稱。
-   * 欄位保留不刪以相容舊資料;`createProfileIfNeeded` 第一次建 user_profile
-   * 時會把這個值寫入新的 nickname,之後 SettingsModal 不再顯示 / 寫入此欄位。
-   */
-  playerName?: string;
   /** 帳戶建立時間（成就：週年） */
   createdAt: number;
-  /**
-   * @deprecated 階段 3D 批 1 起改用 `LoginStreak.lastLoginDate`。
-   * `login.ts:migrateLegacyFromSettings` 第一次 boot 後把這欄位的舊值搬到
-   * LoginStreak,之後本欄位 stale 不再更新。階段 3D 批 2 後從型別刪除。
-   */
-  lastLoginDate?: string;
-  /**
-   * @deprecated 階段 3D 批 1 起改用 `LoginStreak.currentStreak`。
-   * 同 lastLoginDate 的搬遷策略。
-   */
-  consecutiveDays: number;
-  /**
-   * @deprecated 階段 3D 批 1 起改用 `LoginStreak.longestStreak`。
-   */
-  maxConsecutiveDays: number;
   /**
    * 階段 4B.4:已解鎖的家園背景 id 清單。預設 ['default'],
    * 每張新背景花 500 修為解鎖一次,append 進此 array,後續切換不再扣費。

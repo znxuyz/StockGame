@@ -651,9 +651,7 @@ function settingsFromRemote(r: {
     brokerageFeeDiscount: 1.0,
     brokerageMinFee: 20,
     soundEnabled: true,
-    createdAt: Date.now(),
-    consecutiveDays: 0,
-    maxConsecutiveDays: 0
+    createdAt: Date.now()
   };
   return {
     ...baseline,

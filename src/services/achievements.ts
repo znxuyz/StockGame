@@ -19,6 +19,7 @@ import { holdingRepo } from '@/repositories/holdingRepo';
 import { petRepo } from '@/repositories/petRepo';
 import { transactionRepo } from '@/repositories/transactionRepo';
 import { achievementRepo } from '@/repositories/achievementRepo';
+import { loginStreakRepo } from '@/repositories/loginStreakRepo';
 import type {
   AchievementProgress,
   Holding,
@@ -45,6 +46,8 @@ interface AchievementContext {
   sellTxns: Transaction[];
   summary: PortfolioSummary;
   settings: Settings;
+  /** 連登歷史最長天數(階段 6.X 起從 LoginStreak 拿,不再 settings.maxConsecutiveDays) */
+  longestStreak: number;
 }
 
 interface EvaluatorOutput {
@@ -138,10 +141,10 @@ const EVALUATORS: Record<string, Evaluator> = {
   },
 
   // 長期類
-  'login-7': (c) => threshold(c.settings.maxConsecutiveDays, 7),
-  'login-30': (c) => threshold(c.settings.maxConsecutiveDays, 30),
-  'login-100': (c) => threshold(c.settings.maxConsecutiveDays, 100),
-  'login-365': (c) => threshold(c.settings.maxConsecutiveDays, 365),
+  'login-7': (c) => threshold(c.longestStreak, 7),
+  'login-30': (c) => threshold(c.longestStreak, 30),
+  'login-100': (c) => threshold(c.longestStreak, 100),
+  'login-365': (c) => threshold(c.longestStreak, 365),
   'hold-1y': (c) => maxHoldDays(c, 365),
   'hold-3y': (c) => maxHoldDays(c, 1095),
   'diamond-hand': (c) => diamondHand(c, 1825),
@@ -249,7 +252,7 @@ export interface AchievementCheckResult {
 export async function runAchievementChecks(
   now: number = Date.now()
 ): Promise<AchievementCheckResult> {
-  const [holdings, activePets, allPets, prices, transactions, settings, summary] =
+  const [holdings, activePets, allPets, prices, transactions, settings, summary, loginStreak] =
     await Promise.all([
       holdingRepo.list(),
       petRepo.listActive(),
@@ -257,7 +260,8 @@ export async function runAchievementChecks(
       db.prices.toArray(),
       transactionRepo.list(),
       settingsRepo.get(),
-      computeSummary()
+      computeSummary(),
+      loginStreakRepo.get()
     ]);
 
   if (!settings) return { newlyUnlocked: [] };
@@ -273,7 +277,8 @@ export async function runAchievementChecks(
     feedTxns: transactions.filter((t) => t.type === 'feed'),
     sellTxns: transactions.filter((t) => t.type === 'sell'),
     summary,
-    settings
+    settings,
+    longestStreak: loginStreak?.longestStreak ?? 0
   };
 
   // monthly streak 特殊處理：從 snapshots 算
