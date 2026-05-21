@@ -235,6 +235,23 @@ class DexiePetRepo implements PetRepository {
 const REVALIDATE_INTERVAL_MS = 10_000;
 let lastRevalidateAt = 0;
 
+/**
+ * **scheduleRevalidate race 防護**(階段 6.X)
+ *
+ * 模組級 set,追蹤目前正在上傳到雲端的 pet id。流程:
+ *   T=0   tx 寫本機 pet level 11
+ *   T=0.1 tx.on('complete') 觸發 uploadOne → 把 id 加進 inflightPetUploads
+ *   T=0.2 useLiveQuery 再 fire → list() → scheduleRevalidate
+ *   T=0.3 revalidate 拉雲端(尚未收到 11,還是 10)
+ *   T=0.4 revalidate bulkPut **過濾掉 inflightPetUploads 內的 id**,
+ *         避免把剛寫的 11 蓋回 10
+ *   T=0.5 uploadOne 完成 → 從 set 移除
+ *
+ * 比 holdingRepo 的 lastTransactionAt 比對更通用:Pet 沒 updatedAt 欄位,
+ * 用 inflight set 不需動 TS / schema,純運行時防護。
+ */
+const inflightPetUploads = new Set<string>();
+
 class CloudFirstPetRepo implements PetRepository {
   count(): Promise<number> {
     return db.pets.count();
@@ -358,15 +375,25 @@ class CloudFirstPetRepo implements PetRepository {
 
   // ─ private ─
 
+  /**
+   * 雲端 upsert + 同步維護 inflightPetUploads(race 防護用)。
+   * 雲端寫入過程中該 pet id 在 set 內,scheduleRevalidate 會跳過,避免
+   * 用 stale 雲端值覆蓋本機剛寫的值。
+   */
   private async uploadOne(pet: Pet, userId: string): Promise<void> {
-    const { error } = await supabase
-      .from('pets')
-      .upsert(toRemote(pet, userId), { onConflict: 'id' });
-    // **23505 修正**:之前 swallow 全部 23505 視為 OK,但 NULLS NOT DISTINCT
-    // 撞 UNIQUE (user_id, custom_name) 也是 23505 — 真實同步失敗變看不見。
-    // 改 only swallow when conflict 是預期的(by PK id,upsert 該成功),其他
-    // 一律 throw 給 caller 處理 rollback / toast。
-    if (error) throw new Error(`${error.code ?? '?'} ${error.message}`);
+    inflightPetUploads.add(pet.id);
+    try {
+      const { error } = await supabase
+        .from('pets')
+        .upsert(toRemote(pet, userId), { onConflict: 'id' });
+      // **23505 修正**:之前 swallow 全部 23505 視為 OK,但 NULLS NOT DISTINCT
+      // 撞 UNIQUE (user_id, custom_name) 也是 23505 — 真實同步失敗變看不見。
+      // 改 only swallow when conflict 是預期的(by PK id,upsert 該成功),其他
+      // 一律 throw 給 caller 處理 rollback / toast。
+      if (error) throw new Error(`${error.code ?? '?'} ${error.message}`);
+    } finally {
+      inflightPetUploads.delete(pet.id);
+    }
   }
 
   /**
@@ -452,11 +479,20 @@ class CloudFirstPetRepo implements PetRepository {
 
       // 雲端有 → bulkPut 進本機(by uuid id idempotent;merge with existing
       // 保留 lastRealmCheck / lastEffectCheck 純本機 UI 欄位)
+      //
+      // **race 防護**(階段 6.X):若某 pet id 正在 uploadOne(in tx.on complete
+      // 內、雲端還沒 ack),scheduleRevalidate 拉到的雲端值會是舊的。跳過該
+      // pet 避免把剛寫的等級 / customName / colorVariant 等蓋回。uploadOne
+      // 完成後從 set 移除,下一輪 revalidate 自然同步。
       const localById = new Map<string, Pet>();
       for (const p of await db.pets.toArray()) localById.set(p.id, p);
 
-      const localEntries = (data as RemotePet[]).map((r) => toLocal(r, localById.get(r.id)));
-      await db.pets.bulkPut(localEntries);
+      const localEntries = (data as RemotePet[])
+        .filter((r) => !inflightPetUploads.has(r.id))
+        .map((r) => toLocal(r, localById.get(r.id)));
+      if (localEntries.length > 0) {
+        await db.pets.bulkPut(localEntries);
+      }
     } catch (e) {
       console.warn('[petRepo] revalidate failed:', e);
     }
