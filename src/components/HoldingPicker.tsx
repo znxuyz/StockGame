@@ -13,8 +13,10 @@ interface HoldingPickerProps {
 }
 
 /**
- * 持倉清單下拉式選擇器（用於加碼/賣出彈窗）。
- * 顯示神獸 emoji + 名稱 + 股數 + 均價，方便玩家選對股票。
+ * 持倉清單下拉式選擇器(用於加碼/賣出彈窗)。
+ * 顯示神獸立繪 + 名稱 + 股數 + 均價,方便玩家選對股票。
+ *
+ * 階段 6.X:從 emoji 改成 sprite img(同圖鑑視覺),img 載失敗才 fallback emoji。
  */
 export default function HoldingPicker({ value, onChange, emptyMessage }: HoldingPickerProps) {
   const holdings = useRecentHoldings();
@@ -48,7 +50,29 @@ export default function HoldingPicker({ value, onChange, emptyMessage }: Holding
               selected ? 'item-card-selected' : ''
             } w-full text-left px-3 py-2 flex items-center gap-3 transition-colors active:scale-[0.99]`}
           >
-            <span className="text-2xl shrink-0">{species?.emoji ?? '❓'}</span>
+            {/* 階段 6.X:神獸立繪取代 emoji。img 載失敗 → 切回 emoji fallback */}
+            <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+              {species?.art ? (
+                <>
+                  <img
+                    src={`/sprites/${species.id}.png`}
+                    alt={species.name}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement;
+                      img.style.display = 'none';
+                      const fb = img.nextElementSibling as HTMLElement | null;
+                      if (fb) fb.style.display = 'inline';
+                    }}
+                  />
+                  <span className="text-2xl" style={{ display: 'none' }}>
+                    {species.emoji}
+                  </span>
+                </>
+              ) : (
+                <span className="text-2xl">{species?.emoji ?? '❓'}</span>
+              )}
+            </div>
             <div className="flex-1 min-w-0 text-sm">
               <div className="font-bold">
                 {stock?.name ?? h.code}

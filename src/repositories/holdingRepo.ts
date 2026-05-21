@@ -308,8 +308,17 @@ class CloudFirstHoldingRepo implements HoldingRepository {
       }
 
       // 雲端有資料 → merge 進本機(保留本機-only 條目,避免 race / 過渡期誤刪)
+      // **race fix(階段 6.X)**:用 lastTransactionAt 偵測本機是否較新
+      // (剛 buyOrFeed 完,雲端 upload 還在 in-flight,雲端 row 仍是舊值;
+      // 此時若直接覆蓋本機,會把使用者剛加碼的 21 股蓋回 16 股)。
+      // 本機 lastTransactionAt > 雲端 → skip,讓 pendingSync drain 補推上雲。
       for (const row of data as RemoteHolding[]) {
         const existing = await db.holdings.get(row.code);
+        const remoteTs = Date.parse(row.last_transaction_at);
+        if (existing && existing.lastTransactionAt > remoteTs) {
+          // 本機較新,保留(等 pendingSync drain 把本機推上雲)
+          continue;
+        }
         await db.holdings.put(toLocal(row, existing));
       }
     } catch (e) {

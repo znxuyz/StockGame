@@ -80,12 +80,16 @@ export default defineConfig({
           }
         },
         // ── 神獸立繪:幾乎不變,CacheFirst 30 天
+        //   階段 6.X:294 隻 sprite → maxEntries 100 → 300(原 100 會 LRU 淘汰部分立繪)
+        //   cacheName v1 → v2:強制 SW 重新抓所有 sprite(配合 cleanupOutdatedCaches
+        //   會清掉舊 sprites-cache,新 sprites-cache-v2 從頭填,避免舊版 SW 殘留
+        //   「該 sprite 不存在」的 negative cache)
         {
           urlPattern: /\/sprites\/.*\.png$/,
           handler: 'CacheFirst',
           options: {
-            cacheName: 'sprites-cache',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }
+            cacheName: 'sprites-cache-v2',
+            expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 }
           }
         },
         // ── 場景背景 / 按鈕 / 粒子貼圖:CacheFirst 7 天
