@@ -210,6 +210,44 @@ BottomBar 高度,任何裝置都對齊。
 
 ---
 
+## 啟動封面 splash(階段 6.Y)
+
+App mount 一律先 render `<SplashScreen />` 全螢幕蓋住底下任何 UI,
+避免「閃舊畫面 / 中途跳版本」。封面圖在 `public/cover.png`(816×1456 直式),
+object-cover 全螢幕填滿。
+
+### bootProgress 6 個 step(總和 100,全部完成才 ready)
+
+| step id        | 權重 | 在哪 markStep                                                       |
+|---------------|----:|--------------------------------------------------------------------|
+| `db-init`     |  10 | `App.tsx` seedIfEmpty 完成                                          |
+| `local-init`  |  15 | `App.tsx` checkInLoginToday + runAchievementChecks + backfillSnapshots 跑完 |
+| `pwa-ready`   |  15 | `PwaUpdatePrompt` SW 第一次 update check 結束(有 / 沒新版都算) |
+| `auth`        |  10 | `AuthGate` useAuth.loading=false                                    |
+| `cloud-sync`  |  35 | `Game` userId effect 內 forceFetchAllFromCloud 完成(沒登入 AuthGate 直接 mark) |
+| `post-login`  |  15 | `Game` userId effect 內 streak / tasks / profile 全跑完(沒登入 AuthGate 直接 mark) |
+
+新增初始化邏輯時:
+1. 看是不是該擋住玩家進主畫面的「關鍵步驟」 — 是的話歸進現有 step 之一
+2. 不是 → 後台 fire-and-forget,別新增 step(過多 step 會延遲玩家進入遊戲)
+3. 步驟失敗一律 `bootProgress.markStep('...')` 在 catch / finally,不阻塞 splash
+4. **30 秒 safety net** 是兜底,不是規律 — 別讓 step 真的卡到那麼久
+
+### PWA 新版偵測在 splash 階段的特別行為
+
+`PwaUpdatePrompt` 收 `splashActive` prop:
+
+- `splashActive=true` + onNeedRefresh → **不顯示提示卡**,直接
+  `bootProgress.setUpdating()` 讓 splash 顯「正在更新到最新版本…」
+  + `updateServiceWorker(true)` 觸發 skipWaiting + reload。重整後新
+  bundle 直接接手,新 boot 跑一輪 splash 才放玩家進去
+- `splashActive=false`(玩家已進主畫面)→ 沿用既有提示卡(更新 / 強制 / 稍後)
+
+⚠️ **不要**把新版偵測在 splash 階段就放玩家進去再彈提示 — 那會回到
+玩家最痛的「進場後突然跳更新」體驗,反而是 6.Y 要修的問題本身。
+
+---
+
 ## BottomBar + Modal 組織(階段 R 重構後)
 
 BottomBar 5 顆按鈕 + 各自 owning modal:

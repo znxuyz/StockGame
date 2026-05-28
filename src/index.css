@@ -578,6 +578,15 @@ button {
   animation: pwa-update-slide-down 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* SplashScreen「點擊任意處開始遊戲」呼吸動畫 */
+@keyframes splash-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.04); }
+}
+.splash-pulse {
+  animation: splash-pulse 1.8s ease-in-out infinite;
+}
+
 /* ── 第三方登入按鈕(SignInModal)── */
 /* Apple HIG:黑底白字、48px 高、圓角、圖示在前 */
 .apple-signin-btn {

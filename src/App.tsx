@@ -78,6 +78,8 @@ import PetInfoModal from '@/components/PetInfoModal';
 import Toast from '@/components/Toast';
 import InstallPrompt from '@/components/InstallPrompt';
 import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
+import SplashScreen from '@/components/SplashScreen';
+import { bootProgress } from '@/services/bootProgress';
 import PasswordRecoveryModal from '@/components/PasswordRecoveryModal';
 import SignInModal from '@/components/SignInModal';
 import ProfileEditModal from '@/components/ProfileEditModal';
@@ -120,6 +122,14 @@ type ModalKind =
 export default function App() {
   const [ready, setReady] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
+  /**
+   * 階段 6.Y:全螢幕封面 splash gate。
+   *  - 啟動時一律先 render splash 蓋住底下任何 UI(避免「閃舊畫面」)
+   *  - bootProgress 6 step 全部完成 → splash 顯「點擊任意處開始遊戲」
+   *  - 玩家點擊 → splashDismissed=true → splash fade out 後從 tree 拿掉
+   *  - PWA 偵測到新版會在 splash 階段無感套用,reload 後重新跑 splash
+   */
+  const [splashDismissed, setSplashDismissed] = useState(false);
 
   useEffect(() => {
     // 階段 3D 緊急修復:**每一個 init 步驟獨立 try/catch**,任一失敗只 warn,
@@ -127,6 +137,9 @@ export default function App() {
     // 唯一會 setSeedError 的是 seedIfEmpty 本身 throw(Dexie 開不起來 — catastrophic)。
     seedIfEmpty()
       .then(async () => {
+        bootProgress.markStep('db-init');
+        setReady(true);
+
         try { await checkInLoginToday(); }
         catch (e) { console.warn('[init] checkInLoginToday failed:', e); }
 
@@ -143,15 +156,21 @@ export default function App() {
         checkAndRebuildIfNeeded().catch((e) =>
           console.warn('[historyBootstrap] failed:', e)
         );
-        setReady(true);
+
+        bootProgress.markStep('local-init');
       })
-      .catch((e) => setSeedError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => {
+        setSeedError(e instanceof Error ? e.message : String(e));
+        // 失敗也要解除 splash 卡死(不過 seedError UI 會 short-circuit 在 splash 之前)
+        bootProgress.markStep('db-init');
+        bootProgress.markStep('local-init');
+      });
   }, []);
 
   if (seedError) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-sand-100 p-6">
-        <PwaUpdatePrompt />
+        <PwaUpdatePrompt splashActive={false} />
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           初始化失敗：{seedError}
         </div>
@@ -159,21 +178,17 @@ export default function App() {
     );
   }
 
-  if (!ready) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-sand-100 text-gray-500">
-        <PwaUpdatePrompt />
-        資料庫初始化中⋯
-      </div>
-    );
-  }
-
   return (
     <>
-      <PwaUpdatePrompt />
-      <AuthGate>
-        <Game />
-      </AuthGate>
+      <PwaUpdatePrompt splashActive={!splashDismissed} />
+      {ready && (
+        <AuthGate>
+          <Game />
+        </AuthGate>
+      )}
+      {!splashDismissed && (
+        <SplashScreen onStart={() => setSplashDismissed(true)} />
+      )}
     </>
   );
 }
@@ -199,6 +214,22 @@ let authBypassWarned = false;
 
 function AuthGate({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
+
+  /**
+   * 階段 6.Y:把 splash 的 'auth' / 'cloud-sync' / 'post-login' 三個 step
+   * 在這層適當時機 mark done。
+   *  - auth resolved(loading=false)→ markStep('auth')
+   *  - 沒登入 / 雲端沒設定 → 後兩個 step 也跳過,splash 才不會永遠等不到 100%
+   *    (有 session 時這兩個 step 由 Game 內 forceFetchAllFromCloud / post-login chain 自己 mark)
+   */
+  useEffect(() => {
+    if (loading) return;
+    bootProgress.markStep('auth');
+    if (!isCloudConfigured || !session) {
+      bootProgress.markStep('cloud-sync');
+      bootProgress.markStep('post-login');
+    }
+  }, [loading, session]);
 
   if (!isCloudConfigured) {
     if (!authBypassWarned) {
@@ -561,6 +592,8 @@ function Game() {
       } catch (e) {
         console.warn('[init] forceFetchAllFromCloud failed:', e);
       }
+      // splash 'cloud-sync' step done(成敗都 mark,避免卡住封面)
+      bootProgress.markStep('cloud-sync');
 
       try {
         const after = await checkAndUpdateStreak();
@@ -596,6 +629,10 @@ function Game() {
       } catch (e) {
         console.warn('[init] stage 5E initial sync failed:', e);
       }
+
+      // splash 'post-login' step done — 此時 streak / tasks / profile / privacy
+      // / 排行榜快照都已就緒,封面進度可到 100%
+      bootProgress.markStep('post-login');
 
       initialSyncDoneForUserRef.current = userId;
     })();

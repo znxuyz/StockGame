@@ -1,42 +1,79 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { bootProgress } from '@/services/bootProgress';
 
 /**
- * PWA 自動更新提示。
+ * PWA 自動更新提示 + 啟動階段 SW 狀態 gate(階段 6.Y 補)。
  *
- * 流程:
- *  1. vite-plugin-pwa 註冊 Service Worker(`registerType: 'autoUpdate'`)。
- *  2. 每 30 分鐘呼叫 `swReg.update()` 檢查雲端有沒有新版 SW。
- *  3. 偵測到新版時 SW 會進 waiting 狀態,觸發 `onNeedRefresh` → 顯示提示。
- *  4. 玩家按「更新」→ `updateServiceWorker(true)`(觸發 skipWaiting + reload)。
- *     按「稍後」→ 不打擾,下次開 APP 又會跳。
+ * 兩種模式由 `splashActive` 切換:
  *
- * iOS Safari 特別處理:
- *  - iOS Safari 對 SW update 不一定買單,有時 `updateServiceWorker` 後仍拿舊版
- *  - 「強制重整」按鈕清掉所有 caches + unregister 全部 SW + reload
- *    當作給黏死在舊版的 iOS 玩家的最後手段
+ *  1. **啟動階段(`splashActive=true`)**:不顯示提示卡。
+ *     - 若偵測到新版 SW(`onNeedRefresh`)→ 立刻 `updateServiceWorker(true)`
+ *       觸發 skipWaiting + reload,**頁面重整後新 bundle 直接接手**,玩家
+ *       不會在主畫面看到「新版可用」打擾
+ *     - `bootProgress.setUpdating()` 讓 splash 顯示「正在更新到最新版本…」
+ *       而非進度條(reload 前的 1-2 秒過渡)
+ *     - 第一次 update check 結束(無論有無新版)→ `bootProgress.markStep
+ *       ('pwa-ready')` unblock splash 進度
+ *
+ *  2. **遊戲中(`splashActive=false`)**:沿用原本 PrePrompt 行為。
+ *     - 30 分鐘 polling 抓到新版 → 顯示提示卡,玩家點「更新」/「強制」/「稍後」
+ *
+ * iOS Safari 特別處理(沿用):
+ *  - `updateServiceWorker` 後 iOS 偶爾仍拿舊版 → 「強制重整」按鈕清掉
+ *    所有 caches + unregister SW + reload
  *
  * 設計取捨:
- *  - skipWaiting=false(vite.config workbox 設定):不強制接管,等用戶按鈕
+ *  - skipWaiting=false(vite.config workbox):一般 in-session 不強制接管
+ *  - 但啟動階段 splash 在跑,**自動 apply 更新對玩家無感**,所以這時候 OK
+ *    主動觸發接管 + reload
  *  - clientsClaim=true:新 SW activate 後接管所有 tab,避免雙版本並存
  *  - 30 分鐘 polling:不浪費流量(只 fetch sw.js),足夠日常使用節奏
  */
-export default function PwaUpdatePrompt() {
+export default function PwaUpdatePrompt({ splashActive }: { splashActive: boolean }) {
   const [showPrompt, setShowPrompt] = useState(false);
+  /** 用 ref 鎖最新 splashActive,給 `onNeedRefresh` callback 看到 */
+  const splashActiveRef = useRef(splashActive);
+  useEffect(() => {
+    splashActiveRef.current = splashActive;
+  }, [splashActive]);
 
   const {
     needRefresh: [, setNeedRefresh],
     updateServiceWorker
   } = useRegisterSW({
     onNeedRefresh() {
+      if (splashActiveRef.current) {
+        // 啟動階段:無感套用,reload 後新 bundle 接手
+        bootProgress.setUpdating();
+        void updateServiceWorker(true).catch((e) => {
+          console.warn('[PWA] silent update failed during splash:', e);
+          // fallback:讓 splash 還是 unblock,玩家進遊戲再看提示
+          bootProgress.markStep('pwa-ready');
+          setShowPrompt(true);
+        });
+        return;
+      }
+      // 遊戲中:沿用提示卡
       setShowPrompt(true);
     },
     onOfflineReady() {
       console.info('[PWA] 已可離線使用');
+      bootProgress.markStep('pwa-ready');
     },
     onRegistered(swReg) {
       if (swReg) {
-        // 每 30 分鐘檢查一次新版 SW(只 fetch sw.js,流量極低)
+        // 第一次 update check:結果決定後才 unblock splash
+        // (有新版 → onNeedRefresh 先觸發 → reload;無新版 → finally 跑 markStep)
+        swReg
+          .update()
+          .catch(() => {
+            /* offline / 4xx 等 → 下次再試 */
+          })
+          .finally(() => {
+            bootProgress.markStep('pwa-ready');
+          });
+        // 每 30 分鐘檢查一次新版 SW(流量極低)
         setInterval(
           () => {
             swReg.update().catch(() => {
@@ -45,12 +82,23 @@ export default function PwaUpdatePrompt() {
           },
           30 * 60 * 1000
         );
+      } else {
+        // 不支援 / dev 模式 → 直接 unblock,別卡住 splash
+        bootProgress.markStep('pwa-ready');
       }
     },
     onRegisterError(err) {
       console.warn('[PWA] SW 註冊失敗:', err);
+      bootProgress.markStep('pwa-ready');
     }
   });
+
+  // **dev / 不支援 SW 的瀏覽器** safety net:3 秒沒任何 callback 觸發 →
+  // 假設 SW 機制不運作,unblock splash 別卡住玩家
+  useEffect(() => {
+    const t = setTimeout(() => bootProgress.markStep('pwa-ready'), 3000);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!showPrompt) return null;
 

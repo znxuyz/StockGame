@@ -1,5 +1,8 @@
 export { audio } from './audio';
 
+export { bootProgress, useBootProgress } from './bootProgress';
+export type { BootStepId, BootProgressSnapshot } from './bootProgress';
+
 export { buyOrFeed, sell } from './portfolio';
 export type { BuyParams, SellParams, ActionResult } from './portfolio';
 
