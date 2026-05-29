@@ -18,7 +18,20 @@
     left: 0;
     right: 0;
     z-index: 30;
-    padding: calc(10px + env(safe-area-inset-top)) 14px 8px;
+    /**
+     * 四向 padding 全部含 safe-area inset:
+     *   top    狀態列 / 瀏海 / 動態島
+     *   right  橫向時 notch 在右(iPhone 橫向)
+     *   left   橫向時 notch 在左
+     *   bottom 一般 8px,跟下排狀態列銜接
+     * 背景色 var(--hud-bg) 延伸到四周邊緣(fixed + inset 0 + 半透明 blur),
+     * 文字 / 圖示用 padding 壓回安全區,任何裝置都不會被瀏海蓋住。
+     */
+    padding:
+      calc(10px + env(safe-area-inset-top))
+      calc(14px + env(safe-area-inset-right))
+      8px
+      calc(14px + env(safe-area-inset-left));
     background: var(--hud-bg);
     backdrop-filter: blur(20px) saturate(140%);
     -webkit-backdrop-filter: blur(20px) saturate(140%);
@@ -67,7 +80,17 @@
     left: 0;
     right: 0;
     z-index: 60;
-    padding: 8px 8px calc(6px + env(safe-area-inset-bottom));
+    /**
+     * 四向 padding 含 safe-area inset:
+     *   bottom 含 home indicator 高度,5 顆按鈕在上面,iOS 手勢區不卡按鈕
+     *   left / right 橫向 notch 兩側讓字 / icon 退出來
+     * 背景色 inset 0 + blur 把家園背景糊成柔光襯底,5 顆按鈕始終在安全區內
+     */
+    padding:
+      8px
+      calc(8px + env(safe-area-inset-right))
+      calc(6px + env(safe-area-inset-bottom))
+      calc(8px + env(safe-area-inset-left));
     background: var(--hud-bg);
     backdrop-filter: blur(20px) saturate(140%);
     -webkit-backdrop-filter: blur(20px) saturate(140%);
@@ -143,7 +166,12 @@
       .hud-bottom 拉到 z-60 蓋在 popup 之上;popup 內 padding-bottom
       預留 BottomBar 高度,確保內容不被遮。
     */
-    top: 140px;
+    /**
+     * top 含 env(safe-area-inset-top):有瀏海 / 動態島時整個 popup 順勢
+     * 下移,跟 HUD 底緣保持一致的 50px 透氣空間。原本固定 140px 在
+     * iPhone X+ PWA 變成跟 HUD 重疊或太貼。
+     */
+    top: calc(140px + env(safe-area-inset-top));
     bottom: 0;
     left: 0;
     right: 0;
@@ -405,8 +433,14 @@
 }
 
 :root {
-  /* HUD 預估高度,PhaserMap 浮動按鈕用此值往下避讓(不含 safe-area,parent 層自動處理) */
-  --hud-height: 80px;
+  /**
+   * HUD 預估高度 — PhaserMap 浮動按鈕(更新 / 工具)放這值下面避讓 HUD。
+   * 80px 是底色 HUD 兩排 + padding 的視覺高度;safe-area-inset-top 自動加上,
+   * 才能在 iOS PWA 黑色狀態列底下也算對(瀏海 + 動態島 ~44-59px 那段也得算)。
+   * 沒有 inset 的環境(桌機 / Safari browser / Android Chrome 多數)env 回 0,
+   * 自然退回 80px。
+   */
+  --hud-height: calc(80px + env(safe-area-inset-top));
   /* 神話美學:預設襯線中文(Noto Serif TC),數字 / UI 小字另用 .font-zh class 切回無襯線 */
   font-family: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Noto Sans TC', serif;
   font-synthesis: none;
@@ -422,26 +456,45 @@ body,
   margin: 0;
   padding: 0;
   width: 100%;
+  /**
+   * 高度三層 fallback:
+   *  - 100% 給古早瀏覽器
+   *  - 100vh 給支援 viewport units 的瀏覽器
+   *  - 100dvh 是動態 viewport,Safari 工具列伸縮時跟著縮放,避免底部 BottomBar
+   *    被收起的工具列蓋住或多出米色空白
+   * 三層由 CSS 階層後者覆蓋,任何瀏覽器都拿到最合適的高度。
+   */
   height: 100%;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
-  /* 米紙底色,跟 manifest theme_color + Phaser 場景一致(PWA 啟動白屏才不會閃) */
-  background: #efe6cf;
+  /**
+   * 黑色當保底色:萬一 splash / HUD / BottomBar / Phaser canvas 之間有 1px 縫,
+   * 黑色比米色不刺眼,跟瀏海 / 動態島融合。Splash 自帶 bg-black + cover img
+   * 鋪滿,進場後玩家不會看到 body bg。
+   */
+  background: #000;
   color: #1a1a1a;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
 
 body {
-  /* iOS 安全區邊距 */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
   /**
-   * Body 鋪 main.JPG 當 HUD blur 來源 fallback:
-   *  - 正常情況 Phaser canvas 也有畫 main.JPG,HUD blur 的是 canvas
-   *  - 但 Phaser 還沒載入時 / canvas 透明區域,body bg 接住
-   *  - background-attachment: fixed 確保滾動時 bg 不動,blur 結果穩定
+   * **不**對 body 加 safe-area padding ── 那會讓 #root 從 notch 下方才開始,
+   * splash / HUD 的 fixed top:0 在某些 iOS Safari 版本被解讀成 body 邊緣而非
+   * viewport,封面 / HUD 就到不了真正螢幕頂(階段 6.Y 修)。
+   *
+   * 改成各組件層自己處理 safe-area:
+   *  - `.hud` padding-top 已含 env(safe-area-inset-top)
+   *  - `.hud-bottom` padding-bottom 已含 env(safe-area-inset-bottom)
+   *  - `.glass-popup` padding-bottom 已預留 safe-area + BottomBar
+   *  - SplashScreen 進度條 / start 文字 bottom 用 safe-area-inset-bottom
+   *
+   * 橫向 notch / Dynamic Island 兩側 inset 也在組件層補(landscape 才有值)。
+   *
+   * Body bg 圖留著當 HUD 玻璃 blur 的後幕(Phaser canvas 還沒載入時,blur
+   * 才不會糊一片黑)。
    */
   background-image: url('/assets/bg/main.JPG');
   background-size: cover;

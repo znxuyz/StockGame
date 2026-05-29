@@ -12,10 +12,14 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    <meta name="theme-color" content="#efe6cf" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="background-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- black-translucent:狀態列底色透明,讓 web 內容延伸進瀏海 / Dynamic Island 區
+         配合 env(safe-area-inset-*) padding 把文字壓回安全區內。
+         若用 default 系統會幫忙畫不透明米色狀態列,splash / HUD 永遠到不了真正頂端 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="神獸股市" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

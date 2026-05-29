@@ -46,8 +46,18 @@ export default function SplashScreen({ onStart }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[9000] bg-black select-none cursor-pointer"
+      className="fixed z-[9000] bg-black select-none cursor-pointer overflow-hidden"
       style={{
+        // 顯式四向 inset 0 + 100vw / 100dvh:配合 viewport-fit=cover +
+        // apple-mobile-web-app-status-bar-style=black-translucent,封面圖延伸
+        // 進瀏海 / Dynamic Island / home indicator 區,不留任何邊
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        width: '100vw',
+        height: '100dvh',
+        minHeight: '100vh',
         opacity: fadingOut ? 0 : 1,
         transition: 'opacity 240ms ease-out',
         pointerEvents: fadingOut ? 'none' : 'auto'
@@ -56,11 +66,12 @@ export default function SplashScreen({ onStart }: Props) {
       role="button"
       aria-label={showStartText ? '點擊開始遊戲' : '載入中'}
     >
-      {/* 封面圖:object-cover 全螢幕填滿,直式 816×1456 PWA portrait 完美對齊 */}
+      {/* 封面圖:object-cover 全螢幕填滿,直式 816×1456 PWA portrait 完美對齊。
+          不同螢幕比例下置中等比裁切,絕不變形;橫向時兩側裁掉露中段 */}
       <img
         src="/cover.png"
         alt=""
-        className="absolute inset-0 w-full h-full object-cover object-center"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
         draggable={false}
       />
 
@@ -74,11 +85,13 @@ export default function SplashScreen({ onStart }: Props) {
         }}
       />
 
-      {/* 進度條 / start 文字 區塊 */}
+      {/* 進度條 / start 文字 區塊 — bottom 含 safe-area-inset-bottom 避開 home indicator */}
       <div
         className="absolute left-0 right-0 px-8"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)'
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + clamp(32px, 8vh, 64px))',
+          paddingLeft: 'calc(2rem + env(safe-area-inset-left, 0px))',
+          paddingRight: 'calc(2rem + env(safe-area-inset-right, 0px))'
         }}
       >
         {updating ? (

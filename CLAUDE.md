@@ -248,6 +248,80 @@ object-cover 全螢幕填滿。
 
 ---
 
+## 全螢幕 / 安全區 / 跨裝置適配(階段 6.Y 補丁)
+
+### iOS PWA 必須 black-translucent
+
+`index.html`:
+```html
+<meta name="viewport" content="...viewport-fit=cover...">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+```
+
+`default` 會讓 iOS 在狀態列保留一條不透明米色 / 主題色橫條(即 manifest
+theme_color),splash / HUD 無論怎麼設 `top: 0` 都到不了真正螢幕頂緣 — 永
+遠有那條米色空白。`black-translucent` 才讓 web 內容延伸進瀏海 / Dynamic
+Island / home indicator 區。
+
+⚠️ trade-off:狀態列文字(時間 / 電池)在 black-translucent 下永遠白色。
+HUD 米白 bg + blur 下對比較弱但 iOS 系統會做一點自動 dim,實測可讀。
+**不要**為了「狀態列字看不清」改回 default,那樣會回到米色空白雷區。
+
+### 不對 body 加 safe-area padding
+
+```css
+/* ❌ 不要 */
+body { padding: env(safe-area-inset-top) ... ; }
+```
+
+那會把 #root 從瀏海下方才開始,splash / HUD 的 `fixed top:0` 在某些 iOS
+Safari 版本被誤解讀成 body 邊緣而非 viewport,封面 / HUD 怎麼設都到不了真正
+螢幕頂(6.Y 踩雷)。
+
+正確:body 不加 padding,各元件層自己 `padding-top: calc(... + env(safe-
+area-inset-top))`(已對 `.hud` / `.hud-bottom` / `.glass-popup` /
+`SplashScreen` 進度條全做了)。
+
+### 橫向 notch 也要顧
+
+iPhone 橫向時 notch / Dynamic Island 跑到左 OR 右側 →
+`env(safe-area-inset-left)` 或 `safe-area-inset-right` 變大。
+`.hud` / `.hud-bottom` 的 padding 四向都含 inset:
+
+```css
+padding:
+  calc(10px + env(safe-area-inset-top))
+  calc(14px + env(safe-area-inset-right))
+  8px
+  calc(14px + env(safe-area-inset-left));
+```
+
+任何裝置任何方向,文字 / icon 都退到安全區內。背景色靠 fixed + inset 0
+四邊鋪滿。
+
+### 高度用三層 fallback `100% → 100vh → 100dvh`
+
+```css
+height: 100%;     /* 古早瀏覽器 */
+height: 100vh;    /* 支援 viewport units */
+height: 100dvh;   /* iOS Safari 工具列伸縮跟著動,不留底部米色空白 */
+```
+
+不用 `min-height: 100vh` — overflow:hidden 環境下 vh 跟 dvh 差幾 px
+直接讓 BottomBar 從底部冒出米色縫。
+
+### --hud-height 含 safe-area-inset-top
+
+```css
+--hud-height: calc(80px + env(safe-area-inset-top));
+```
+
+`OfflineBanner` / `PhaserMap` 浮動按鈕用此值往下避讓 HUD;iPhone X+
+PWA HUD 含 inset 高 ~134px,沒含 inset 的 80px fallback 自然退回。
+`glass-popup` top 也是 `calc(140px + env(safe-area-inset-top))` 同理。
+
+---
+
 ## BottomBar + Modal 組織(階段 R 重構後)
 
 BottomBar 5 顆按鈕 + 各自 owning modal:
