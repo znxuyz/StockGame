@@ -89,14 +89,14 @@ export default function PrivacySettingsModal({
                 checked={data.portfolioAmountVisibility === 'hidden'}
                 onClick={() => commit({ portfolioAmountVisibility: 'hidden' })}
                 label="完全不顯示"
-                caption="只看比例,金額顯示「---」(預設)"
+                caption="只看比例,金額顯示「---」"
               />
               <VisibilityRadio
                 value="partial"
                 checked={data.portfolioAmountVisibility === 'partial'}
                 onClick={() => commit({ portfolioAmountVisibility: 'partial' })}
                 label="部分顯示"
-                caption="例:1234567 → 1*****7"
+                caption="例:1234567 → 1*****7(預設)"
               />
               <VisibilityRadio
                 value="full"

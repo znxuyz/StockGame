@@ -20,7 +20,7 @@ interface FriendPortfolioViewProps {
  */
 export default function FriendPortfolioView({ friendUserId }: FriendPortfolioViewProps) {
   const [items, setItems] = useState<FriendPortfolioItem[]>([]);
-  const [visibility, setVisibility] = useState<PortfolioVisibility>('hidden');
+  const [visibility, setVisibility] = useState<PortfolioVisibility>('partial');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function FriendPortfolioView({ friendUserId }: FriendPortfolioVie
     Promise.all([getFriendPortfolio(friendUserId), getFriendPrivacy(friendUserId)]).then(
       ([list, privacy]) => {
         setItems(list);
-        setVisibility(privacy?.portfolioAmountVisibility ?? 'hidden');
+        setVisibility(privacy?.portfolioAmountVisibility ?? 'partial');
         setLoading(false);
       }
     );

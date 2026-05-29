@@ -161,7 +161,9 @@ export async function getFriendPortfolio(userId: string): Promise<FriendPortfoli
     if (error) console.warn('[portfolioSync] getFriendPortfolio:', error.message);
     return [];
   }
-  const visibility = privacy?.portfolioAmountVisibility ?? 'hidden';
+  // 對方沒設定隱私 row(或讀取失敗)→ fallback 跟 DEFAULT_PRIVACY 對齊 'partial',
+  // 讓好友還能看到大致金額位數;以前是 'hidden' 整個遮成 "---" 太不友善
+  const visibility = privacy?.portfolioAmountVisibility ?? 'partial';
   const showDaily = privacy?.showDailyReturn ?? true;
   const showTotal = privacy?.showTotalReturn ?? true;
 

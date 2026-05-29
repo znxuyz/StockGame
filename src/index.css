@@ -510,10 +510,30 @@ body,
   overscroll-behavior: none;
 }
 
-/* splash 渲染時 body bg 自動切深色(跟封面圖頂緣 letterbox 融合);
-   splash unmount → selector 不命中 → body bg 退回米白。全 CSS,零 JS race */
+/**
+ * **splash 期間 body bg 切成 cover.png 本身**(階段 6.Z)
+ *
+ * 以前用 #0a0a14 dark 色填,玩家在 iOS PWA 看到瀏海是「黑色塊」,跟封面
+ * 連不起來。改用 `background-image: url('/cover.png')` 後,iOS 在
+ * black-translucent + viewport-fit=cover 內容延伸模式下,body 延伸到物理
+ * 螢幕邊緣,cover.png 像素**真的畫進瀏海 / Dynamic Island / home indicator**
+ * 區,跟 SplashScreen 主元素內的封面無縫連起來。
+ *
+ * 為什麼要 body 也畫一份(SplashScreen 主元素不夠嗎?)── 因為 iOS PWA
+ * 對「fixed inset:0 子元素」在系統 safe-area zone 的渲染行為不穩,有時會
+ * clip。body 的 background 在 black-translucent 模式下**保證**會延伸到
+ * 螢幕邊緣,作為「保底封面像素來源」。SplashScreen 主元素+body 都畫,
+ * 雙保險。
+ *
+ * `background-color: #0a0a14` 保留當 image 載入前 / 失敗的 fallback,
+ * 跟封面圖頂緣夜空色融合。
+ */
 body:has([data-splash-active]) {
-  background: #0a0a14;
+  background-color: #0a0a14;
+  background-image: url('/cover.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
 }
 
 body {
@@ -532,12 +552,17 @@ body {
    *
    * Body bg 圖留著當 HUD 玻璃 blur 的後幕(Phaser canvas 還沒載入時,blur
    * 才不會糊一片黑)。
+   *
+   * ⚠️ **拔掉 `background-attachment: fixed`** ── 部分 iOS WebKit 版本
+   * 把 fixed bg attachment 視為建立 containing block,連帶讓內部 position:
+   * fixed 子元素被「框」在 body 而非真正 viewport,splash / HUD 因此延伸
+   * 不到瀏海。改用 scroll(預設)沒影響(body overflow:hidden 沒 scroll)
+   * 卻能保留瀏海延伸正常運作(階段 6.Z)。
    */
   background-image: url('/assets/bg/main.JPG');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
 }
 
 button {

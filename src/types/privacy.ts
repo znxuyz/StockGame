@@ -30,9 +30,10 @@ export interface UserPrivacySettings {
   updatedAt: string;
 }
 
-/** 預設值 — 隱私優先,新用戶看不到金額但其他功能全開 */
+/** 預設值 — 「部分顯示」是 sweet spot:好友看到金額位數但不到精確值,
+ *  既保留炫耀基本盤又不過度曝光(新用戶想完全隱藏可再去隱私設定切 hidden) */
 export const DEFAULT_PRIVACY: Omit<UserPrivacySettings, 'userId' | 'updatedAt'> = {
-  portfolioAmountVisibility: 'hidden',
+  portfolioAmountVisibility: 'partial',
   showDailyReturn: true,
   showTotalReturn: true,
   joinLeaderboard: true,
