@@ -48,9 +48,6 @@ export default function SplashScreen({ onStart }: Props) {
     <div
       className="fixed z-[9000] bg-black select-none cursor-pointer overflow-hidden"
       style={{
-        // 顯式四向 inset 0 + 100vw / 100dvh:配合 viewport-fit=cover +
-        // apple-mobile-web-app-status-bar-style=black-translucent,封面圖延伸
-        // 進瀏海 / Dynamic Island / home indicator 區,不留任何邊
         top: 0,
         right: 0,
         bottom: 0,
@@ -66,12 +63,17 @@ export default function SplashScreen({ onStart }: Props) {
       role="button"
       aria-label={showStartText ? '點擊開始遊戲' : '載入中'}
     >
-      {/* 封面圖:object-cover 全螢幕填滿,直式 816×1456 PWA portrait 完美對齊。
-          不同螢幕比例下置中等比裁切,絕不變形;橫向時兩側裁掉露中段 */}
+      {/* 封面圖滿版填 viewport。在正確安裝的 PWA(black-translucent + viewport-fit
+          =cover)會直接延伸進瀏海 / home indicator 區,玩家看到的就是滿版封面。
+          舊安裝 PWA / Safari 等 iOS 沒延伸的情境下,封面圖只填可見 viewport,
+          上方瀏海區用動態 theme-color = 封面頂緣實際 RGB 顏色 fallback(`App.tsx`
+          載入時用 canvas 取樣),視覺接近封面延續到瀏海。
+          object-position 'center top' 鎖封面源圖頂緣,確保延伸時上半部是天空。 */}
       <img
         src="/cover.png"
         alt=""
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ objectPosition: 'center top' }}
         draggable={false}
       />
 

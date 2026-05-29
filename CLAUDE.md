@@ -268,48 +268,66 @@ Island / home indicator 區。
 HUD 米白 bg + blur 下對比較弱但 iOS 系統會做一點自動 dim,實測可讀。
 **不要**為了「狀態列字看不清」改回 default,那樣會回到米色空白雷區。
 
-### 雙層 fallback:動態 theme-color + 動態 body bg
+### 雙層 fallback + canvas 取樣:動態 theme-color + body bg = 封面頂緣 RGB
 
 iOS 在某些情境下(PWA 沒以 black-translucent 重新安裝 / Safari 瀏覽器 /
-舊 manifest 殘留)無法把內容延伸進瀏海 / 動態島 / home indicator 區。
-我們用兩層 fallback 同時 toggle,任一 iOS 行為模式都能命中其中一個:
+舊 manifest 殘留)無法把內容延伸進瀏海 / 動態島 / home indicator 區,
+系統用 theme-color / body bg 填那塊。
 
-1. **動態 `<meta name="theme-color">`**(`App.tsx` querySelector + setAttribute)
-   - 切到 `#faf6e8` → iOS / Android 用此色當狀態列 tint
-   - 切到 `#000000` → splash 階段狀態列變黑
-
-2. **動態 `<body>` class**
-   ```css
-   body { background: #faf6e8; }              /* 米白 = HUD 玻璃融合 */
-   body.splash-bg { background: #000; }       /* splash 切黑 = 封面 letterbox */
-   ```
-   - iOS 拿 body bg 填內容延伸不到的瀏海 / home indicator 區
-
-`App.tsx` useEffect 跟著 `splashDismissed` 同時 toggle theme-color +
-body class:
+兩層同時 toggle 任一 iOS 行為模式都能命中其中一個 fallback;**splash 階段
+的顏色用 canvas 從 cover.png 取樣**得到真實「夜空深藍紫」RGB,瀏海跟封面
+頂緣 visually 連起來(不會有色差):
 
 ```tsx
+// 1. 抓 cover.png 頂部 4 行 pixel 平均 RGB
+useEffect(() => {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = 4;  // 4 行平均壓雜訊
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, 4).data;
+    let r=0, g=0, b=0;
+    for (let i = 0; i < data.length; i += 4) { r+=data[i]; g+=data[i+1]; b+=data[i+2]; }
+    const px = canvas.width * 4;
+    setCoverEdgeColor(`#${Math.round(r/px).toString(16).padStart(2,'0')}...`);
+  };
+  img.src = '/cover.png';
+}, []);
+
+// 2. 同時切 theme-color + body inline bg
 useEffect(() => {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (splashDismissed) {
-    document.body.classList.remove('splash-bg');
+    document.body.style.backgroundColor = '';        // 退回 CSS 預設 #faf6e8
     meta?.setAttribute('content', '#faf6e8');
   } else {
-    document.body.classList.add('splash-bg');
-    meta?.setAttribute('content', '#000000');
+    document.body.style.backgroundColor = coverEdgeColor;
+    meta?.setAttribute('content', coverEdgeColor);
   }
-  return () => { ... };
-}, [splashDismissed]);
+}, [splashDismissed, coverEdgeColor]);
+```
+
+Body CSS 預設米白:
+```css
+body { background: #faf6e8; }              /* HUD 玻璃融合 */
+body.splash-bg { background: #000; }       /* JS inline 取樣色蓋過此 fallback */
 ```
 
 Vite manifest `theme_color` / `background_color` 也一致設 `#faf6e8`
 (新 PWA 安裝讀的就是這個)。
 
-⚠️ **真正想要「cover 圖直接畫進瀏海區」**(而非黑色 fallback)需 iOS PWA
-black-translucent + viewport-fit=cover 正確生效。已安裝舊 PWA 的玩家
-必須**從 home screen 移除 + 重新加入** 才會讀新 manifest;在他們重裝前,
-雙層 fallback 是視覺上最接近的解法(瀏海跟畫面主色融合,不再黑/米色強烈
-不一致)。
+⚠️ **真正想要「cover 圖實際 pixel 延伸進瀏海區」**(而非取樣色填充)仍需
+iOS PWA black-translucent + viewport-fit=cover 正確生效;舊裝置已安裝的 PWA
+必須**從 home screen 移除 + 重新加入** 才會讀新 manifest。在玩家重裝前,
+canvas 取樣 fallback 是視覺最接近的解法(瀏海跟封面頂緣同色,以為延伸)。
+
+⚠️ **iOS WebKit 對 `position: fixed` 元素的負偏移子節點會 clip 在 viewport
+邊界**(就算父層 overflow:visible)── 不能用負 top 把元素「擠進」瀏海區。
+試過,沒用。唯一真正延伸的方法是 PWA 重裝。
 
 ### 不對 body 加 safe-area padding
 
