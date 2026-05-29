@@ -164,36 +164,103 @@ export type SendRequestResult =
   | { ok: true }
   | { ok: false; reason: 'not_signed_in' | 'self' | 'already_friend' | 'already_sent' | 'unknown'; error?: string };
 
-/** 發送好友請求 */
+/** 把 supabase / fetch 錯誤翻譯成中文,易讀又不暴露技術細節 */
+function describeFriendError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  // iOS Safari fetch fail / Chrome network fail / supabase wrapper
+  if (/load failed|failed to fetch|network|networkerror|timeout|aborted/i.test(raw)) {
+    return '網路連線不穩,請確認連線後再試一次';
+  }
+  if (/jwt|token|unauthorized|401|403/i.test(raw)) {
+    return '登入逾時,請關掉重開 App 後再試';
+  }
+  return raw || '發送失敗,請稍後再試';
+}
+
+/** 發送好友請求 — 內含 1 次網路重試,並把網路錯誤翻譯成易讀訊息 */
 export async function sendFriendRequest(toUserId: string): Promise<SendRequestResult> {
   if (!isCloudConfigured) return { ok: false, reason: 'not_signed_in' };
-  const me = await getCurrentUserId();
+
+  let me: string | null = null;
+  try {
+    me = await getCurrentUserId();
+  } catch (e) {
+    return { ok: false, reason: 'unknown', error: describeFriendError(e) };
+  }
   if (!me) return { ok: false, reason: 'not_signed_in' };
   if (me === toUserId) return { ok: false, reason: 'self' };
 
-  // 已是好友 → 跳過
-  const rel = await getRelation(me, toUserId);
-  if (rel === 'friend') return { ok: false, reason: 'already_friend' };
-  if (rel === 'request_sent') return { ok: false, reason: 'already_sent' };
-
-  const { error } = await supabase
-    .from('friend_requests')
-    .insert({ from_user: me, to_user: toUserId, status: 'pending' });
-  if (error) {
-    if (error.code === '23505') return { ok: false, reason: 'already_sent' };
-    return { ok: false, reason: 'unknown', error: error.message };
+  // 已是好友 / 已發過 → 跳過(getRelation 內部 supabase 已對 error 回 null,
+  // 萬一整個 throw 包 try/catch 也擋住)
+  try {
+    const rel = await getRelation(me, toUserId);
+    if (rel === 'friend') return { ok: false, reason: 'already_friend' };
+    if (rel === 'request_sent') return { ok: false, reason: 'already_sent' };
+  } catch (e) {
+    // getRelation throw → 不擋,讓 insert 自己試;反正 unique constraint
+    // 會兜底防重複(已發過 → 23505 → 'already_sent')
+    console.warn('[friend] getRelation failed, fallback to insert-and-check:', e);
   }
 
-  // 階段 5F:發通知給對方
-  const myProfile = await getProfile(me);
-  const nickname = myProfile?.nickname ?? '修仙者';
-  void notify({
-    targetUserId: toUserId,
-    type: 'friend_request',
-    title: '新的好友請求',
-    message: `${nickname} 想加你為好友`,
-    relatedData: { fromUserId: me, fromNickname: nickname }
-  });
+  // 主動作:insert friend_requests。網路錯誤(iOS Safari 常見「Load failed」)
+  // **自動重試 1 次**,中間 800ms backoff。Supabase v2 預設不重 fetch error。
+  const insertFr = async () =>
+    supabase
+      .from('friend_requests')
+      .insert({ from_user: me, to_user: toUserId, status: 'pending' });
+
+  let result: Awaited<ReturnType<typeof insertFr>>;
+  try {
+    result = await insertFr();
+  } catch (e) {
+    console.warn('[friend] insert threw (network?), retrying once:', e);
+    await new Promise((r) => setTimeout(r, 800));
+    try {
+      result = await insertFr();
+    } catch (e2) {
+      return { ok: false, reason: 'unknown', error: describeFriendError(e2) };
+    }
+  }
+
+  const { error } = result;
+  if (error) {
+    if (error.code === '23505') return { ok: false, reason: 'already_sent' };
+    // **網路錯誤被 supabase 包成 error.message="Load failed"** 的情境也走這條
+    // — message 看起來像 fetch 錯誤就再試一次
+    if (/load failed|failed to fetch|network/i.test(error.message ?? '')) {
+      console.warn('[friend] insert returned network-like error, retrying once');
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        const retry = await insertFr();
+        if (retry.error) {
+          if (retry.error.code === '23505') return { ok: false, reason: 'already_sent' };
+          return { ok: false, reason: 'unknown', error: describeFriendError(new Error(retry.error.message)) };
+        }
+      } catch (e2) {
+        return { ok: false, reason: 'unknown', error: describeFriendError(e2) };
+      }
+      // retry 沒 error → fall through to success
+    } else {
+      return { ok: false, reason: 'unknown', error: describeFriendError(new Error(error.message)) };
+    }
+  }
+
+  // 階段 5F:發通知給對方(fire-and-forget,失敗不影響好友請求結果)
+  void (async () => {
+    try {
+      const myProfile = await getProfile(me!);
+      const nickname = myProfile?.nickname ?? '修仙者';
+      await notify({
+        targetUserId: toUserId,
+        type: 'friend_request',
+        title: '新的好友請求',
+        message: `${nickname} 想加你為好友`,
+        relatedData: { fromUserId: me!, fromNickname: nickname }
+      });
+    } catch (e) {
+      console.warn('[friend] notify after sendFriendRequest failed (non-blocking):', e);
+    }
+  })();
 
   return { ok: true };
 }
