@@ -131,6 +131,23 @@ export default function App() {
    */
   const [splashDismissed, setSplashDismissed] = useState(false);
 
+  /**
+   * iOS 在某些情境下(PWA 沒重新安裝 / Safari 瀏覽器)無法把內容延伸進
+   * 瀏海 / 動態島區,系統會用 body bg 填那塊。splash 階段把 body bg 改黑,
+   * 跟封面圖週邊 letterbox 融合;進遊戲後改回米白,跟 HUD 米白玻璃融合,
+   * 視覺上像 HUD / 封面一路長到螢幕頂。
+   */
+  useEffect(() => {
+    if (splashDismissed) {
+      document.body.classList.remove('splash-bg');
+    } else {
+      document.body.classList.add('splash-bg');
+    }
+    return () => {
+      document.body.classList.remove('splash-bg');
+    };
+  }, [splashDismissed]);
+
   useEffect(() => {
     // 階段 3D 緊急修復:**每一個 init 步驟獨立 try/catch**,任一失敗只 warn,
     // 不再把整段 init chain 灌進 setSeedError → 不會出現「初始化失敗」全屏彈窗。

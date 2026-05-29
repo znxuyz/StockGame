@@ -469,14 +469,26 @@ body,
   height: 100dvh;
   overflow: hidden;
   /**
-   * 黑色當保底色:萬一 splash / HUD / BottomBar / Phaser canvas 之間有 1px 縫,
-   * 黑色比米色不刺眼,跟瀏海 / 動態島融合。Splash 自帶 bg-black + cover img
-   * 鋪滿,進場後玩家不會看到 body bg。
+   * **動態 body bg** — 預設米白(=HUD 玻璃實際視覺色)。
+   *
+   * iOS 在某些情境下(沒以 black-translucent 模式重新安裝 PWA / Safari
+   * 瀏覽器 / 舊裝置)內容延伸不到瀏海 / 動態島區,iOS 會把該區塗成 body bg。
+   * 預設米白 → 瀏海 / 動態島區跟 HUD 顏色連成一片(視覺上 HUD 一路長到
+   * 螢幕頂);底部 home indicator 區也跟 BottomBar 米白連起來。
+   *
+   * splash 期間 `App.tsx` 把 `.splash-bg` class 加到 <body>,bg 變黑跟
+   * SplashScreen 黑色封面背景無縫融合,玩家看不到上下黑邊。退出 splash
+   * class 拔掉,bg 退回米白讓 HUD 區域連成一片。
    */
-  background: #000;
+  background: #faf6e8;
   color: #1a1a1a;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+}
+
+/** splash 階段:body bg 切黑,跟封面圖週邊融合(`App.tsx` toggle) */
+body.splash-bg {
+  background: #000;
 }
 
 body {

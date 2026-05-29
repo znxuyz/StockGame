@@ -255,6 +255,7 @@ object-cover 全螢幕填滿。
 `index.html`:
 ```html
 <meta name="viewport" content="...viewport-fit=cover...">
+<meta name="theme-color" content="#faf6e8">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 ```
 
@@ -266,6 +267,26 @@ Island / home indicator 區。
 ⚠️ trade-off:狀態列文字(時間 / 電池)在 black-translucent 下永遠白色。
 HUD 米白 bg + blur 下對比較弱但 iOS 系統會做一點自動 dim,實測可讀。
 **不要**為了「狀態列字看不清」改回 default,那樣會回到米色空白雷區。
+
+### 動態 body bg(瀏海 / home indicator 區的顏色)
+
+iOS 在某些情境下(PWA 沒以 black-translucent 重新安裝 / Safari 瀏覽器)
+內容延伸不到瀏海 / 動態島區,系統會用 `<body>` bg 顏色填那塊。所以:
+
+```css
+body { background: #faf6e8; }                /* 米白 = 跟 HUD 玻璃融合 */
+body.splash-bg { background: #000; }         /* splash 期間切黑 = 跟封面融合 */
+```
+
+`App.tsx` useEffect 跟著 `splashDismissed` toggle class。這樣不管 iOS 有
+沒有延伸,瀏海區永遠是「該畫面預期的顏色」,不會像之前一直黑掉。
+
+theme-color 也跟著設成 `#faf6e8`,Android Chrome / 某些 iOS 版本拿 theme-
+color 當狀態列底色,跟 body 預設 bg 一致。
+
+⚠️ 玩家如果是在「以舊版 manifest 安裝過的 PWA」內看到瀏海仍是黑色,要
+**從 home screen 移除 + 重新加入** 才會生效新 status-bar-style。動態 body
+bg 至少把這情境的「黑邊」降級成「跟畫面色調一致的邊」。
 
 ### 不對 body 加 safe-area padding
 
