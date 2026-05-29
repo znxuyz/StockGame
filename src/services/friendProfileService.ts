@@ -148,6 +148,20 @@ export async function getFriendMilestones(
  * 撈對方雲端 user_data.blob 裡的修為總額 / lifetime / streak / 任務完成數,
  * 給「我 vs 他」對比用。失敗回 null 不擋主流程。
  */
+/**
+ * 撈對方雲端**修為 + 連登**,給「我 vs 他」對比用 / 好友個人頁顯示。
+ *
+ * 階段 6.Z(2026-06):改從 `user_cultivation` / `user_login_streak` per-table
+ * 撈,**不再讀 deprecated `user_data.blob`**。舊版 stage 4-B 已把 blob 整包
+ * 同步拆成各 Repository per-table,但 `getFriendCloudStats` 忘了同步改,
+ * 導致好友個人頁的「修為 / 連登」永遠是 — 顯示。
+ *
+ * RLS:`user_cultivation` / `user_login_streak` 各加一條 `read_others_*`
+ * 政策放讀給登入用戶(見 supabase/migrations/20260603_friend_read_cult_
+ * streak.sql)。寫入仍 own-only。
+ *
+ * 兩張表 query parallel,任一失敗都不擋主流程(回 null,UI 顯示「—」)。
+ */
 export interface FriendCloudStats {
   cultivation: number | null;
   lifetimeEarned: number | null;
@@ -167,30 +181,38 @@ export async function getFriendCloudStats(userId: string): Promise<FriendCloudSt
   const cached = readCache<FriendCloudStats>(key);
   if (cached) return cached;
 
-  const { data, error } = await supabase
-    .from('user_data')
-    .select('blob')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error || !data?.blob) {
-    if (error) console.warn('[friendProfileService] getFriendCloudStats:', error.message);
-    writeCache(key, empty);
-    return empty;
+  // ⚠️ 雲端欄位命名跟本機型別不一樣:
+  //   user_cultivation.total_points → UserCultivation.amount(本機叫 amount)
+  //   user_login_streak.max_streak  → LoginStreak.longestStreak
+  // 這裡用雲端命名,跟既有 `cultivationRepo` / `loginStreakRepo` 對齊。
+  const [cultRes, streakRes] = await Promise.all([
+    supabase
+      .from('user_cultivation')
+      .select('total_points, lifetime_earned')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('user_login_streak')
+      .select('current_streak, max_streak')
+      .eq('user_id', userId)
+      .maybeSingle()
+  ]);
+
+  if (cultRes.error) {
+    console.warn('[friendProfileService] cultivation read:', cultRes.error.message);
   }
-  const blob = data.blob as Record<string, unknown>;
-  const cult = blob.userCultivation as
-    | { amount?: number; lifetimeEarned?: number }
-    | undefined
-    | null;
-  const streak = blob.userLoginStreak as
-    | { currentStreak?: number; longestStreak?: number }
-    | undefined
-    | null;
+  if (streakRes.error) {
+    console.warn('[friendProfileService] login_streak read:', streakRes.error.message);
+  }
+
+  const cult = cultRes.data as { total_points?: number; lifetime_earned?: number } | null;
+  const streak = streakRes.data as { current_streak?: number; max_streak?: number } | null;
+
   const out: FriendCloudStats = {
-    cultivation: cult?.amount ?? null,
-    lifetimeEarned: cult?.lifetimeEarned ?? null,
-    consecutiveDays: streak?.currentStreak ?? null,
-    longestStreak: streak?.longestStreak ?? null
+    cultivation: cult?.total_points ?? null,
+    lifetimeEarned: cult?.lifetime_earned ?? null,
+    consecutiveDays: streak?.current_streak ?? null,
+    longestStreak: streak?.max_streak ?? null
   };
   writeCache(key, out);
   return out;
