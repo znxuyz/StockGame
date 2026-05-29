@@ -21,6 +21,7 @@ import {
   type CodexComparisonSummary,
   type VsMetric
 } from '@/services';
+import { formatReturnPercent } from '@/utils/amountMasker';
 import type { UserMilestone, MilestoneEventType, Pet } from '@/types';
 
 interface FriendProfileModalProps {
@@ -240,18 +241,19 @@ function FriendProfileBody({
         </p>
       )}
 
-      {/* §2 修仙概況 */}
+      {/* §2 修仙概況 — 階段 6.Z:修為/連登 換成 投入/報酬(從持倉摘要算,套對方隱私遮罩) */}
       <section>
         <h4 className="text-xs text-gray-500 mb-2 font-bold">📊 修仙概況</h4>
         <div className="grid grid-cols-2 gap-2">
-          <ConciseStat
-            label="💎 修為"
-            value={cloudStats.cultivation !== null ? cloudStats.cultivation.toLocaleString() : '—'}
-          />
+          <ConciseStat label="💰 投入" value={cloudStats.totalInvestedText} />
           <ConciseStat label="🐾 神獸" value={`${creatures.length} 隻`} />
           <ConciseStat
-            label="🔥 連登"
-            value={cloudStats.consecutiveDays !== null ? `${cloudStats.consecutiveDays} 天` : '—'}
+            label="📈 報酬"
+            value={
+              cloudStats.hasPortfolioData
+                ? formatReturnPercent(cloudStats.totalReturnPercent)
+                : '—'
+            }
           />
           <ConciseStat label="📚 圖鑑" value={`${creatures.length} / ${CREATURES.length}`} />
         </div>

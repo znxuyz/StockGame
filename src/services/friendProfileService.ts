@@ -17,6 +17,7 @@ import { getProfile } from './profileService';
 import { getShowcase } from './showcaseService';
 import { getTitle } from './titleService';
 import { realmRank } from './petTier';
+import { maskAmount } from '@/utils/amountMasker';
 import type {
   CreatureSummary,
   UserMilestone,
@@ -24,7 +25,8 @@ import type {
   UserShowcase,
   SoulRealmId,
   MilestoneEventType,
-  MilestoneEventData
+  MilestoneEventData,
+  PortfolioVisibility
 } from '@/types';
 
 interface CreatureSummaryRow {
@@ -167,6 +169,12 @@ export interface FriendCloudStats {
   lifetimeEarned: number | null;
   consecutiveDays: number | null;
   longestStreak: number | null;
+  /** 階段 6.Z:投入總額(已套對方隱私遮罩) — '---' / '1*****7' / '1,234,567' */
+  totalInvestedText: string;
+  /** 階段 6.Z:總報酬率比例(showTotalReturn=false → null;UI 端用 formatReturnPercent) */
+  totalReturnPercent: number | null;
+  /** 是否真的有持倉資料(沒持倉 → 投入/報酬都顯「—」而非 0%) */
+  hasPortfolioData: boolean;
 }
 
 export async function getFriendCloudStats(userId: string): Promise<FriendCloudStats> {
@@ -174,7 +182,10 @@ export async function getFriendCloudStats(userId: string): Promise<FriendCloudSt
     cultivation: null,
     lifetimeEarned: null,
     consecutiveDays: null,
-    longestStreak: null
+    longestStreak: null,
+    totalInvestedText: '—',
+    totalReturnPercent: null,
+    hasPortfolioData: false
   };
   if (!isCloudConfigured) return empty;
   const key = `stats:${userId}`;
@@ -185,7 +196,7 @@ export async function getFriendCloudStats(userId: string): Promise<FriendCloudSt
   //   user_cultivation.total_points → UserCultivation.amount(本機叫 amount)
   //   user_login_streak.max_streak  → LoginStreak.longestStreak
   // 這裡用雲端命名,跟既有 `cultivationRepo` / `loginStreakRepo` 對齊。
-  const [cultRes, streakRes] = await Promise.all([
+  const [cultRes, streakRes, portfolioRes, privacyRes] = await Promise.all([
     supabase
       .from('user_cultivation')
       .select('total_points, lifetime_earned')
@@ -194,6 +205,17 @@ export async function getFriendCloudStats(userId: string): Promise<FriendCloudSt
     supabase
       .from('user_login_streak')
       .select('current_streak, max_streak')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    // 階段 6.Z:撈持倉摘要計算「投入 + 報酬」聚合
+    supabase
+      .from('user_portfolio_summary')
+      .select('invested_amount, current_value, unrealized_pnl')
+      .eq('user_id', userId),
+    // 同時撈隱私決定遮罩程度
+    supabase
+      .from('user_privacy_settings')
+      .select('portfolio_amount_visibility, show_total_return')
       .eq('user_id', userId)
       .maybeSingle()
   ]);
@@ -204,16 +226,53 @@ export async function getFriendCloudStats(userId: string): Promise<FriendCloudSt
   if (streakRes.error) {
     console.warn('[friendProfileService] login_streak read:', streakRes.error.message);
   }
+  if (portfolioRes.error) {
+    console.warn('[friendProfileService] portfolio read:', portfolioRes.error.message);
+  }
+  if (privacyRes.error) {
+    console.warn('[friendProfileService] privacy read:', privacyRes.error.message);
+  }
 
   const cult = cultRes.data as { total_points?: number; lifetime_earned?: number } | null;
   const streak = streakRes.data as { current_streak?: number; max_streak?: number } | null;
+  const portfolioRows = (portfolioRes.data ?? []) as {
+    invested_amount: number;
+    current_value: number;
+    unrealized_pnl: number;
+  }[];
+  const privacy = privacyRes.data as {
+    portfolio_amount_visibility?: PortfolioVisibility;
+    show_total_return?: boolean;
+  } | null;
+  // 對齊「沒設定 row 也預設 partial」(階段 6.Z DEFAULT_PRIVACY)
+  const visibility: PortfolioVisibility = privacy?.portfolio_amount_visibility ?? 'partial';
+  const showTotalReturn = privacy?.show_total_return ?? true;
+
+  // 聚合計算
+  let totalInvested = 0;
+  let totalCurrent = 0;
+  let totalPnl = 0;
+  for (const r of portfolioRows) {
+    totalInvested += r.invested_amount ?? 0;
+    totalCurrent += r.current_value ?? 0;
+    totalPnl += r.unrealized_pnl ?? 0;
+  }
+  const hasPortfolioData = portfolioRows.length > 0 && totalInvested > 0;
+  const totalReturnPercent =
+    hasPortfolioData && showTotalReturn ? totalPnl / totalInvested : null;
+  const totalInvestedText = hasPortfolioData ? maskAmount(totalInvested, visibility) : '—';
 
   const out: FriendCloudStats = {
     cultivation: cult?.total_points ?? null,
     lifetimeEarned: cult?.lifetime_earned ?? null,
     consecutiveDays: streak?.current_streak ?? null,
-    longestStreak: streak?.max_streak ?? null
+    longestStreak: streak?.max_streak ?? null,
+    totalInvestedText,
+    totalReturnPercent,
+    hasPortfolioData
   };
+  // suppress unused var lint for current(留著當未來「市值」欄位用)
+  void totalCurrent;
   writeCache(key, out);
   return out;
 }
