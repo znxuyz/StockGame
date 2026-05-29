@@ -121,6 +121,8 @@ node scripts/flood-fill-sprite-bg.mjs --halo         # 全 294 隻只跑 halo cl
 node scripts/process-button-icons.mjs                # BottomBar/TradeModal/tab/ 全部 PNG icon 去背 + resize 256x256
 node scripts/process-button-icons.mjs <file.png>     # 處理單一 icon(就地覆蓋,seed-based flood-fill)
 node scripts/process-rings.mjs                       # 6 顆魂環 PNG (public/assets/rings/) 去背 + resize 128x128
+node scripts/cleanup-isolated-blobs.mjs <file.png>   # 清「跟主體不連通的小白點」(iOS Lift Subject 後常見的 1-3px 殘留雜訊),不動主體
+node scripts/cleanup-isolated-blobs.mjs --scan       # 掃描列出疑似有雜訊的 sprite,個別視覺確認後再針對性跑
 ```
 
 ---
