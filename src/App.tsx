@@ -132,117 +132,29 @@ export default function App() {
   const [splashDismissed, setSplashDismissed] = useState(false);
 
   /**
-   * 階段 6.Y:封面頂緣 RGB 動態取樣 — 用 canvas 抓 `/cover.png` 第一列 pixel
-   * 平均 RGB,當作 splash 階段 theme-color + body bg 的 fallback 色。
+   * 階段 6.Y(穩定版):瀏海 / home indicator 區的顏色**完全 static**
+   * — 不再用 JS toggle 切 theme-color / body bg / class,避免:
+   *   - canvas 取樣 async 失敗導致初始 race
+   *   - MutationObserver 跟 React lifecycle 撞 timing
+   *   - iOS PWA standalone 把 meta theme-color 變動快取不一致
+   *   - splash → game 切換時看到一閃顏色
    *
-   * iOS 內容沒延伸到瀏海區時,系統用 theme-color / body bg 填那塊。本來寫死
-   * #000(黑)就跟封面黑色 letterbox 一致,但封面實際頂緣是「夜空深藍紫」
-   * 不完全是純黑,寫死黑會有色差。改用 canvas 取樣後,瀏海區跟封面頂緣
-   * 同色,視覺接近「封面直接延伸進瀏海」(玩家還在用舊 manifest PWA 的情境
-   * 下這是最接近 fullbleed 的解法)。
+   * 策略:
+   *   - manifest theme_color / index.html meta theme-color / body CSS bg
+   *     **全部統一 #f3ecd7**(HUD glass over Phaser 米紙底實際呈現的暖米黃,
+   *     `--hud-effective-bg` 預設值)
+   *   - SplashScreen 自己 fixed inset-0 蓋滿 viewport,在正確安裝的 PWA
+     *     (black-translucent + viewport-fit=cover)封面圖延伸進瀏海;
+   *     舊安裝 PWA 看到的瀏海是米白(米白比黑色不刺眼,跟 HUD 同色)
+   *   - 玩家想要「封面實際 pixel 延伸進瀏海」要從 home screen 移除 + 重裝 PWA
+   *
+   * 拔掉的雜訊:
+   *   - useState `coverEdgeColor` + canvas 取樣 useEffect
+   *   - splashDismissed/coverEdgeColor useEffect(theme-color/body bg/class
+   *     dynamic toggle)
+   *   - MutationObserver(監聽 data-theme,改用「HUD 主題切換時 theme-color
+   *     就保持 #f3ecd7 預設;玩家在意的話之後可加靜態主題對應 meta)
    */
-  const [coverEdgeColor, setCoverEdgeColor] = useState<string>('#000000');
-  useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        // 取封面頂部 4 行做平均(壓掉單列雜訊)
-        const sampleRows = 4;
-        canvas.width = img.naturalWidth;
-        canvas.height = sampleRows;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0);
-        const data = ctx.getImageData(0, 0, canvas.width, sampleRows).data;
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        const pxCount = canvas.width * sampleRows;
-        for (let i = 0; i < data.length; i += 4) {
-          r += data[i];
-          g += data[i + 1];
-          b += data[i + 2];
-        }
-        r = Math.round(r / pxCount);
-        g = Math.round(g / pxCount);
-        b = Math.round(b / pxCount);
-        const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-        setCoverEdgeColor(hex);
-      } catch (e) {
-        console.warn('[splash] cover top color extraction failed:', e);
-      }
-    };
-    img.src = '/cover.png';
-  }, []);
-
-  /**
-   * 階段 6.Y:雙層 fallback 把「瀏海 / 動態島 / home indicator」區塗成跟
-   * 當前畫面一致的顏色,讓玩家看到「HUD / 封面一路長到螢幕頂」的視覺。
-   *
-   *   1. `<meta name="theme-color">` 動態切 — iOS Safari / Android Chrome /
-   *      部分 iOS PWA 拿 theme-color 當狀態列 / URL bar tint。動態改值 →
-   *      狀態列底色即時跟著變,**不用重新安裝 PWA**
-   *   2. `<body>` inline bg 切 — iOS 內容延伸不到瀏海區時,會用 body bg
-   *      填那塊。inline style 蓋過 .splash-bg class,直接用取樣顏色
-   *
-   * 兩層同時 toggle,任一 iOS 行為模式都能命中其中一個:
-   *   - splash 階段 → theme-color + body bg = 封面頂緣取樣 RGB(深藍夜空)
-   *     瀏海 / home indicator 跟封面頂緣同色,視覺接近封面延伸進瀏海
-   *   - 遊戲階段   → theme-color + body bg = #faf6e8 米白,跟 HUD / BottomBar
-   *     玻璃連成一片
-   *
-   * 真正想要「cover 圖直接畫進瀏海(而非取樣色)」仍需 iOS PWA black-
-   * translucent + viewport-fit=cover 正確生效;舊裝置已安裝的 PWA 要從
-   * home screen 移除 + 重新加入才會讀新 manifest。
-   */
-  useEffect(() => {
-    const meta = document.querySelector('meta[name="theme-color"]');
-    /** 讀目前主題的 --hud-effective-bg(HUD 玻璃 + Phaser 底色實際呈現的米黃) */
-    const effectiveHudBg = () =>
-      getComputedStyle(document.documentElement)
-        .getPropertyValue('--hud-effective-bg')
-        .trim() || '#f3ecd7';
-    if (splashDismissed) {
-      document.body.classList.remove('splash-bg');
-      document.body.style.backgroundColor = '';
-      // 遊戲階段:狀態列跟 TopBar 同色(讀目前主題的 --hud-effective-bg,
-      // 米粉/玉藍/紫金/朱紅 4 主題自動切對應色)
-      meta?.setAttribute('content', effectiveHudBg());
-    } else {
-      document.body.classList.add('splash-bg');
-      document.body.style.backgroundColor = coverEdgeColor;
-      meta?.setAttribute('content', coverEdgeColor);
-    }
-    return () => {
-      document.body.classList.remove('splash-bg');
-      document.body.style.backgroundColor = '';
-      meta?.setAttribute('content', effectiveHudBg());
-    };
-  }, [splashDismissed, coverEdgeColor]);
-
-  /**
-   * 主題切換時(SettingsModal 改 HUD 主題色 → Game 內 useEffect 設
-   * `html.dataset.theme`)用 MutationObserver 偵測 data-theme 變動,
-   * 重新讀 `--hud-effective-bg` 同步狀態列 tint,瀏海跟新主題 HUD 同色。
-   * splash 階段不動(那時 theme-color = 封面取樣色)。
-   */
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      if (!splashDismissed) return;
-      const meta = document.querySelector('meta[name="theme-color"]');
-      const effectiveBg = getComputedStyle(document.documentElement)
-        .getPropertyValue('--hud-effective-bg')
-        .trim();
-      if (effectiveBg) meta?.setAttribute('content', effectiveBg);
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme']
-    });
-    return () => observer.disconnect();
-  }, [splashDismissed]);
 
   useEffect(() => {
     // 階段 3D 緊急修復:**每一個 init 步驟獨立 try/catch**,任一失敗只 warn,

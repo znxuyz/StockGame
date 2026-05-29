@@ -270,66 +270,78 @@ Island / home indicator 區。
 HUD 米白 bg + blur 下對比較弱但 iOS 系統會做一點自動 dim,實測可讀。
 **不要**為了「狀態列字看不清」改回 default,那樣會回到米色空白雷區。
 
-### 雙層 fallback + canvas 取樣:動態 theme-color + body bg = 封面頂緣 RGB
+### 穩定版:CSS `:has()` + 靜態 theme-color(取代之前的 JS toggle/canvas 取樣/MutationObserver)
 
-iOS 在某些情境下(PWA 沒以 black-translucent 重新安裝 / Safari 瀏覽器 /
-舊 manifest 殘留)無法把內容延伸進瀏海 / 動態島 / home indicator 區,
-系統用 theme-color / body bg 填那塊。
+之前用 canvas 取樣封面色 + 動態 theme-color toggle + body class toggle +
+MutationObserver 同步主題,**5 個層次跟 iOS 狀態管理打架**,user 反映瀏海色
+「常常不穩定」(canvas async 失敗、iOS PWA 快取舊 meta、React lifecycle 跟
+MutationObserver race timing 等等)。
 
-兩層同時 toggle 任一 iOS 行為模式都能命中其中一個 fallback;**splash 階段
-的顏色用 canvas 從 cover.png 取樣**得到真實「夜空深藍紫」RGB,瀏海跟封面
-頂緣 visually 連起來(不會有色差):
+階段 6.Y 改成**全 CSS 驅動 + 靜態 theme-color**:
+
+```css
+/* 預設 body bg = HUD 視覺等效底色,遊戲畫面下瀏海跟 HUD 連成一片 */
+body { background: var(--hud-effective-bg, #f3ecd7); }
+
+/* splash 渲染時 body bg 自動切深色;splash unmount → selector 不命中 → bg 退回米白 */
+body:has([data-splash-active]) { background: #0a0a14; }
+```
 
 ```tsx
-// 1. 抓 cover.png 頂部 4 行 pixel 平均 RGB
-useEffect(() => {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = 4;  // 4 行平均壓雜訊
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, 4).data;
-    let r=0, g=0, b=0;
-    for (let i = 0; i < data.length; i += 4) { r+=data[i]; g+=data[i+1]; b+=data[i+2]; }
-    const px = canvas.width * 4;
-    setCoverEdgeColor(`#${Math.round(r/px).toString(16).padStart(2,'0')}...`);
-  };
-  img.src = '/cover.png';
-}, []);
-
-// 2. 同時切 theme-color + body inline bg
-useEffect(() => {
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (splashDismissed) {
-    document.body.style.backgroundColor = '';        // 退回 CSS 預設 #faf6e8
-    meta?.setAttribute('content', '#faf6e8');
-  } else {
-    document.body.style.backgroundColor = coverEdgeColor;
-    meta?.setAttribute('content', coverEdgeColor);
-  }
-}, [splashDismissed, coverEdgeColor]);
+// SplashScreen 根 div 加 data-splash-active 屬性
+<div data-splash-active ...>...</div>
 ```
 
-Body CSS 預設米白:
-```css
-body { background: #faf6e8; }              /* HUD 玻璃融合 */
-body.splash-bg { background: #000; }       /* JS inline 取樣色蓋過此 fallback */
+```html
+<!-- theme-color 一律 #f3ecd7,不再 JS toggle -->
+<meta name="theme-color" content="#f3ecd7">
 ```
 
-Vite manifest `theme_color` / `background_color` 也一致設 `#faf6e8`
-(新 PWA 安裝讀的就是這個)。
+```jsonc
+// manifest.json 同色,新裝 PWA 安裝時讀的也是這個
+"theme_color": "#f3ecd7",
+"background_color": "#f3ecd7"
+```
 
-⚠️ **真正想要「cover 圖實際 pixel 延伸進瀏海區」**(而非取樣色填充)仍需
-iOS PWA black-translucent + viewport-fit=cover 正確生效;舊裝置已安裝的 PWA
-必須**從 home screen 移除 + 重新加入** 才會讀新 manifest。在玩家重裝前,
-canvas 取樣 fallback 是視覺最接近的解法(瀏海跟封面頂緣同色,以為延伸)。
+**為什麼穩定:**
+
+  - body bg 唯一來源 = DOM 結構(splash 在不在 tree 上),瀏覽器 reflow
+    一次就到位,沒有 JS / React 重新 render 的延遲或 race
+  - theme-color 完全 static,iOS PWA 安裝時讀什麼就用什麼,不會被 JS
+    更新搞亂快取
+  - 沒有 canvas 取樣的 async 失敗風險(以前 CORS / decode 錯誤會讓初始
+    color 卡在 `#000` 預設,玩家看到一閃的黑)
+  - 沒有 MutationObserver 跟 SettingsModal 改主題的 timing race
+
+**trade-off:**
+
+  - splash 階段瀏海固定深藍黑 #0a0a14(cover.png 頂緣大致色),不再
+    canvas 取樣完美匹配 — 但本來取樣值就接近這個區間,視覺幾乎沒差
+  - HUD 主題切換時瀏海色不跟著變(永遠米粉 #f3ecd7) — 預設主題完美,
+    玉藍 / 紫金 / 朱紅主題時瀏海跟 HUD 有色差。可接受 ── 換主題是
+    power-user 行為,且色差不大
+
+**`:has()` 瀏覽器支援:**Safari 15.4+ / Chrome 105+(2022 起),iOS PWA 必裝
+Safari 內核,覆蓋率充足。古早瀏覽器不命中規則 → body bg 維持米白,splash
+有米色 letterbox(降級不破)。
+
+---
+
+### 兩個踩過的雷(別倒車)
+
+⚠️ **真正想「cover 圖實際 pixel 延伸進瀏海區」**(而非靠 body bg fill)仍需
+iOS PWA `black-translucent` + `viewport-fit=cover` 正確生效;舊裝置已安裝的
+PWA 必須**從 home screen 移除 + 重新加入** 才會讀新 manifest。在玩家重裝前,
+body bg + `:has()` 切換已是視覺最接近 fullbleed 的解法。
 
 ⚠️ **iOS WebKit 對 `position: fixed` 元素的負偏移子節點會 clip 在 viewport
 邊界**(就算父層 overflow:visible)── 不能用負 top 把元素「擠進」瀏海區。
 試過,沒用。唯一真正延伸的方法是 PWA 重裝。
+
+⚠️ **別用 JS 動態 toggle `<meta name="theme-color">` 或 body inline bg**
+(canvas 取樣 / MutationObserver 同步主題等)── iOS PWA standalone 對 meta
+變動快取行為不穩定,canvas async 失敗 / React lifecycle race / 多個 layer
+打架等等。CSS `:has()` 是穩定唯一解。
 
 ### 不對 body 加 safe-area padding
 

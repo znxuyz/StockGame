@@ -46,8 +46,13 @@ export default function SplashScreen({ onStart }: Props) {
 
   return (
     <div
+      data-splash-active
       className="fixed z-[9000] bg-black select-none cursor-pointer overflow-hidden"
       style={{
+        // 顯式 inset 0 + 100dvh + minHeight 100vh:viewport-fit=cover 配合
+        // black-translucent 正確安裝的 PWA 會延伸進瀏海。
+        // `data-splash-active` 屬性讓 `body:has(...)` CSS 規則把 body bg 切深藍黑,
+        // 沒延伸的 iOS 也會看到瀏海是深色(跟封面 letterbox 融合)。
         top: 0,
         right: 0,
         bottom: 0,

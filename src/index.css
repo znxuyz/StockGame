@@ -490,17 +490,19 @@ body,
   height: 100dvh;
   overflow: hidden;
   /**
-   * **動態 body bg** — 預設米白(=HUD 玻璃實際視覺色)。
+   * **Body bg 用 CSS `:has()` 自動切換**(階段 6.Y 穩定版)
    *
-   * iOS 在某些情境下(沒以 black-translucent 模式重新安裝 PWA / Safari
-   * 瀏覽器 / 舊裝置)內容延伸不到瀏海 / 動態島區,iOS 會把該區塗成 body bg。
-   * 預設米白 → 瀏海 / 動態島區跟 HUD 顏色連成一片(視覺上 HUD 一路長到
-   * 螢幕頂);底部 home indicator 區也跟 BottomBar 米白連起來。
+   * 預設米白 = `--hud-effective-bg`(HUD glass 在 Phaser 米紙底實際呈現的
+   * 暖米黃),遊戲畫面下瀏海 / home indicator 區跟 HUD 米白連成一片。
    *
-   * splash 期間 `App.tsx` 把 `.splash-bg` class 加到 <body>,bg 變成
-   * cover.png 頂緣取樣 RGB 跟封面無縫融合;退出 splash 後 bg 退回
-   * `--hud-effective-bg`(HUD 玻璃在 Phaser 米紙底上面實際呈現的米黃),
-   * 瀏海 / home indicator 跟 HUD 區域同色,玩家視覺接近 fullbleed HUD。
+   * splash 期間 SplashScreen 在 DOM 內帶 `[data-splash-active]` 屬性
+   * → 下面 `body:has(...)` 規則命中,bg 切深藍黑(cover.png 頂緣色),
+   * 瀏海跟封面 letterbox 融合。splash unmount → 屬性消失 → bg 自動退回
+   * 米白。**全程 CSS,不用 JS toggle / canvas 取樣 / MutationObserver**,
+   * 沒有 race / async / iOS 快取不一致問題。
+   *
+   * `:has()` 在 Safari 15.4+ / Chrome 105+(2022 起所有現代瀏覽器),
+   * iOS PWA 必裝 Safari 內核,支援充分。
    */
   background: var(--hud-effective-bg, #f3ecd7);
   color: #1a1a1a;
@@ -508,9 +510,10 @@ body,
   overscroll-behavior: none;
 }
 
-/** splash 階段:body bg 切黑,跟封面圖週邊融合(`App.tsx` toggle) */
-body.splash-bg {
-  background: #000;
+/* splash 渲染時 body bg 自動切深色(跟封面圖頂緣 letterbox 融合);
+   splash unmount → selector 不命中 → body bg 退回米白。全 CSS,零 JS race */
+body:has([data-splash-active]) {
+  background: #0a0a14;
 }
 
 body {
