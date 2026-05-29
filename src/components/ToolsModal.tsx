@@ -3,6 +3,7 @@ import Modal from './Modal';
 import { isCloudConfigured } from '@/lib/supabase';
 import { forceSyncAllToCloud } from '@/repositories/syncAll';
 import { clearProfileSyncDisabled } from '@/services/profileSyncService';
+import { rebuildDailySnapshots } from '@/services/portfolioHistoryService';
 
 interface ToolsModalProps {
   open: boolean;
@@ -35,6 +36,48 @@ export default function ToolsModal({
   onOpenExcelImport
 }: ToolsModalProps) {
   const [forceSyncing, setForceSyncing] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
+
+  /**
+   * 階段 6.Z:手動強制重建歷史曲線。
+   *
+   * 為什麼需要按鈕(自動 bootstrap 不夠嗎?):`checkAndRebuildIfNeeded`
+   * 只看 snapshot **數量 + 日期範圍**,不看 **價值正不正確**。如果 user
+   * 是 Excel 匯入舊資料,snapshotBackfill 已建出 229 筆 proxy 快照
+   * (returnRate ≈ 0 全程),`checkAndRebuildIfNeeded` 看到「snapshots 已
+   * up-to-date」就 skip 不重建 → 累積報酬率圖永遠是 0% 加最後一根針。
+   *
+   * 這顆按鈕直接呼叫 `rebuildDailySnapshots`(await,跳過 coalesce 排程
+   * 直接跑),用真實歷史價回推每日 MV → 寫真實 snapshots(覆蓋舊 proxy)。
+   * useLiveQuery 訂閱 `db.snapshots` 會自動讓圖表 re-render。
+   *
+   * 跑完顯示「重建 N 天 / 抓 N 筆價 / 失敗 N 檔」摘要。
+   */
+  async function handleRebuildHistory() {
+    if (rebuilding) return;
+    setRebuilding(true);
+    try {
+      const result = await rebuildDailySnapshots();
+      const total = result.priceRowsFetched + result.priceRowsCached;
+      const hitRate = total === 0 ? '—' : ((result.priceRowsCached / total) * 100).toFixed(0) + '%';
+      const failedNote =
+        result.failedCodes.length > 0 ? `,${result.failedCodes.length} 檔抓不到價` : '';
+      if (result.daysRebuilt === 0) {
+        onActionComplete('沒有交易紀錄可重建');
+      } else {
+        onActionComplete(
+          `✅ 重建 ${result.daysRebuilt} 天,抓 ${result.priceRowsFetched} 筆價(cache ${hitRate})${failedNote}`
+        );
+      }
+    } catch (e) {
+      console.error('[rebuildHistory] handler threw:', e);
+      onActionComplete(
+        `⚠️ 重建失敗:${e instanceof Error ? e.message : String(e)}`
+      );
+    } finally {
+      setRebuilding(false);
+    }
+  }
 
   async function handleForceSync() {
     if (forceSyncing) return;
@@ -91,6 +134,23 @@ export default function ToolsModal({
   return (
     <Modal open={open} onClose={onClose} title="🛠 工具">
       <div className="space-y-3 font-zh">
+        {/* 重建歷史曲線 — 階段 6.Z(原本是「後續 PR」現在補上)*/}
+        <div>
+          <button
+            type="button"
+            onClick={handleRebuildHistory}
+            disabled={rebuilding || forceSyncing}
+            className="w-full py-2.5 bg-emerald-100 text-emerald-800 rounded-lg text-sm border border-emerald-300 disabled:opacity-50 font-bold"
+          >
+            {rebuilding ? '重建中⋯(這可能要 30 秒)' : '📈 重建歷史曲線'}
+          </button>
+          <p className="text-[11px] text-gray-500 leading-relaxed mt-1">
+            累積報酬率 / 對比圖中間一段都 0%、只有最後一根針 → 點這個。
+            從第一筆交易日開始,用 Yahoo 真實歷史日 K 重算每日市值,
+            覆蓋舊 proxy 快照。
+          </p>
+        </div>
+
         {/* 雲端強推 */}
         {isCloudConfigured && (
           <div>
