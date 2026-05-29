@@ -268,25 +268,48 @@ Island / home indicator 區。
 HUD 米白 bg + blur 下對比較弱但 iOS 系統會做一點自動 dim,實測可讀。
 **不要**為了「狀態列字看不清」改回 default,那樣會回到米色空白雷區。
 
-### 動態 body bg(瀏海 / home indicator 區的顏色)
+### 雙層 fallback:動態 theme-color + 動態 body bg
 
-iOS 在某些情境下(PWA 沒以 black-translucent 重新安裝 / Safari 瀏覽器)
-內容延伸不到瀏海 / 動態島區,系統會用 `<body>` bg 顏色填那塊。所以:
+iOS 在某些情境下(PWA 沒以 black-translucent 重新安裝 / Safari 瀏覽器 /
+舊 manifest 殘留)無法把內容延伸進瀏海 / 動態島 / home indicator 區。
+我們用兩層 fallback 同時 toggle,任一 iOS 行為模式都能命中其中一個:
 
-```css
-body { background: #faf6e8; }                /* 米白 = 跟 HUD 玻璃融合 */
-body.splash-bg { background: #000; }         /* splash 期間切黑 = 跟封面融合 */
+1. **動態 `<meta name="theme-color">`**(`App.tsx` querySelector + setAttribute)
+   - 切到 `#faf6e8` → iOS / Android 用此色當狀態列 tint
+   - 切到 `#000000` → splash 階段狀態列變黑
+
+2. **動態 `<body>` class**
+   ```css
+   body { background: #faf6e8; }              /* 米白 = HUD 玻璃融合 */
+   body.splash-bg { background: #000; }       /* splash 切黑 = 封面 letterbox */
+   ```
+   - iOS 拿 body bg 填內容延伸不到的瀏海 / home indicator 區
+
+`App.tsx` useEffect 跟著 `splashDismissed` 同時 toggle theme-color +
+body class:
+
+```tsx
+useEffect(() => {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (splashDismissed) {
+    document.body.classList.remove('splash-bg');
+    meta?.setAttribute('content', '#faf6e8');
+  } else {
+    document.body.classList.add('splash-bg');
+    meta?.setAttribute('content', '#000000');
+  }
+  return () => { ... };
+}, [splashDismissed]);
 ```
 
-`App.tsx` useEffect 跟著 `splashDismissed` toggle class。這樣不管 iOS 有
-沒有延伸,瀏海區永遠是「該畫面預期的顏色」,不會像之前一直黑掉。
+Vite manifest `theme_color` / `background_color` 也一致設 `#faf6e8`
+(新 PWA 安裝讀的就是這個)。
 
-theme-color 也跟著設成 `#faf6e8`,Android Chrome / 某些 iOS 版本拿 theme-
-color 當狀態列底色,跟 body 預設 bg 一致。
-
-⚠️ 玩家如果是在「以舊版 manifest 安裝過的 PWA」內看到瀏海仍是黑色,要
-**從 home screen 移除 + 重新加入** 才會生效新 status-bar-style。動態 body
-bg 至少把這情境的「黑邊」降級成「跟畫面色調一致的邊」。
+⚠️ **真正想要「cover 圖直接畫進瀏海區」**(而非黑色 fallback)需 iOS PWA
+black-translucent + viewport-fit=cover 正確生效。已安裝舊 PWA 的玩家
+必須**從 home screen 移除 + 重新加入** 才會讀新 manifest;在他們重裝前,
+雙層 fallback 是視覺上最接近的解法(瀏海跟畫面主色融合,不再黑/米色強烈
+不一致)。
 
 ### 不對 body 加 safe-area padding
 

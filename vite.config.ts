@@ -12,9 +12,11 @@ export default defineConfig({
       name: '山海經股票養成',
       short_name: '神獸股市',
       description: '把你的台股投資組合變成山海經神獸動物園',
-      // 米紙底色,跟 Phaser 場景 + sprite 米紙底融合
-      theme_color: '#efe6cf',
-      background_color: '#efe6cf',
+      // 米白 = HUD 玻璃實際視覺色 + body 預設 bg + index.html theme-color
+      // 全部一致,iOS PWA 安裝時讀 manifest theme_color 當狀態列底色,瀏海
+      // 區域跟 HUD 連成一片(階段 6.Y 全螢幕適配)
+      theme_color: '#faf6e8',
+      background_color: '#faf6e8',
       display: 'standalone',
       orientation: 'portrait',
       lang: 'zh-Hant',

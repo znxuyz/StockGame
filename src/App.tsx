@@ -132,19 +132,38 @@ export default function App() {
   const [splashDismissed, setSplashDismissed] = useState(false);
 
   /**
-   * iOS 在某些情境下(PWA 沒重新安裝 / Safari 瀏覽器)無法把內容延伸進
-   * 瀏海 / 動態島區,系統會用 body bg 填那塊。splash 階段把 body bg 改黑,
-   * 跟封面圖週邊 letterbox 融合;進遊戲後改回米白,跟 HUD 米白玻璃融合,
-   * 視覺上像 HUD / 封面一路長到螢幕頂。
+   * 階段 6.Y:雙層 fallback 把「瀏海 / 動態島 / home indicator」區塗成跟
+   * 當前畫面一致的顏色,讓玩家看到「HUD / 封面一路長到螢幕頂」的視覺。
+   *
+   *   1. `<meta name="theme-color">` 動態切 — iOS Safari / Android Chrome /
+   *      部分 iOS PWA 拿 theme-color 當狀態列 / URL bar tint。動態改值 →
+   *      狀態列底色即時跟著變,**不用重新安裝 PWA**
+   *   2. `<body>` class `.splash-bg` 切 bg — iOS 內容延伸不到瀏海區時,
+   *      會用 body bg 填那塊(底部 home indicator 區同理)
+   *
+   * 兩層同時 toggle,任一 iOS 行為模式下都能命中其中一個:
+   *   - splash 階段 → theme-color #000 + body bg #000 → 瀏海 / home indicator
+   *     全黑,跟封面 letterbox 融合(已正確安裝 PWA 的情境下 cover 圖直接延伸
+   *     進瀏海,黑色 fallback 看不到)
+   *   - 遊戲階段  → theme-color #faf6e8 + body bg #faf6e8 → 瀏海 / home
+   *     indicator 全米白,跟 HUD / BottomBar 玻璃連成一片
+   *
+   * 真正想要「cover 圖延伸進瀏海」(而非黑色)需 iOS PWA black-translucent
+   * 模式 + viewport-fit=cover。舊裝置已安裝的 PWA 要從 home screen 移除 +
+   * 重新加入才會讀新 manifest。
    */
   useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
     if (splashDismissed) {
       document.body.classList.remove('splash-bg');
+      meta?.setAttribute('content', '#faf6e8');
     } else {
       document.body.classList.add('splash-bg');
+      meta?.setAttribute('content', '#000000');
     }
     return () => {
       document.body.classList.remove('splash-bg');
+      meta?.setAttribute('content', '#faf6e8');
     };
   }, [splashDismissed]);
 
