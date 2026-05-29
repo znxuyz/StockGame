@@ -127,6 +127,8 @@
     --popup-bg: rgba(250, 246, 232, 0.75);
     --popup-border: rgba(212, 175, 55, 0.5);
     --popup-header-bg: rgba(250, 246, 232, 0.5);
+    /* 米粉主題 HUD 視覺等效底色(over 米紙底 #efe6cf 計算) */
+    --hud-effective-bg: #f3ecd7;
   }
 
   /* 玉藍主題(綠調玻璃 + 翠玉邊線) */
@@ -136,6 +138,7 @@
     --popup-bg: rgba(225, 240, 232, 0.78);
     --popup-border: rgba(80, 160, 130, 0.5);
     --popup-header-bg: rgba(225, 240, 232, 0.55);
+    --hud-effective-bg: #e7ead9;
   }
 
   /* 紫金主題(紫調玻璃 + 紫晶邊線) */
@@ -145,6 +148,7 @@
     --popup-bg: rgba(245, 235, 250, 0.78);
     --popup-border: rgba(180, 130, 200, 0.5);
     --popup-header-bg: rgba(245, 235, 250, 0.55);
+    --hud-effective-bg: #efe6e0;
   }
 
   /* 朱紅主題(紅調玻璃 + 朱砂邊線) */
@@ -154,6 +158,7 @@
     --popup-bg: rgba(255, 240, 240, 0.78);
     --popup-border: rgba(200, 100, 100, 0.5);
     --popup-header-bg: rgba(255, 240, 240, 0.55);
+    --hud-effective-bg: #f5e8da;
   }
 
   .glass-popup {
@@ -441,6 +446,22 @@
    * 自然退回 80px。
    */
   --hud-height: calc(80px + env(safe-area-inset-top));
+
+  /**
+   * 「HUD 視覺等效底色」── 用來填瀏海 / home indicator 區,讓 fallback 色
+   * 跟 HUD 半透明 + blur 後實際看到的顏色一致。
+   *
+   * 計算:HUD glass rgba(250,246,232, 0.35) 鋪在 Phaser 米紙底 #efe6cf 上面,
+   * Porter-Duff source-over 算出:
+   *   R = 0.35×250 + 0.65×239 ≈ 243 → #f3
+   *   G = 0.35×246 + 0.65×230 ≈ 235 → #ec
+   *   B = 0.35×232 + 0.65×207 ≈ 215 → #d7
+   * → #f3ecd7 比純米白 #faf6e8 更暖一點,跟 HUD 實際看到的米黃更貼近。
+   *
+   * 主題色變換時這個值也跟著變(下面的 --hud-bg 主題覆蓋區域),確保任何
+   * 主題下瀏海跟 HUD 都同色。
+   */
+  --hud-effective-bg: #f3ecd7;
   /* 神話美學:預設襯線中文(Noto Serif TC),數字 / UI 小字另用 .font-zh class 切回無襯線 */
   font-family: 'Noto Serif TC', 'Songti TC', 'PMingLiU', 'Noto Sans TC', serif;
   font-synthesis: none;
@@ -476,11 +497,12 @@ body,
    * 預設米白 → 瀏海 / 動態島區跟 HUD 顏色連成一片(視覺上 HUD 一路長到
    * 螢幕頂);底部 home indicator 區也跟 BottomBar 米白連起來。
    *
-   * splash 期間 `App.tsx` 把 `.splash-bg` class 加到 <body>,bg 變黑跟
-   * SplashScreen 黑色封面背景無縫融合,玩家看不到上下黑邊。退出 splash
-   * class 拔掉,bg 退回米白讓 HUD 區域連成一片。
+   * splash 期間 `App.tsx` 把 `.splash-bg` class 加到 <body>,bg 變成
+   * cover.png 頂緣取樣 RGB 跟封面無縫融合;退出 splash 後 bg 退回
+   * `--hud-effective-bg`(HUD 玻璃在 Phaser 米紙底上面實際呈現的米黃),
+   * 瀏海 / home indicator 跟 HUD 區域同色,玩家視覺接近 fullbleed HUD。
    */
-  background: #faf6e8;
+  background: var(--hud-effective-bg, #f3ecd7);
   color: #1a1a1a;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;

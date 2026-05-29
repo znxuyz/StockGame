@@ -12,12 +12,13 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    <!-- theme-color 米白 = body 預設 bg = HUD 玻璃實際視覺色。
-         iOS / Android 用 theme-color 決定狀態列 / 工具列 tint;米白讓狀態列
-         區跟 HUD 連成一片(視覺上 HUD 一路到螢幕頂)。Splash 期間 App.tsx
-         會 toggle body class 把 bg 切黑跟封面融合。 -->
-    <meta name="theme-color" content="#faf6e8" />
-    <meta name="background-color" content="#faf6e8" />
+    <!-- theme-color #f3ecd7 = HUD glass over Phaser 米紙底實際呈現的暖米黃
+         (rgba 250,246,232,0.35 over #efe6cf source-over)。比 #faf6e8 純米白
+         更貼近玩家看到的 HUD 色,瀏海區跟 HUD 視覺上完全融合(階段 6.Y)。
+         App.tsx 啟動後讀 --hud-effective-bg CSS 變數動態 sync(切主題色時
+         也跟著變);splash 期間切換到 cover.png 頂緣取樣 RGB。 -->
+    <meta name="theme-color" content="#f3ecd7" />
+    <meta name="background-color" content="#f3ecd7" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <!-- black-translucent:狀態列底色透明,讓 web 內容延伸進瀏海 / Dynamic Island 區

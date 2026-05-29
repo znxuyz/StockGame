@@ -199,10 +199,17 @@ export default function App() {
    */
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
+    /** 讀目前主題的 --hud-effective-bg(HUD 玻璃 + Phaser 底色實際呈現的米黃) */
+    const effectiveHudBg = () =>
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--hud-effective-bg')
+        .trim() || '#f3ecd7';
     if (splashDismissed) {
       document.body.classList.remove('splash-bg');
       document.body.style.backgroundColor = '';
-      meta?.setAttribute('content', '#faf6e8');
+      // 遊戲階段:狀態列跟 TopBar 同色(讀目前主題的 --hud-effective-bg,
+      // 米粉/玉藍/紫金/朱紅 4 主題自動切對應色)
+      meta?.setAttribute('content', effectiveHudBg());
     } else {
       document.body.classList.add('splash-bg');
       document.body.style.backgroundColor = coverEdgeColor;
@@ -211,9 +218,31 @@ export default function App() {
     return () => {
       document.body.classList.remove('splash-bg');
       document.body.style.backgroundColor = '';
-      meta?.setAttribute('content', '#faf6e8');
+      meta?.setAttribute('content', effectiveHudBg());
     };
   }, [splashDismissed, coverEdgeColor]);
+
+  /**
+   * 主題切換時(SettingsModal 改 HUD 主題色 → Game 內 useEffect 設
+   * `html.dataset.theme`)用 MutationObserver 偵測 data-theme 變動,
+   * 重新讀 `--hud-effective-bg` 同步狀態列 tint,瀏海跟新主題 HUD 同色。
+   * splash 階段不動(那時 theme-color = 封面取樣色)。
+   */
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      if (!splashDismissed) return;
+      const meta = document.querySelector('meta[name="theme-color"]');
+      const effectiveBg = getComputedStyle(document.documentElement)
+        .getPropertyValue('--hud-effective-bg')
+        .trim();
+      if (effectiveBg) meta?.setAttribute('content', effectiveBg);
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
+    return () => observer.disconnect();
+  }, [splashDismissed]);
 
   useEffect(() => {
     // 階段 3D 緊急修復:**每一個 init 步驟獨立 try/catch**,任一失敗只 warn,

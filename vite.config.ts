@@ -12,11 +12,12 @@ export default defineConfig({
       name: '山海經股票養成',
       short_name: '神獸股市',
       description: '把你的台股投資組合變成山海經神獸動物園',
-      // 米白 = HUD 玻璃實際視覺色 + body 預設 bg + index.html theme-color
-      // 全部一致,iOS PWA 安裝時讀 manifest theme_color 當狀態列底色,瀏海
-      // 區域跟 HUD 連成一片(階段 6.Y 全螢幕適配)
-      theme_color: '#faf6e8',
-      background_color: '#faf6e8',
+      // #f3ecd7 = HUD glass(rgba 250,246,232,0.35)over Phaser 米紙底
+      // (#efe6cf)source-over 算出的「HUD 視覺等效底色」(階段 6.Y)。比純
+      // 米白 #faf6e8 更暖,跟玩家實際看到的 HUD 米黃同色。iOS PWA 安裝時
+      // 讀這個值當狀態列底色,瀏海區跟 HUD 連成一片。
+      theme_color: '#f3ecd7',
+      background_color: '#f3ecd7',
       display: 'standalone',
       orientation: 'portrait',
       lang: 'zh-Hant',
