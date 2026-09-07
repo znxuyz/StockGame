@@ -606,57 +606,64 @@ function Game() {
     if (initialSyncDoneForUserRef.current === userId) return;
 
     (async () => {
+      /**
+       * 階段 6.Z:每個 step 各給一個個別 timeout,弱網情境不再卡住整個
+       * splash — timeout 就 mark step 完成,實際 promise 繼續在背後跑,
+       * useLiveQuery 訂閱等好了會自然 re-render。
+       */
+      const withTimeout = <T,>(p: Promise<T>, ms: number, tag: string): Promise<T | null> =>
+        Promise.race<T | null>([
+          p,
+          new Promise<null>((resolve) =>
+            setTimeout(() => {
+              console.warn(`[init] ${tag} timed out after ${ms}ms — 背景繼續跑,splash 不擋`);
+              resolve(null);
+            }, ms)
+          )
+        ]).catch((e) => {
+          console.warn(`[init] ${tag} failed:`, e);
+          return null;
+        });
+
       // **新裝置 / 無痕視窗首次登入 self-heal**:把雲端所有 user-owned 表
-      // 拉進本機 Dexie。各 Repository 的 stale-while-revalidate 在 boot race
-      // 時會被 throttle 擋住、settingsRepo「local newer than cloud」邏輯也
-      // 會把 seedIfEmpty 預設覆蓋雲端,所以這裡必須主動先拉一次,讓後續
-      // checkAndUpdateStreak / portfolio / pets 看到的是雲端真實資料。
-      // idempotent — 同 user 重複 boot 只 overwrite local 為 cloud,無副作用。
-      try {
-        await forceFetchAllFromCloud();
-      } catch (e) {
-        console.warn('[init] forceFetchAllFromCloud failed:', e);
-      }
-      // splash 'cloud-sync' step done(成敗都 mark,避免卡住封面)
+      // 拉進本機 Dexie。5 秒 timeout 兜底(弱網 / 大量資料時常見)
+      await withTimeout(forceFetchAllFromCloud(), 5000, 'forceFetchAllFromCloud');
+      // splash 'cloud-sync' step done(成敗 / timeout 都 mark)
       bootProgress.markStep('cloud-sync');
 
-      try {
-        const after = await checkAndUpdateStreak();
-        await checkAndGenerateDailyTasks();
-        await checkAndGenerateWeeklyTasks();
-        if (after.streak.todayClaimed) {
-          setCheckInStreak(null);
-        }
-      } catch (e) {
-        console.warn('[init] streak / tasks re-init failed:', e);
-      }
+      // post-login chain 全部包 timeout,任一個 hang 都不擋 splash
+      await withTimeout(
+        (async () => {
+          const after = await checkAndUpdateStreak();
+          await checkAndGenerateDailyTasks();
+          await checkAndGenerateWeeklyTasks();
+          if (after.streak.todayClaimed) {
+            setCheckInStreak(null);
+          }
+        })(),
+        3000,
+        'streak / tasks'
+      );
 
       checkAndRebuildIfNeeded().catch((e) =>
         console.warn('[init] checkAndRebuildIfNeeded failed:', e)
       );
 
-      try {
-        await createProfileIfNeeded();
-      } catch (e) {
-        console.warn('[init] createProfileIfNeeded failed:', e);
-      }
+      await withTimeout(createProfileIfNeeded(), 3000, 'createProfileIfNeeded');
+      await withTimeout(backfillProfileSync(), 3000, 'backfillProfileSync');
 
-      try {
-        await backfillProfileSync();
-      } catch (e) {
-        console.warn('[init] backfillProfileSync failed:', e);
-      }
+      await withTimeout(
+        (async () => {
+          await getMyPrivacy();
+          await syncMyPortfolio();
+          await generateMySnapshot();
+        })(),
+        3000,
+        'stage 5E initial sync'
+      );
 
-      try {
-        await getMyPrivacy();
-        await syncMyPortfolio();
-        await generateMySnapshot();
-      } catch (e) {
-        console.warn('[init] stage 5E initial sync failed:', e);
-      }
-
-      // splash 'post-login' step done — 此時 streak / tasks / profile / privacy
-      // / 排行榜快照都已就緒,封面進度可到 100%
+      // splash 'post-login' step done — 到這裡不管實際有沒有完成都 mark,
+      // splash 進度到 100%
       bootProgress.markStep('post-login');
 
       initialSyncDoneForUserRef.current = userId;

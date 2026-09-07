@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useBootProgress } from '@/services/bootProgress';
+import { bootProgress, useBootProgress } from '@/services/bootProgress';
 
 /**
  * 全螢幕封面 splash(階段 6.Y)。
@@ -23,7 +23,7 @@ interface Props {
 }
 
 export default function SplashScreen({ onStart }: Props) {
-  const { progress, ready, updating } = useBootProgress();
+  const { progress, ready, updating, showSkipButton } = useBootProgress();
   const [fadingOut, setFadingOut] = useState(false);
   const startedRef = useRef(false);
 
@@ -32,6 +32,16 @@ export default function SplashScreen({ onStart }: Props) {
     if (!ready || updating || fadingOut) return;
     if (startedRef.current) return;
     startedRef.current = true;
+    setFadingOut(true);
+  }
+
+  /** 「跳過」按鈕:強制 mark 所有 step,後台 sync 繼續跑 */
+  function handleSkip(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (updating || fadingOut) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+    bootProgress.forceSkip();
     setFadingOut(true);
   }
 
@@ -106,7 +116,33 @@ export default function SplashScreen({ onStart }: Props) {
         ) : showStartText ? (
           <StartText />
         ) : (
-          <ProgressBar progress={progress} />
+          <>
+            <ProgressBar progress={progress} />
+            {/* 6 秒後顯示「跳過」按鈕 — 弱網 / 卡住的玩家可以主動進遊戲,
+                後台 sync 繼續跑,不會遺漏資料 */}
+            {showSkipButton && (
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  className="px-5 py-2 rounded-full text-sm font-medium bg-white/15 text-white/95 border border-white/30 active:scale-95 transition-transform"
+                  style={{
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  跳過 ⏭
+                </button>
+                <div
+                  className="mt-1 text-[11px] text-white/70"
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                >
+                  網路較慢?點擊直接進入,資料會在背景繼續同步
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

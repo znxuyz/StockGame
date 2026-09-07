@@ -233,7 +233,12 @@ object-cover 全螢幕填滿。
 1. 看是不是該擋住玩家進主畫面的「關鍵步驟」 — 是的話歸進現有 step 之一
 2. 不是 → 後台 fire-and-forget,別新增 step(過多 step 會延遲玩家進入遊戲)
 3. 步驟失敗一律 `bootProgress.markStep('...')` 在 catch / finally,不阻塞 splash
-4. **30 秒 safety net** 是兜底,不是規律 — 別讓 step 真的卡到那麼久
+4. **8 秒 safety net + 個別 step 3-5s timeout(階段 6.Z 從 30s 縮短)** 是兜底 —
+   別讓 step 真的卡到那麼久;弱網 / 4G 常見 hang 直接 timeout mark done,
+   實際 promise 繼續在背景跑
+5. **6 秒後 splash 顯「跳過」按鈕** — 玩家可主動 `bootProgress.forceSkip()`
+   立即進遊戲(呼叫 `forceAllDone`),`useLiveQuery` 訂閱背景 sync 完成會
+   自然 re-render
 
 ### PWA 新版偵測在 splash 階段的特別行為
 

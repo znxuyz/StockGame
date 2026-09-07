@@ -45,8 +45,23 @@ const WEIGHTS: Record<BootStepId, number> = {
 
 const TOTAL_WEIGHT = Object.values(WEIGHTS).reduce((a, b) => a + b, 0); // 100
 
-/** 30 秒 safety net,避免某個 step 漏掉永遠卡住 */
-const SAFETY_NET_MS = 30_000;
+/**
+ * Safety net(階段 6.Z 縮短):8 秒後強制 unblock 所有 step。
+ *
+ * 為什麼從 30s 縮到 8s:
+ *   - user 4G / 弱網情境下 `forceFetchAllFromCloud` 常 hang 住,原 30s 讓
+ *     玩家覺得「跑不動」,以為服務停用
+ *   - 8s 已夠涵蓋正常網路的 cloud-sync + auth + PWA check
+ *   - 過期 step 被 mark 沒關係 — 各 service 有自己的 try/catch,在背景繼續
+ *     跑(不會擋 UI),完成後 useLiveQuery 訂閱會自動 re-render
+ */
+const SAFETY_NET_MS = 8_000;
+
+/**
+ * Skip button 顯示延遲:6 秒後 splash 多顯一顆「跳過」按鈕,玩家可主動
+ * 立即進入遊戲。設計:比 SAFETY_NET_MS 稍早,讓不耐煩的玩家有出口。
+ */
+export const SKIP_BUTTON_DELAY_MS = 6_000;
 
 type Listener = () => void;
 
@@ -59,10 +74,19 @@ class BootProgressTracker {
   constructor() {
     this.safetyTimer = setTimeout(() => {
       if (!this.isReady()) {
-        console.warn('[bootProgress] 30s safety net triggered, force-marking remaining steps done');
+        console.warn(
+          `[bootProgress] ${SAFETY_NET_MS}ms safety net triggered, force-marking remaining steps done (background sync continues)`
+        );
         this.forceAllDone();
       }
     }, SAFETY_NET_MS);
+  }
+
+  /**
+   * 玩家點「跳過」按鈕 → 強制推所有 step 到 done。後台 sync 繼續跑,不擋。
+   */
+  forceSkip(): void {
+    this.forceAllDone();
   }
 
   markStep(id: BootStepId): void {
@@ -121,10 +145,13 @@ export interface BootProgressSnapshot {
   progress: number;
   ready: boolean;
   updating: boolean;
+  /** 6 秒後為 true — SplashScreen 顯示「跳過」按鈕給不耐煩的玩家 */
+  showSkipButton: boolean;
 }
 
 export function useBootProgress(): BootProgressSnapshot {
-  const [snapshot, setSnapshot] = useState<BootProgressSnapshot>(() => ({
+  const [showSkipButton, setShowSkipButton] = useState(false);
+  const [snapshot, setSnapshot] = useState<Omit<BootProgressSnapshot, 'showSkipButton'>>(() => ({
     progress: bootProgress.getProgress(),
     ready: bootProgress.isReady(),
     updating: bootProgress.isUpdating()
@@ -138,5 +165,9 @@ export function useBootProgress(): BootProgressSnapshot {
       });
     });
   }, []);
-  return snapshot;
+  useEffect(() => {
+    const t = setTimeout(() => setShowSkipButton(true), SKIP_BUTTON_DELAY_MS);
+    return () => clearTimeout(t);
+  }, []);
+  return { ...snapshot, showSkipButton };
 }
